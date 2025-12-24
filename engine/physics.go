@@ -37,9 +37,41 @@ func CreateBody(x float32, y float32, angle float32, invMass float32, shape Shap
 }
 
 type Contact struct {
-	A, B        rl.Vector2
-	Normal      rl.Vector2
-	Penetration float32
+	BodyA, BodyB   *Body
+	PointA, PointB rl.Vector2
+	Normal         rl.Vector2
+	Penetration    float32
+	Lambda         float32
+	Compliance     float32
+}
+
+func (c *Contact) Solve(dt float32) {
+	a := c.BodyA
+	b := c.BodyB
+
+	if a.InvMass == 0 && b.InvMass == 0 {
+		return
+	}
+
+	C := -c.Penetration
+
+	wA := a.InvMass
+	wB := b.InvMass
+	w := wA + wB
+
+	if w == 0 {
+		return
+	}
+
+	alpha := c.Compliance / (dt * dt)
+	deltaLambda := (-C - alpha*c.Lambda) / (w + alpha)
+
+	impulse := rl.Vector2Scale(c.Normal, deltaLambda)
+
+	a.Position = rl.Vector2Add(a.Position, rl.Vector2Scale(impulse, wA))
+	b.Position = rl.Vector2Subtract(b.Position, rl.Vector2Scale(impulse, wB))
+
+	c.Lambda += deltaLambda
 }
 
 type Shape interface{}
@@ -56,6 +88,46 @@ type Box struct {
 type World struct {
 	Bodies  []*Body
 	Gravity rl.Vector2
+}
+
+func (w *World) Integrate(dt float32) {
+	for _, body := range w.Bodies {
+		if body.InvMass == 0 {
+			continue
+		}
+
+		body.Velocity.X += w.Gravity.X * dt
+		body.Velocity.Y += w.Gravity.Y * dt
+
+		body.PrevPosition = body.Position
+		body.PrevAngle = body.Angle
+
+		body.Position.X += body.Velocity.X * dt
+		body.Position.Y += body.Velocity.Y * dt
+		body.Angle += body.AngularVelocity * dt
+	}
+}
+
+func (w *World) GenerateContactConstraints() []Contact {
+	var contacts []Contact
+
+	for i := 0; i < len(w.Bodies); i++ {
+		for j := i + 1; j < len(w.Bodies); j++ {
+			if ok, contact := w.Bodies[i].CollidesWith(w.Bodies[j]); ok {
+				contacts = append(contacts, contact)
+			}
+		}
+	}
+
+	return contacts
+}
+
+func (w *World) SolveConstraints(contacts []Contact, dt float32, iterations int) {
+	for iter := 0; iter < iterations; iter++ {
+		for i := range contacts {
+			contacts[i].Solve(dt)
+		}
+	}
 }
 
 func (w *World) Clone() *World {
@@ -148,8 +220,10 @@ func CircleVsCircle(a, b *Body) (bool, Contact) {
 		contactB := rl.Vector2Add(b.Position, rl.Vector2Scale(normal, -bRadius))
 
 		return true, Contact{
-			A:           contactA,
-			B:           contactB,
+			BodyA:       a,
+			BodyB:       b,
+			PointA:      contactA,
+			PointB:      contactB,
 			Normal:      normal,
 			Penetration: penetration,
 		}
@@ -231,8 +305,10 @@ func CircleVsBox(circle *Body, box *Body) (bool, Contact) {
 	contactB := closestWorld
 
 	return true, Contact{
-		A:           contactA,
-		B:           contactB,
+		BodyA:       circle,
+		BodyB:       box,
+		PointA:      contactA,
+		PointB:      contactB,
 		Normal:      normal,
 		Penetration: penetration,
 	}
@@ -310,8 +386,10 @@ func BoxVsBox(a, b *Body) (bool, Contact) {
 	contactA, contactB := findBoxContactPoints(a, b, bestAxis, aHW, aHH, bHW, bHH, aCos, aSin, bCos, bSin)
 
 	return true, Contact{
-		A:           contactA,
-		B:           contactB,
+		BodyA:       a,
+		BodyB:       b,
+		PointA:      contactA,
+		PointB:      contactB,
 		Normal:      bestAxis,
 		Penetration: minPenetration,
 	}
@@ -415,7 +493,7 @@ func (a *Body) CollidesWith(b *Body) (bool, Contact) {
 			ok, contact := CircleVsBox(b, a)
 			if ok {
 
-				contact.A, contact.B = contact.B, contact.A
+				contact.PointA, contact.PointB = contact.PointB, contact.PointA
 				contact.Normal = rl.Vector2Scale(contact.Normal, -1)
 			}
 			return ok, contact

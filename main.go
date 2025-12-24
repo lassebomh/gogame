@@ -13,14 +13,14 @@ func main() {
 
 	history := History[*State]{
 		OriginTime: time.Now(),
-		TickRate:   30,
+		TickRate:   10,
 		Items: []TickState[*State]{{Tick: 0, State: &State{
 			World: World{
 				Bodies: []*Body{
 					CreateBody(400, 400, 0.3, 1, Box{Width: 50, Height: 50}),
 					CreateBody(400, 600, 0, 0, Box{Width: 600, Height: 50}),
 				},
-				Gravity: rl.Vector2{Y: 0.01},
+				Gravity: rl.Vector2{Y: 90},
 			},
 		}}},
 		Inputs: make(map[ID][]Input),

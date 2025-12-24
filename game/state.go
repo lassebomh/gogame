@@ -37,6 +37,11 @@ func (s *State) Update(ctx *UpdateContext[*State]) {
 		}
 	}
 
+	dt := 1 / float32(ctx.TickRate)
+	s.World.Integrate(dt)
+	contacts := s.World.GenerateContactConstraints()
+	s.World.SolveConstraints(contacts, dt, 8)
+
 	for _, player := range IterMapSorted(s.Players) {
 		player.Update(ctx)
 	}
