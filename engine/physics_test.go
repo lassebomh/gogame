@@ -10,7 +10,7 @@ import (
 
 func TestCircleVSCircle(t *testing.T) {
 
-	a := &Body[Circle]{
+	a := &Body{
 		Position: rl.Vector2{X: 0, Y: 0},
 		Angle:    0,
 		Shape: Circle{
@@ -18,7 +18,7 @@ func TestCircleVSCircle(t *testing.T) {
 		},
 	}
 
-	b := &Body[Circle]{
+	b := &Body{
 		Position: rl.Vector2{X: 2, Y: 0},
 		Angle:    0,
 		Shape: Circle{
@@ -32,7 +32,7 @@ func TestCircleVSCircle(t *testing.T) {
 }
 
 func TestCircleVsBox(t *testing.T) {
-	circle := &Body[Circle]{
+	circle := &Body{
 		Position: rl.Vector2{X: 0, Y: 0},
 		Angle:    0,
 		Shape: Circle{
@@ -40,7 +40,7 @@ func TestCircleVsBox(t *testing.T) {
 		},
 	}
 
-	box := &Body[Box]{
+	box := &Body{
 		Position: rl.Vector2{X: 2, Y: 0},
 		Angle:    0,
 		Shape: Box{
@@ -55,7 +55,7 @@ func TestCircleVsBox(t *testing.T) {
 }
 
 func TestCircleVsRotatedBox(t *testing.T) {
-	circle := &Body[Circle]{
+	circle := &Body{
 		Position: rl.Vector2{X: 0, Y: 0},
 		Angle:    0,
 		Shape: Circle{
@@ -63,7 +63,7 @@ func TestCircleVsRotatedBox(t *testing.T) {
 		},
 	}
 
-	box := &Body[Box]{
+	box := &Body{
 		Position: rl.Vector2{X: 2.01, Y: 0},
 		Angle:    45 * rl.Deg2rad,
 		Shape: Box{

@@ -9,7 +9,7 @@ import (
 type State struct {
 	Ticks   int
 	Players map[ID]*Player
-	Bodies  []*Body[Shape]
+	Bodies  []*Body
 }
 
 func (s *State) Clone() *State {
@@ -21,7 +21,7 @@ func (s *State) Clone() *State {
 		clone.Players[k] = &playerCopy
 	}
 
-	clone.Bodies = make([]*Body[Shape], 0)
+	clone.Bodies = make([]*Body, 0)
 	for _, v := range s.Bodies {
 		bodyClone := *v
 		clone.Bodies = append(clone.Bodies, &bodyClone)
@@ -58,8 +58,19 @@ func (s *State) Render(ctx *RenderContext[*State]) {
 	}
 
 	if ctx.Debug {
-		for _, body := range ctx.Current.Bodies {
-			body.Render()
+
+		a := ctx.Current.Bodies[0]
+		b := ctx.Current.Bodies[1]
+
+		a.Render(rl.Green)
+
+		if ok, _ := a.CollidesWith(b); ok {
+			b.Render(rl.Red)
+
+		} else {
+			b.Render(rl.Green)
+
 		}
+
 	}
 }
