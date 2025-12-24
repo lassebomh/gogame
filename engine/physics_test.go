@@ -72,14 +72,42 @@ func TestCircleVsRotatedBox(t *testing.T) {
 		},
 	}
 
-	// for i := float32(0); i < 360*rl.Deg2rad; i += 10 * rl.Deg2rad {
-	// 	box.Angle = i
-	// 	_, c := CircleVsBox(circle, box)
-	// 	t.Logf("%+v\n", box)
-	// 	t.Logf("%+v\n", c)
-	// }
-
 	if ok, _ := CircleVsBox(circle, box); !ok {
+		t.Errorf("no contact")
+	}
+}
+
+func TestBoxVSBox(t *testing.T) {
+
+	a := &Body{
+		Position: rl.Vector2{X: 0, Y: 0},
+		Angle:    0,
+		Shape: Box{
+			Width:  2,
+			Height: 2,
+		},
+	}
+
+	b := &Body{
+		Position: rl.Vector2{X: 2, Y: 0},
+		Angle:    0,
+		Shape: Box{
+			Width:  2,
+			Height: 2,
+		},
+	}
+
+	if ok, _ := BoxVsBox(a, b); !ok {
+		t.Errorf("no contact")
+	}
+
+	b.Position.X += 0.1
+	if ok, _ := BoxVsBox(a, b); ok {
+		t.Errorf("bad contact")
+	}
+
+	b.Angle = 45 * rl.Deg2rad
+	if ok, _ := BoxVsBox(a, b); !ok {
 		t.Errorf("no contact")
 	}
 }

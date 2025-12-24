@@ -13,10 +13,10 @@ func main() {
 
 	history := History[*State]{
 		OriginTime: time.Now(),
-		TickRate:   60,
+		TickRate:   30,
 		Items: []TickState[*State]{{Tick: 0, State: &State{
 			Bodies: []*Body{
-				{Position: rl.Vector2{X: 40, Y: 40}, Shape: Circle{Radius: 20}},
+				{Position: rl.Vector2{X: 40, Y: 40}, Shape: Box{Width: 40, Height: 40}},
 				{Position: rl.Vector2{X: 85, Y: 40}, Shape: Box{Width: 40, Height: 40}},
 			},
 		}}},
@@ -27,7 +27,7 @@ func main() {
 	rl.InitWindow(800, 700, "")
 	defer rl.CloseWindow()
 
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(90)
 
 	prev_tick := 0
 

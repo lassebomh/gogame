@@ -42,7 +42,7 @@ func (s *State) Update(ctx *UpdateContext[*State]) {
 	}
 
 	for _, body := range s.Bodies {
-		body.Angle += 0.05
+		body.Angle += 2 / float32(ctx.TickRate)
 	}
 
 	for _, player := range IterMapSorted(s.Players) {
