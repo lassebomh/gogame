@@ -15,9 +15,12 @@ func main() {
 		OriginTime: time.Now(),
 		TickRate:   30,
 		Items: []TickState[*State]{{Tick: 0, State: &State{
-			Bodies: []*Body{
-				{Position: rl.Vector2{X: 40, Y: 40}, Shape: Box{Width: 40, Height: 40}},
-				{Position: rl.Vector2{X: 85, Y: 40}, Shape: Box{Width: 40, Height: 40}},
+			World: World{
+				Bodies: []*Body{
+					CreateBody(400, 400, 0.3, 1, Box{Width: 50, Height: 50}),
+					CreateBody(400, 600, 0, 0, Box{Width: 600, Height: 50}),
+				},
+				Gravity: rl.Vector2{Y: 0.01},
 			},
 		}}},
 		Inputs: make(map[ID][]Input),

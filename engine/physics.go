@@ -7,9 +7,33 @@ import (
 )
 
 type Body struct {
-	Position rl.Vector2
-	Angle    float32
-	Shape    Shape
+	Position     rl.Vector2
+	PrevPosition rl.Vector2
+
+	Angle     float32
+	PrevAngle float32
+
+	Velocity        rl.Vector2
+	AngularVelocity float32
+
+	InvMass    float32
+	InvInertia float32
+
+	Shape Shape
+}
+
+func CreateBody(x float32, y float32, angle float32, invMass float32, shape Shape) *Body {
+	return &Body{
+		Position:        rl.Vector2{X: x, Y: y},
+		PrevPosition:    rl.Vector2{X: x, Y: y},
+		Angle:           angle,
+		PrevAngle:       angle,
+		AngularVelocity: 0,
+		Velocity:        rl.Vector2{X: 0, Y: 0},
+		InvMass:         invMass,
+		InvInertia:      0,
+		Shape:           shape,
+	}
 }
 
 type Contact struct {
@@ -29,8 +53,23 @@ type Box struct {
 	Height float32
 }
 
-func (b *Body) Render(color rl.Color) {
+type World struct {
+	Bodies  []*Body
+	Gravity rl.Vector2
+}
 
+func (w *World) Clone() *World {
+	clone := *w
+	clone.Bodies = make([]*Body, 0)
+	for _, v := range w.Bodies {
+		bodyClone := *v
+		clone.Bodies = append(clone.Bodies, &bodyClone)
+	}
+
+	return &clone
+}
+
+func (b *Body) Render(color rl.Color) {
 	const dirLen float32 = 20
 
 	dir := rl.Vector2{
