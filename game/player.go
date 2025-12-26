@@ -7,62 +7,32 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
-type Item interface {
-	Update(w *World)
-	RenderHud(cursor *rl.Vector2) bool
-	GetBody() *cp.Body
-	SetBody(body *cp.Body)
-}
-
-func ItemSpawnBody(item Item, w *World, pos cp.Vector) {
-	radius := 20.
-	mass := radius * radius / 25.0
-	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, radius, cp.Vector{})))
-	body.SetPosition(pos)
-
-	shape := w.Space.AddShape(cp.NewBox(body, radius, radius*2, 0))
-	shape.SetElasticity(0)
-	shape.SetFriction(0.9)
-
-	item.SetBody(body)
-}
-
-func ItemDespawnBody(item Item, w *World) {
-	body := item.GetBody()
-	body.EachShape(func(shape *cp.Shape) {
-		w.Space.RemoveShape(shape)
-	})
-	w.Space.RemoveBody(body)
-	item.SetBody(nil)
-}
-
 type Player struct {
 	Body  *cp.Body
 	Speed float64
 
+	SpO2      float32
 	Health    float32
 	HealthMax float32
 
-	Inventory []Item
+	Items []Item
 }
 
-func (p *Player) DropItem(w *World, target Item) {
-	targetIndex := -1
-
-	for i, item := range p.Inventory {
+func (p *Player) RemoveItem(w *World, target Item) {
+	for i, item := range p.Items {
 		if item == target {
-			targetIndex = i
+			last := len(p.Items) - 1
+			p.Items[i] = p.Items[last]
+			p.Items = p.Items[:last]
 			break
 		}
 	}
 
-	if targetIndex != -1 {
-		p.Inventory[targetIndex] = p.Inventory[len(p.Inventory)-1]
-		p.Inventory = p.Inventory[:len(p.Inventory)-1]
-		ItemSpawnBody(target, w, p.Body.Position())
-		w.Items = append(w.Items, target)
-	}
+}
 
+func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
+	w.RemovePhysicalItem(pitem)
+	w.Player.Items = append(w.Player.Items, pitem.Item)
 }
 
 func NewPlayer(w *World) *Player {
@@ -80,18 +50,22 @@ func NewPlayer(w *World) *Player {
 		Speed:     500,
 		Health:    100,
 		HealthMax: 100,
+		SpO2:      100,
 
-		Inventory: make([]Item, 0),
+		Items: make([]Item, 0),
 	}
 
-	player.Inventory = append(player.Inventory,
+	player.Items = append(player.Items,
 		&ItemOxygenTank{
-			Oxygen:    50,
+			Oxygen:    100,
 			OxygenMax: 100,
 		},
-		&ItemOxygenTank{
-			Oxygen:    4,
-			OxygenMax: 100,
+		&ItemBattery{
+			Power:    100,
+			PowerMax: 100,
+		},
+		&ItemAirPurifier{
+			Active: false,
 		})
 
 	return player
@@ -122,23 +96,12 @@ func (p *Player) Update(w *World) {
 	newVelocity := p.Body.Velocity().Lerp(force, 0.1)
 	p.Body.SetVelocity(newVelocity.X, newVelocity.Y)
 
-	var activeOxygenTank *ItemOxygenTank
-
-	for _, item := range p.Inventory {
-		item.Update(w)
-
-		if oxygenTank, ok := item.(*ItemOxygenTank); ok && oxygenTank.Oxygen > 0 {
-
-			activeOxygenTank = oxygenTank
-		}
+	if p.SpO2 > 0 {
+		p.SpO2 -= 0.5 * w.DT
 	}
 
-	if activeOxygenTank != nil && activeOxygenTank.Oxygen > 0 {
-		activeOxygenTank.Oxygen = max(activeOxygenTank.Oxygen-w.DT, 0)
-	}
-
-	if activeOxygenTank == nil || activeOxygenTank.Oxygen == 0 {
-		p.Health -= w.DT
+	for _, item := range p.Items {
+		item.InventoryUpdate(w, p)
 	}
 
 	// fmt.Printf("%+v\n", currentOxygenTank)
@@ -166,13 +129,14 @@ func (p *Player) RenderHud(w *World) {
 	rl.DrawText(fmt.Sprintf("HP: %.0f/%.0f", w.Player.Health, w.Player.HealthMax), int32(cursor.X), int32(cursor.Y), 20, rl.Black)
 	cursor.Y += 20
 
-	for _, item := range p.Inventory {
+	rl.DrawText(fmt.Sprintf("SpO2: %.1f%%", w.Player.SpO2), int32(cursor.X), int32(cursor.Y), 20, rl.Black)
+	cursor.Y += 20
+
+	for _, item := range p.Items {
 		cursor.Y += 20
 		if item.RenderHud(&cursor) {
-			p.DropItem(w, item)
+			p.RemoveItem(w, item)
+			w.NewPhysicalItem(item, p.Body.Position())
 		}
 	}
-
-	// rl.DrawText(fmt.Sprintf("O2: %.0f/%.0f", w.Player.Oxygen, w.Player.OxygenMax), 30, 50, 20, rl.Black)
-	// rl.DrawText(fmt.Sprintf("PW: %.0f/%.0f", w.Player.Power, w.Player.PowerMax), 30, 80, 20, rl.Black)
 }

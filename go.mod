@@ -11,6 +11,7 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/ByteArena/box2d v1.0.2
 	github.com/air-verse/air v1.63.4 // indirect
+	github.com/beefsack/go-astar v0.0.0-20200827232313-4ecf9e304482
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect

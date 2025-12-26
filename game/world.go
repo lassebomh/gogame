@@ -1,25 +1,56 @@
 package game
 
 import (
-	"fmt"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
 
-var grabbableMaskBit uint = 1 << 31
-var grabFilter = cp.ShapeFilter{
-	Group: cp.NO_GROUP, Categories: grabbableMaskBit, Mask: grabbableMaskBit,
+type World struct {
+	Player        *Player
+	Space         *cp.Space
+	Tilemap       *Tilemap
+	Monster       *Monster
+	Items         []*PhysicalItem
+	Accumulator   float32
+	DT            float32
+	Camera        rl.Camera2D
+	PhysicsDrawer *RaylibDrawer
 }
 
-type World struct {
-	Player      *Player
-	Space       *cp.Space
-	Tilemap     *Tilemap
-	Items       []Item
-	Accumulator float32
-	DT          float32
-	Camera      rl.Camera2D
+func (w *World) NewPhysicalItem(item Item, pos cp.Vector) *PhysicalItem {
+
+	radius := 20.
+	mass := radius * radius / 25.0
+	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, radius, cp.Vector{})))
+	body.SetPosition(pos)
+
+	shape := w.Space.AddShape(cp.NewCircle(body, radius, cp.Vector{}))
+	shape.SetElasticity(0)
+	shape.SetFriction(0.9)
+
+	pitem := &PhysicalItem{
+		Item: item,
+		Body: body,
+	}
+
+	w.Items = append(w.Items, pitem)
+
+	return pitem
+}
+
+func (w *World) RemovePhysicalItem(item *PhysicalItem) {
+	for i, pitem := range w.Items {
+		if pitem == item {
+			w.Items[i] = w.Items[len(w.Items)-1]
+			w.Items = w.Items[:len(w.Items)-1]
+			break
+		}
+	}
+	item.Body.EachShape(func(shape *cp.Shape) {
+		w.Space.RemoveShape(shape)
+	})
+	w.Space.RemoveBody(item.Body)
+	item.Body = nil
 }
 
 func NewWorld(tilemap *Tilemap) *World {
@@ -30,13 +61,16 @@ func NewWorld(tilemap *Tilemap) *World {
 	world := &World{
 		Space:  space,
 		Camera: rl.NewCamera2D(rl.Vector2{}, rl.Vector2{}, 0, 1),
-		Items:  make([]Item, 0),
+		Items:  make([]*PhysicalItem, 0),
 	}
 
 	world.Player = NewPlayer(world)
+	world.Monster = NewMonster(world, cp.Vector{X: 200, Y: 200})
 
 	world.Tilemap = tilemap
 	world.Tilemap.GenerateBodies(world)
+
+	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 
 	return world
 }
@@ -53,6 +87,10 @@ func (w *World) Update(dt float32) {
 
 	if w.Player != nil {
 		w.Player.Update(w)
+	}
+
+	if w.Monster != nil {
+		w.Monster.Update(w)
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseLeftButton) {
@@ -73,12 +111,10 @@ func (w *World) Update(dt float32) {
 		if info.Shape != nil && info.Point.Distance(w.Player.Body.Position()) < 100 {
 			clickedBody := info.Shape.Body()
 
-			for i, item := range w.Items {
-				if item.GetBody() == clickedBody {
-					w.Player.Inventory = append(w.Player.Inventory, item)
-					w.Items[i] = w.Items[len(w.Items)-1]
-					w.Items = w.Items[:len(w.Items)-1]
-					ItemDespawnBody(item, w)
+			for _, pitem := range w.Items {
+				if pitem.Body == clickedBody {
+					w.Player.Items = append(w.Player.Items, pitem.Item)
+					w.RemovePhysicalItem(pitem)
 
 					break
 				}
@@ -102,43 +138,18 @@ func (w *World) Render() {
 	rl.BeginMode2D(w.Camera)
 
 	w.Tilemap.Render()
-	w.Space.EachShape(func(s *cp.Shape) {
-		switch shape := s.Class.(type) {
 
-		case *cp.Segment:
-			a := shape.A()
-			b := shape.B()
-			r := float32(shape.Radius())
-			rl.DrawLineEx(v(a), v(b), r*2, rl.DarkGray)
-			rl.DrawCircleV(v(a), r, rl.Blue)
-			rl.DrawCircleV(v(b), r, rl.Blue)
-			mid := cp.Vector{X: (a.X + b.X) * 0.5, Y: (a.Y + b.Y) * 0.5}
-			n := shape.Normal()
-			normEnd := cp.Vector{
-				X: mid.X + n.X*float64(r*4),
-				Y: mid.Y + n.Y*float64(r*4),
-			}
-			rl.DrawLineV(v(mid), v(normEnd), rl.Green)
+	if w.PhysicsDrawer != nil {
+		cp.DrawSpace(w.Space, w.PhysicsDrawer)
+	}
 
-		case *cp.Circle:
-			pos := shape.Body().Position()
-			r := float32(shape.Radius())
-			rl.DrawCircleV(v(pos), r, rl.Red)
-
-		case *cp.PolyShape:
-			count := shape.Count()
-			body := shape.Body()
-			for i := 0; i < count; i++ {
-				vert := shape.Vert(i)
-				nextVert := shape.Vert((i + 1) % count)
-				worldVert := body.LocalToWorld(vert)
-				worldNextVert := body.LocalToWorld(nextVert)
-				rl.DrawLineV(v(worldVert), v(worldNextVert), rl.Red)
-			}
-		default:
-			fmt.Println("unexpected shape", s.Class)
+	for _, arm := range w.Monster.Arms {
+		if arm.Path != nil {
+			RenderPath(arm.Path, rl.Blue)
 		}
-	})
+	}
+
+	w.Monster.Render(w)
 
 	// w.Player.Render(w)
 
