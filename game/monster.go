@@ -14,10 +14,11 @@ type Monster struct {
 }
 
 type MonsterArm struct {
-	Monster *Monster
-	Bodies  []*cp.Body
-	Shapes  []*cp.Shape
-	Path    []cp.Vector
+	Monster           *Monster
+	Bodies            []*cp.Body
+	Shapes            []*cp.Shape
+	RotaryLimitJoints []*cp.Constraint
+	Path              []cp.Vector
 }
 
 func (arm *MonsterArm) Update(w *World) {
@@ -52,12 +53,88 @@ func (m *Monster) Update(w *World) {
 		arm.Update(w)
 
 		// targetAngleOffset := float32(i) / float32(len(m.Arms)-1) / 2 * 0.1
-		arm.TargetPoint(w, 0, arm.Path[0])
+
+		// var tangle float64 = 0
+
+		// prevBody := m.body
+		// diffs := make([]cp.Vector, len(arm.Bodies))
+		// for i, body := range arm.Bodies {
+		// 	diffs[i] = body.Position().Sub(prevBody.Position()).Normalize()
+		// 	prevBody = body
+		// }
+		// for i, diff := range diffs {
+		// 	if i == 0 {
+		// 		continue
+		// 	}
+		// 	prevDiff := diffs[i-1]
+		// 	a := diff.Rotate(prevDiff)
+		// 	angle := math.Atan2(a.Y, a.X)
+		// 	tangle += angle
+		// }
+
+		// targetPoint := arm.Path[0]
+		var tangle float64 = 0
+		prevBody := m.body
+		diffs := make([]cp.Vector, len(arm.Bodies))
+		angles := make([]float64, len(arm.Bodies)-1) // Store individual angles
+
+		for i, body := range arm.Bodies {
+			diffs[i] = body.Position().Sub(prevBody.Position()).Normalize()
+			prevBody = body
+		}
+
+		for i, diff := range diffs {
+			if i == 0 {
+				continue
+			}
+			prevDiff := diffs[i-1]
+			a := diff.Rotate(prevDiff)
+			angle := math.Atan2(a.Y, a.X)
+			angles[i-1] = angle
+			tangle += angle
+		}
+
+		// targetPoint := arm.Path[0]
+		// curlRatio := math.Abs(tangle) / (rl.Pi * 2)
+
+		// if curlRatio > 0.2 {
+		// 	// Uncurl by counter-rotating each segment
+		// 	uncurlStrength := 1. // Adjust this to control how aggressive the uncurling is
+
+		// 	for i, body := range arm.Bodies {
+		// 		if i == 0 {
+		// 			continue // Skip the base
+		// 		}
+
+		// 		// Apply torque to counter the curl
+		// 		// The sign of tangle tells us which direction we're curled
+		// 		curlDirection := tangle / math.Abs(tangle)
+
+		// 		// Apply stronger counter-torque to more curved segments
+		// 		segmentCurl := angles[i-1]
+		// 		torque := -curlDirection * math.Abs(segmentCurl) * uncurlStrength * body.Moment()
+
+		// 		body.SetTorque(body.Torque() + torque)
+		// 	}
+		// } else {
+		// 	// Normal behavior - follow path
+		// 	// arm.TargetPoint(w, 0, arm.Path[0])
+		// 	// arm.TargetPoint(w, 0, targetPoint, 0.1)
+		// }
+
+		// if tangle {
+		// 	arm.TargetPoint(w, 0, m.body.Position().Add(arm.Path[0].Sub(m.body.Position())))
+
+		// } else {
+
+		// }
+
+		arm.TargetPoint(w, 0, arm.Path[0], 1)
 
 	}
 }
 
-func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vector) {
+func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vector, power float64) {
 	// Get the last segment
 	lastSegment := arm.Bodies[len(arm.Bodies)-1]
 	lastPos := lastSegment.Position()
@@ -72,7 +149,7 @@ func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vecto
 		direction = cp.Vector{X: math.Cos(desiredAngle), Y: math.Sin(desiredAngle)}
 
 		// Apply force toward the target point
-		force := direction.Mult(50000) // Adjust force strength as needed
+		force := direction.Mult(50000 * power) // Adjust force strength as needed
 		lastSegment.SetForce(force)
 
 		// Calculate desired angle (pointing toward target)
@@ -115,7 +192,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 	var width float64 = monster.radius / 2
 	var height float64 = monster.radius * 1.5
 
-	for range 3 {
+	for range 4 {
 		arm := MonsterArm{
 			Monster: monster,
 			Bodies:  make([]*cp.Body, 0),
@@ -146,6 +223,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 				rotaryLimitAngle := rl.Pi / 4
 				rotaryLimit := w.Space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, body, -rotaryLimitAngle, rotaryLimitAngle))
 				rotaryLimit.SetMaxForce(1000000)
+				arm.RotaryLimitJoints = append(arm.RotaryLimitJoints, rotaryLimit)
 
 			} else {
 				pivot := pos.Add(cp.Vector{X: -width / 2, Y: 0})

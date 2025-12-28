@@ -64,11 +64,11 @@ func NewWorld(tilemap *Tilemap) *World {
 		Items:  make([]*PhysicalItem, 0),
 	}
 
-	world.Player = NewPlayer(world)
-	world.Monster = NewMonster(world, cp.Vector{X: 200, Y: 200})
-
 	world.Tilemap = tilemap
 	world.Tilemap.GenerateBodies(world)
+
+	world.Player = NewPlayer(world, tilemap.CenterPosition)
+	world.Monster = NewMonster(world, tilemap.CenterPosition.Add(cp.Vector{X: 1000, Y: 100}))
 
 	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 

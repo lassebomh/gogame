@@ -27,7 +27,6 @@ func (p *Player) RemoveItem(w *World, target Item) {
 			break
 		}
 	}
-
 }
 
 func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
@@ -35,11 +34,11 @@ func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
 	w.Player.Items = append(w.Player.Items, pitem.Item)
 }
 
-func NewPlayer(w *World) *Player {
+func NewPlayer(w *World, pos cp.Vector) *Player {
 	radius := 20.
 	mass := radius * radius / 25.0
 	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, radius, cp.Vector{})))
-	body.SetPosition(cp.Vector{X: 200, Y: 200})
+	body.SetPosition(pos)
 
 	shape := w.Space.AddShape(cp.NewCircle(body, radius, cp.Vector{}))
 	shape.SetElasticity(0)

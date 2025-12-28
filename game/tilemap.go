@@ -75,10 +75,11 @@ type Tile struct {
 }
 
 type Tilemap struct {
-	Cols   [][]Tile
-	Scale  float64
-	Width  int
-	Height int
+	Cols           [][]Tile
+	Scale          float64
+	Width          int
+	Height         int
+	CenterPosition cp.Vector
 }
 
 func NewTilemap(width int, height int, scale float64) *Tilemap {
@@ -97,6 +98,8 @@ func NewTilemap(width int, height int, scale float64) *Tilemap {
 
 		tilemap.Cols[x] = col
 	}
+
+	tilemap.CenterPosition = cp.Vector{X: float64(tilemap.Width / 2), Y: float64(tilemap.Height / 2)}.Mult(tilemap.Scale)
 
 	return tilemap
 }
