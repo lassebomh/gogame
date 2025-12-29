@@ -15,7 +15,8 @@ type Player struct {
 	Health    float32
 	HealthMax float32
 
-	Items []Item
+	Radius float32
+	Items  []Item
 }
 
 func (p *Player) RemoveItem(w *World, target Item) {
@@ -35,24 +36,25 @@ func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
 }
 
 func NewPlayer(w *World, pos cp.Vector) *Player {
-	radius := 20.
-	mass := radius * radius / 25.0
-	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, radius, cp.Vector{})))
-	body.SetPosition(pos)
-
-	shape := w.Space.AddShape(cp.NewCircle(body, radius, cp.Vector{}))
-	shape.SetElasticity(0)
-	shape.SetFriction(0.9)
 
 	player := &Player{
-		Body:      body,
-		Speed:     500,
+		Speed:     50,
 		Health:    100,
 		HealthMax: 100,
 		SpO2:      100,
 
-		Items: make([]Item, 0),
+		Items:  make([]Item, 0),
+		Radius: 2,
 	}
+
+	mass := float64(player.Radius * player.Radius / 25.0)
+	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, float64(player.Radius), cp.Vector{})))
+	body.SetPosition(pos)
+
+	shape := w.Space.AddShape(cp.NewCircle(body, float64(player.Radius), cp.Vector{}))
+	shape.SetElasticity(0)
+	shape.SetFriction(0.9)
+	player.Body = body
 
 	player.Items = append(player.Items,
 		&ItemOxygenTank{

@@ -80,14 +80,16 @@ type Tilemap struct {
 	Width          int
 	Height         int
 	CenterPosition cp.Vector
+	WallDepthRatio float32
 }
 
 func NewTilemap(width int, height int, scale float64) *Tilemap {
 	tilemap := &Tilemap{
-		Cols:   make([][]Tile, width),
-		Scale:  scale,
-		Width:  width,
-		Height: height,
+		Cols:           make([][]Tile, width),
+		Scale:          scale,
+		Width:          width,
+		Height:         height,
+		WallDepthRatio: 0.1,
 	}
 
 	for x := range width {
@@ -162,7 +164,7 @@ func (t *Tilemap) GenerateBodies(w *World) {
 			tileX := float64(x) * t.Scale
 			tileY := float64(y) * t.Scale
 
-			th := t.Scale / 6
+			th := t.Scale * float64(t.WallDepthRatio)
 			s := t.Scale
 
 			body := cp.NewStaticBody()

@@ -68,7 +68,7 @@ func NewWorld(tilemap *Tilemap) *World {
 	world.Tilemap.GenerateBodies(world)
 
 	world.Player = NewPlayer(world, tilemap.CenterPosition)
-	world.Monster = NewMonster(world, tilemap.CenterPosition.Add(cp.Vector{X: 1000, Y: 100}))
+	world.Monster = NewMonster(world, tilemap.CenterPosition)
 
 	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 

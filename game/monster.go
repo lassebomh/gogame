@@ -10,7 +10,7 @@ import (
 type Monster struct {
 	body   *cp.Body
 	Arms   []MonsterArm
-	radius float64
+	Radius float64
 }
 
 type MonsterArm struct {
@@ -39,13 +39,14 @@ func (arm *MonsterArm) Update(w *World) {
 
 	if len(arm.Path) == 0 {
 		arm.Path = w.Tilemap.FindPath(tipPos, playerPos)
-		arm.Path = append(arm.Path[:len(arm.Path)-1], playerPos)
+
+		arm.Path = append(arm.Path[:max(len(arm.Path)-1, 0)], playerPos)
 	}
 
 }
 
 func (m *Monster) Update(w *World) {
-	newVelocity := m.body.Velocity().Mult(0.95)
+	newVelocity := m.body.Velocity().Mult(0.90)
 	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
 	for i := range m.Arms {
@@ -53,9 +54,7 @@ func (m *Monster) Update(w *World) {
 		arm.Update(w)
 
 		// targetAngleOffset := float32(i) / float32(len(m.Arms)-1) / 2 * 0.1
-
 		// var tangle float64 = 0
-
 		// prevBody := m.body
 		// diffs := make([]cp.Vector, len(arm.Bodies))
 		// for i, body := range arm.Bodies {
@@ -71,12 +70,12 @@ func (m *Monster) Update(w *World) {
 		// 	angle := math.Atan2(a.Y, a.X)
 		// 	tangle += angle
 		// }
-
 		// targetPoint := arm.Path[0]
+
 		var tangle float64 = 0
 		prevBody := m.body
 		diffs := make([]cp.Vector, len(arm.Bodies))
-		angles := make([]float64, len(arm.Bodies)-1) // Store individual angles
+		angles := make([]float64, len(arm.Bodies)-1)
 
 		for i, body := range arm.Bodies {
 			diffs[i] = body.Position().Sub(prevBody.Position()).Normalize()
@@ -135,11 +134,9 @@ func (m *Monster) Update(w *World) {
 }
 
 func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vector, power float64) {
-	// Get the last segment
 	lastSegment := arm.Bodies[len(arm.Bodies)-1]
 	lastPos := lastSegment.Position()
 
-	// Calculate direction to target
 	direction := point.Sub(lastPos)
 	distance := direction.Length()
 
@@ -148,14 +145,11 @@ func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vecto
 		desiredAngle := math.Atan2(direction.Y, direction.X) + float64(offsetAngle)
 		direction = cp.Vector{X: math.Cos(desiredAngle), Y: math.Sin(desiredAngle)}
 
-		// Apply force toward the target point
-		force := direction.Mult(50000 * power) // Adjust force strength as needed
+		force := direction.Mult(5000 * power)
 		lastSegment.SetForce(force)
 
-		// Calculate desired angle (pointing toward target)
 		currentAngle := lastSegment.Angle()
 
-		// Normalize angle difference to -pi to pi
 		angleDiff := desiredAngle - currentAngle
 		for angleDiff > math.Pi {
 			angleDiff -= 2 * math.Pi
@@ -164,8 +158,7 @@ func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vecto
 			angleDiff += 2 * math.Pi
 		}
 
-		// Apply torque to rotate toward target
-		torque := angleDiff * 10000 // Adjust torque strength as needed
+		torque := angleDiff * 1000
 		lastSegment.SetTorque(torque)
 	}
 }
@@ -175,24 +168,24 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 
 	monster := &Monster{
 		Arms:   make([]MonsterArm, 0),
-		radius: 30.,
+		Radius: 2.,
 	}
 
-	mass := monster.radius * monster.radius / 25.0
-	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, monster.radius, cp.Vector{})))
+	mass := monster.Radius * monster.Radius * 10
+	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, monster.Radius, cp.Vector{})))
 	body.SetPosition(position)
 
-	shape := w.Space.AddShape(cp.NewCircle(body, monster.radius, cp.Vector{}))
+	shape := w.Space.AddShape(cp.NewCircle(body, monster.Radius, cp.Vector{}))
 	shape.SetElasticity(0)
 	shape.SetFriction(0.9)
 	shape.Filter.Group = group
 
 	monster.body = body
 
-	var width float64 = monster.radius / 2
-	var height float64 = monster.radius * 1.5
+	var width float64 = monster.Radius / 2
+	var height float64 = monster.Radius * 1.5
 
-	for range 4 {
+	for range 3 {
 		arm := MonsterArm{
 			Monster: monster,
 			Bodies:  make([]*cp.Body, 0),
@@ -204,7 +197,8 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 		for bodyI := range 14 {
 			i := float64(bodyI)
 			pos := position.Add(cp.Vector{X: (i + 0.5) * width, Y: 0})
-			body := w.Space.AddBody(cp.NewBody(5, cp.MomentForBox(1, width, height)))
+			mass := monster.Radius * monster.Radius
+			body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, width, height)))
 			body.SetPosition(pos)
 
 			arm.Bodies = append(arm.Bodies, body)
@@ -243,9 +237,16 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 }
 
 func (m *Monster) Render(w *World) {
-	rl.DrawCircle(int32(m.body.Position().X), int32(m.body.Position().Y), float32(m.radius), rl.Black)
+	// rl.DrawCircle(int32(m.body.Position().X), int32(m.body.Position().Y), float32(m.Radius), rl.Black)
 
-	// for _, arm := range m.Arms {
-	// DrawChain(arm.Bodies, arm.Shapes, rl.Black)
-	// }
+	pos := m.body.Position()
+
+	rl.DrawSphereEx(rl.Vector3{X: float32(pos.X), Y: 1, Z: float32(pos.Y)}, float32(m.Radius), 8, 8, rl.Black)
+
+	for _, arm := range m.Arms {
+		for i, segment := range arm.Bodies {
+			pos := segment.Position()
+			rl.DrawSphereEx(rl.Vector3{X: float32(pos.X), Y: 1, Z: float32(pos.Y)}, float32(arm.Monster.Radius/(1.2+float64(i)/10)), 8, 8, rl.Black)
+		}
+	}
 }
