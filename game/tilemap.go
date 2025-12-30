@@ -153,6 +153,30 @@ func (t *Tilemap) Render() {
 	}
 }
 
+func (t *Tilemap) CreateRoom(x, y, width, height int, doorDirection int) {
+	for w := range width {
+		t.Cols[x+w][y].Wall |= WALL_T
+		t.Cols[x+w][y+height-1].Wall |= WALL_B
+	}
+	for h := range height {
+		t.Cols[x][y+h].Wall |= WALL_L
+		t.Cols[x+width-1][y+h].Wall |= WALL_R
+	}
+
+	if doorDirection&WALL_T != 0 {
+		t.Cols[x+width/2][y].Wall = 0
+	}
+	if doorDirection&WALL_L != 0 {
+		t.Cols[x][y+height/2].Wall = 0
+	}
+	if doorDirection&WALL_B != 0 {
+		t.Cols[x+width/2][y+height-1].Wall = 0
+	}
+	if doorDirection&WALL_R != 0 {
+		t.Cols[x+width-1][y+height/2].Wall = 0
+	}
+}
+
 func (t *Tilemap) GenerateBodies(w *World) {
 	for x, rows := range t.Cols {
 		for y := range rows {

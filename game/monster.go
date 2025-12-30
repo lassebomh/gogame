@@ -8,7 +8,7 @@ import (
 )
 
 type Monster struct {
-	body   *cp.Body
+	Body   *cp.Body
 	Arms   []MonsterArm
 	Radius float64
 }
@@ -19,6 +19,8 @@ type MonsterArm struct {
 	Shapes            []*cp.Shape
 	RotaryLimitJoints []*cp.Constraint
 	Path              []cp.Vector
+	Width             float64
+	Height            float64
 }
 
 func (arm *MonsterArm) Update(w *World) {
@@ -46,8 +48,8 @@ func (arm *MonsterArm) Update(w *World) {
 }
 
 func (m *Monster) Update(w *World) {
-	newVelocity := m.body.Velocity().Mult(0.90)
-	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
+	newVelocity := m.Body.Velocity().Mult(0.80)
+	m.Body.SetVelocity(newVelocity.X, newVelocity.Y)
 
 	for i := range m.Arms {
 		arm := &m.Arms[i]
@@ -73,7 +75,7 @@ func (m *Monster) Update(w *World) {
 		// targetPoint := arm.Path[0]
 
 		var tangle float64 = 0
-		prevBody := m.body
+		prevBody := m.Body
 		diffs := make([]cp.Vector, len(arm.Bodies))
 		angles := make([]float64, len(arm.Bodies)-1)
 
@@ -134,10 +136,14 @@ func (m *Monster) Update(w *World) {
 }
 
 func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vector, power float64) {
-	lastSegment := arm.Bodies[len(arm.Bodies)-1]
-	lastPos := lastSegment.Position()
+	tip := arm.Bodies[len(arm.Bodies)-1]
+	tipPos := tip.Position()
 
-	direction := point.Sub(lastPos)
+	// base := arm.Bodies[0]
+	// newBaseVelocity := base.Velocity().Mult(0.9)
+	// base.SetVelocity(newBaseVelocity.X, newBaseVelocity.Y)
+
+	direction := point.Sub(tipPos)
 	distance := direction.Length()
 
 	if distance > 0 {
@@ -146,9 +152,9 @@ func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vecto
 		direction = cp.Vector{X: math.Cos(desiredAngle), Y: math.Sin(desiredAngle)}
 
 		force := direction.Mult(5000 * power)
-		lastSegment.SetForce(force)
+		tip.SetForce(force)
 
-		currentAngle := lastSegment.Angle()
+		currentAngle := tip.Angle()
 
 		angleDiff := desiredAngle - currentAngle
 		for angleDiff > math.Pi {
@@ -159,7 +165,7 @@ func (arm *MonsterArm) TargetPoint(w *World, offsetAngle float32, point cp.Vecto
 		}
 
 		torque := angleDiff * 1000
-		lastSegment.SetTorque(torque)
+		tip.SetTorque(torque)
 	}
 }
 
@@ -168,7 +174,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 
 	monster := &Monster{
 		Arms:   make([]MonsterArm, 0),
-		Radius: 2.,
+		Radius: 2.5,
 	}
 
 	mass := monster.Radius * monster.Radius * 10
@@ -180,12 +186,10 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 	shape.SetFriction(0.9)
 	shape.Filter.Group = group
 
-	monster.body = body
+	monster.Body = body
 
-	var width float64 = monster.Radius / 2
-	var height float64 = monster.Radius * 1.5
+	for range 4 {
 
-	for range 3 {
 		arm := MonsterArm{
 			Monster: monster,
 			Bodies:  make([]*cp.Body, 0),
@@ -195,15 +199,19 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 		var prevBody *cp.Body
 
 		for bodyI := range 14 {
+
 			i := float64(bodyI)
-			pos := position.Add(cp.Vector{X: (i + 0.5) * width, Y: 0})
-			mass := monster.Radius * monster.Radius
-			body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, width, height)))
+			bodyWidth := monster.Radius * 0.8
+			bodyHeight := monster.Radius / (1 + i/5)
+			mass := bodyWidth * bodyHeight * 5
+
+			pos := position.Add(cp.Vector{X: (i + 0.5) * bodyWidth, Y: 0})
+			body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, bodyWidth, bodyHeight)))
 			body.SetPosition(pos)
 
 			arm.Bodies = append(arm.Bodies, body)
 
-			shape := w.Space.AddShape(cp.NewBox(body, width, height/(1+i/5), 0))
+			shape := w.Space.AddShape(cp.NewBox(body, bodyWidth, bodyHeight, 0))
 			shape.SetElasticity(0.5)
 			shape.SetFriction(0.7)
 			shape.Filter.Group = group
@@ -211,7 +219,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 
 			if prevBody != nil {
 
-				pivot := pos.Add(cp.Vector{X: -width / 2, Y: 0})
+				pivot := pos.Add(cp.Vector{X: -bodyWidth / 2, Y: 0})
 				constraint := w.Space.AddConstraint(cp.NewPivotJoint(prevBody, body, pivot))
 				constraint.SetMaxForce(1000000)
 				rotaryLimitAngle := rl.Pi / 4
@@ -220,8 +228,8 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 				arm.RotaryLimitJoints = append(arm.RotaryLimitJoints, rotaryLimit)
 
 			} else {
-				pivot := pos.Add(cp.Vector{X: -width / 2, Y: 0})
-				constraint := w.Space.AddConstraint(cp.NewPivotJoint(monster.body, body, pivot))
+				pivot := pos.Add(cp.Vector{X: -bodyWidth / 2, Y: 0})
+				constraint := w.Space.AddConstraint(cp.NewPivotJoint(monster.Body, body, pivot))
 				constraint.SetMaxForce(1000000)
 
 			}
@@ -239,7 +247,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 func (m *Monster) Render(w *World) {
 	// rl.DrawCircle(int32(m.body.Position().X), int32(m.body.Position().Y), float32(m.Radius), rl.Black)
 
-	pos := m.body.Position()
+	pos := m.Body.Position()
 
 	rl.DrawSphereEx(rl.Vector3{X: float32(pos.X), Y: 1, Z: float32(pos.Y)}, float32(m.Radius), 8, 8, rl.Black)
 

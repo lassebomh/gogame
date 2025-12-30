@@ -20,14 +20,22 @@ func main() {
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 
-	tilemap := NewTilemap(10, 10, 10)
-	tilemap.Cols[1][1].Wall = WALL_L | WALL_T
-	tilemap.Cols[2][1].Wall = WALL_T
-	tilemap.Cols[3][1].Wall = WALL_T | WALL_R
-	tilemap.Cols[3][3].Wall = WALL_B | WALL_R
-	tilemap.Cols[2][3].Wall = WALL_B
-	tilemap.Cols[1][3].Wall = WALL_B | WALL_L
-	tilemap.Cols[1][2].Wall = WALL_L
+	tilemap := NewTilemap(40, 40, 10)
+
+	roomWidth := 5
+	roomHeight := 5
+	rooms := 5
+
+	for x := range rooms {
+		for y := range rooms {
+			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
+		}
+	}
+
+	// tilemap.CreateRoom(1, 1, 4, 4, WALL_R)
+	// tilemap.CreateRoom(6, 1, 4, 4, WALL_R|WALL_L)
+	// tilemap.CreateRoom(6, 6, 4, 4, WALL_R|WALL_L)
+	// tilemap.CreateRoom(1, 6, 4, 4, WALL_R|WALL_L)
 
 	w := NewWorld(tilemap)
 	tilemap.GenerateBodies(w)
@@ -45,6 +53,12 @@ func main() {
 	wall := rl.LoadModel("./models/cube.glb")
 	wall.Materials.Shader = shader
 
+	monsterArm := rl.LoadModel("./models/cube3d.glb")
+	monsterArm.Materials.Shader = shader
+
+	monsterBody := rl.LoadModel("./models/monster_body.glb")
+	monsterBody.Materials.Shader = shader
+
 	cam := rl.Camera3D{}
 	cam.Fovy = 70
 	cam.Position = rl.Vector3{X: 0, Y: 2, Z: 0}
@@ -57,7 +71,7 @@ func main() {
 	l.Init(0.0, rl.Vector3{X: 1, Y: 1, Z: 1})
 	l1 := l.NewLight(LightTypePoint, rl.Vector3{X: 10, Y: 5, Z: 30}, rl.Vector3{}, rl.Yellow, 10, &l.Shader)
 	l2 := l.NewLight(LightTypePoint, rl.Vector3{X: 2, Y: 5, Z: 1}, rl.Vector3{}, rl.Green, 10, &l.Shader)
-	l3 := l.NewLight(LightTypePoint, rl.Vector3{X: 30, Y: 5, Z: 12}, rl.Vector3{}, rl.Red, 20, &l.Shader)
+	l3 := l.NewLight(LightTypePoint, rl.Vector3{X: 30, Y: 5, Z: 12}, rl.Vector3{}, rl.White, 20, &l.Shader)
 	l4 := l.NewLight(LightTypePoint, rl.Vector3{X: 10, Y: 5, Z: 30}, rl.Vector3{}, rl.Blue, 10, &l.Shader)
 
 	p := PhysicRender{}
@@ -79,6 +93,19 @@ func main() {
 	wallMat.Shader = shader
 	p.TextureMapAlbedo(wallMat, rl.LoadTexture("./models/bricks_a.png"))
 	p.TextureMapNormal(wallMat, rl.LoadTexture("./models/bricks_n.png"))
+
+	p.UseTexNormal()
+	// p.RoughnessValue(0.75)
+	// p.NormalValue(0.3)
+	monsterArmMat := &monsterArm.GetMaterials()[0]
+	monsterArmMat.Shader = shader
+	p.TextureMapAlbedo(monsterArmMat, rl.LoadTexture("./models/Segment.png"))
+	p.TextureMapNormal(monsterArmMat, rl.LoadTexture("./models/Segment_normal.png"))
+
+	monsterBodyMat := &monsterBody.GetMaterials()[0]
+	monsterBodyMat.Shader = shader
+	p.TextureMapAlbedo(monsterBodyMat, rl.LoadTexture("./models/Segment.png"))
+	p.TextureMapNormal(monsterBodyMat, rl.LoadTexture("./models/Segment_normal.png"))
 
 	fmt.Printf("%+v\n", wallMat)
 	fmt.Printf("%+v\n", planeMat)
@@ -102,9 +129,7 @@ func main() {
 		// cam.Position = rl.Vector3Add(position, rl.Vector3{X: float32(math.Cos(t/5)) * 55, Y: 55, Z: float32(math.Sin(t/5)) * 55})
 		cam.Position = rl.Vector3Add(position, rl.Vector3{X: 0, Y: 50, Z: 20})
 
-		// rl.UpdateCamera(&cam, rl.CameraOrbital)
-
-		l3.Position = rl.Vector3Add(position, rl.Vector3{0, 4, 0})
+		l3.Position = rl.Vector3Add(position, rl.Vector3{X: 0, Y: 10, Z: 0})
 		l3.UpdateValues()
 
 		p.UpdateByCamera(cam.Position)
@@ -182,7 +207,42 @@ func main() {
 		l.DrawSpherelight(&l4)
 
 		rl.DrawSphereEx(position, w.Player.Radius, 12, 12, rl.Red)
-		w.Monster.Render(w)
+		// w.Monster.Render(w)
+
+		pos := w.Monster.Body.Position()
+
+		rl.DrawModelEx(
+			monsterBody,
+			rl.Vector3{X: float32(pos.X), Y: float32(w.Monster.Radius), Z: float32(pos.Y)},
+			rl.Vector3{X: 0, Y: 1, Z: 0},
+			float32(-w.Monster.Body.Angle())*rl.Rad2deg, rl.Vector3Scale(rl.Vector3One(), float32(w.Monster.Radius)), rl.DarkGray)
+
+		for _, arm := range w.Monster.Arms {
+			for i, segment := range arm.Bodies {
+				pos := segment.Position()
+				angle := segment.Angle()
+				armPos := rl.Vector3Add(
+					rl.Vector3{X: float32(pos.X), Y: float32(w.Monster.Radius), Z: float32(pos.Y)},
+					rl.Vector3{X: 0, Y: 0, Z: 0},
+				)
+				width := w.Monster.Radius / 2
+				height := (w.Monster.Radius) / (1 + float64(i)/3)
+				rl.DrawModelEx(
+					monsterArm,
+					armPos,
+					rl.Vector3{
+						X: 0,
+						Y: 1,
+						Z: 0,
+					},
+					float32(-angle)*rl.Rad2deg,
+					rl.Vector3{X: float32(width), Y: 1, Z: float32(height)},
+					rl.DarkGray,
+				)
+				// rl.DrawSphereEx(rl.Vector3{X: float32(pos.X), Y: 1, Z: float32(pos.Y)}, float32(arm.Monster.Radius/(1.2+float64(i)/10)), 8, 8, rl.Black)
+			}
+		}
+
 		rl.DrawGrid(5, 5)
 
 		rl.EndMode3D()
