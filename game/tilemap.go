@@ -11,6 +11,33 @@ import (
 
 var p astar.Pather = &Tile{}
 
+const (
+	WALL_T = 1 << iota
+	WALL_R
+	WALL_B
+	WALL_L
+)
+
+type Tile struct {
+	Wall int
+	X    int
+	Y    int
+
+	WorldPosition cp.Vector
+
+	tilemap  *Tilemap
+	wallBody *cp.Body
+}
+
+type Tilemap struct {
+	Cols           [][]Tile
+	Scale          float64
+	Width          int
+	Height         int
+	CenterPosition cp.Vector
+	WallDepthRatio float32
+}
+
 func (t *Tile) PathNeighbors() []astar.Pather {
 	neighbors := make([]astar.Pather, 0, 4)
 
@@ -57,32 +84,6 @@ func (t *Tile) PathEstimatedCost(to astar.Pather) float64 {
 	other := to.(*Tile)
 	return math.Hypot(float64(t.X-other.X), float64(t.Y-other.Y))
 }
-
-const (
-	WALL_T = 1 << iota
-	WALL_R
-	WALL_B
-	WALL_L
-)
-
-type Tile struct {
-	Wall int
-	X    int
-	Y    int
-
-	tilemap  *Tilemap
-	wallBody *cp.Body
-}
-
-type Tilemap struct {
-	Cols           [][]Tile
-	Scale          float64
-	Width          int
-	Height         int
-	CenterPosition cp.Vector
-	WallDepthRatio float32
-}
-
 func NewTilemap(width int, height int, scale float64) *Tilemap {
 	tilemap := &Tilemap{
 		Cols:           make([][]Tile, width),
@@ -95,7 +96,7 @@ func NewTilemap(width int, height int, scale float64) *Tilemap {
 	for x := range width {
 		col := make([]Tile, height)
 		for y := range height {
-			col[y] = Tile{X: x, Y: y, tilemap: tilemap}
+			col[y] = Tile{X: x, Y: y, tilemap: tilemap, WorldPosition: cp.Vector{X: float64(x) * tilemap.Scale, Y: float64(y) * tilemap.Scale}}
 		}
 
 		tilemap.Cols[x] = col
@@ -244,19 +245,68 @@ func (t *Tilemap) GenerateBodies(w *World) {
 	}
 }
 
-func RenderPath(path []cp.Vector, color rl.Color) {
-	if len(path) < 2 {
-		return
+func GenerateMaze(tilemap *Tilemap, startX, startY, width, height int) {
+	// 1. Fill the area with walls
+	for x := 0; x < width; x++ {
+		for y := 0; y < width; y++ {
+			tilemap.Cols[startX+x][startY+y].Wall = WALL_R | WALL_L | WALL_T | WALL_B
+		}
 	}
 
-	for i := 0; i < len(path)-1; i++ {
-		start := path[i]
-		end := path[i+1]
-		rl.DrawLineV(v(start), v(end), color)
-	}
+	type cell struct{ x, y int }
+	visited := make(map[cell]bool)
+	stack := []cell{{startX, startY}}
+	visited[cell{startX, startY}] = true
 
-	// Optional: Draw dots at each waypoint
-	for _, point := range path {
-		rl.DrawCircleV(v(point), 3, color)
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+
+		// Find unvisited neighbors
+		var neighbors []cell
+		dirs := []struct {
+			dx, dy        int
+			wall, oppWall int
+		}{
+			{0, -1, WALL_T, WALL_B}, // Top
+			{0, 1, WALL_B, WALL_T},  // Bottom
+			{-1, 0, WALL_L, WALL_R}, // Left
+			{1, 0, WALL_R, WALL_L},  // Right
+		}
+
+		for _, d := range dirs {
+			nx, ny := current.x+d.dx, current.y+d.dy
+			if nx >= startX && nx < startX+width && ny >= startY && ny < startY+height {
+				if !visited[cell{nx, ny}] {
+					neighbors = append(neighbors, cell{nx, ny})
+				}
+			}
+		}
+
+		if len(neighbors) > 0 {
+			// Pick random neighbor
+			next := neighbors[rl.GetRandomValue(0, int32(len(neighbors)-1))]
+
+			// Remove walls between current and next
+			dx, dy := next.x-current.x, next.y-current.y
+			if dx == 1 {
+				tilemap.Cols[current.x][current.y].Wall &= ^WALL_R
+				tilemap.Cols[next.x][next.y].Wall &= ^WALL_L
+			} else if dx == -1 {
+				tilemap.Cols[current.x][current.y].Wall &= ^WALL_L
+				tilemap.Cols[next.x][next.y].Wall &= ^WALL_R
+			} else if dy == 1 {
+				tilemap.Cols[current.x][current.y].Wall &= ^WALL_B
+				tilemap.Cols[next.x][next.y].Wall &= ^WALL_T
+			} else if dy == -1 {
+				tilemap.Cols[current.x][current.y].Wall &= ^WALL_T
+				tilemap.Cols[next.x][next.y].Wall &= ^WALL_B
+			}
+
+			visited[next] = true
+			stack = append(stack, next)
+		} else {
+			// Backtrack
+			stack = stack[:len(stack)-1]
+		}
 	}
 }

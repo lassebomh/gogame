@@ -5,6 +5,13 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
+// type Game struct {
+// 	Accumulator   float32
+// 	DT            float32
+// 	Camera        rl.Camera3D
+// 	PhysicsDrawer *RaylibDrawer
+// }
+
 type World struct {
 	Player        *Player
 	Space         *cp.Space
@@ -13,13 +20,13 @@ type World struct {
 	Items         []*PhysicalItem
 	Accumulator   float32
 	DT            float32
-	Camera        rl.Camera2D
+	Camera        rl.Camera3D
 	PhysicsDrawer *RaylibDrawer
 }
 
 func (w *World) NewPhysicalItem(item Item, pos cp.Vector) *PhysicalItem {
 
-	radius := 20.
+	radius := 1.
 	mass := radius * radius / 25.0
 	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, radius, cp.Vector{})))
 	body.SetPosition(pos)
@@ -29,8 +36,9 @@ func (w *World) NewPhysicalItem(item Item, pos cp.Vector) *PhysicalItem {
 	shape.SetFriction(0.9)
 
 	pitem := &PhysicalItem{
-		Item: item,
-		Body: body,
+		Item:   item,
+		Body:   body,
+		Radius: radius,
 	}
 
 	w.Items = append(w.Items, pitem)
@@ -58,17 +66,24 @@ func NewWorld(tilemap *Tilemap) *World {
 	space.Iterations = 20
 	space.SetCollisionSlop(0.5)
 
+	cam := rl.Camera3D{}
+	cam.Fovy = 45
+	cam.Position = rl.Vector3{X: 0, Y: 2, Z: 0}
+	cam.Target = rl.Vector3{X: 0, Y: 0, Z: -0.2}
+	cam.Projection = rl.CameraOrthographic
+	cam.Up = rl.Vector3{X: 0, Y: 1, Z: 0}
+
 	world := &World{
 		Space:  space,
-		Camera: rl.NewCamera2D(rl.Vector2{}, rl.Vector2{}, 0, 1),
+		Camera: cam,
 		Items:  make([]*PhysicalItem, 0),
 	}
 
 	world.Tilemap = tilemap
 	world.Tilemap.GenerateBodies(world)
 
-	world.Player = NewPlayer(world, tilemap.CenterPosition)
-	world.Monster = NewMonster(world, tilemap.CenterPosition)
+	world.Player = NewPlayer(world, tilemap.CenterPosition.Add(cp.Vector{Y: 15}))
+	// world.Monster = NewMonster(world, tilemap.CenterPosition)
 
 	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 
@@ -85,6 +100,11 @@ func (w *World) Update(dt float32) {
 		w.Accumulator -= physicsTickrate
 	}
 
+	playerPos := VecFrom2D(w.Player.Body.Position(), float64(w.Player.Radius))
+
+	w.Camera.Target = playerPos.Vector3
+	w.Camera.Position = playerPos.Add(NewVec(0, 50, 20)).Vector3
+
 	if w.Player != nil {
 		w.Player.Update(w)
 	}
@@ -94,13 +114,14 @@ func (w *World) Update(dt float32) {
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseLeftButton) {
-		mousePos := rl.GetMousePosition()
-		worldPos := rl.GetScreenToWorld2D(mousePos, w.Camera)
+		mouseRay := rl.GetScreenToWorldRay(rl.GetMousePosition(), w.Camera)
 
 		cpWorldPos := cp.Vector{
-			X: float64(worldPos.X),
-			Y: float64(worldPos.Y),
+			X: float64(mouseRay.Position.X),
+			Y: float64(mouseRay.Position.Z - (mouseRay.Position.Y/mouseRay.Direction.Y)*mouseRay.Direction.Z),
 		}
+		Debug("cp", cpWorldPos)
+		Debug("player", w.Player.Body.Position())
 
 		info := w.Space.PointQueryNearest(cpWorldPos, 0, cp.ShapeFilter{
 			Group:      cp.NO_GROUP,
@@ -126,40 +147,4 @@ func (w *World) Update(dt float32) {
 	for _, item := range w.Items {
 		item.Update(w)
 	}
-}
-
-func (w *World) Render() {
-
-	w.Camera.Offset = rl.Vector2{X: float32(rl.GetRenderWidth()) / 2, Y: float32(rl.GetRenderHeight()) / 2}
-	cameraTarget := cp.Vector{X: float64(w.Camera.Target.X), Y: float64(w.Camera.Target.Y)}
-	cameraTarget = cameraTarget.Lerp(w.Player.Body.Position(), 0.05)
-	w.Camera.Target = v(cameraTarget)
-
-	rl.BeginMode2D(w.Camera)
-
-	w.Tilemap.Render()
-
-	if w.PhysicsDrawer != nil {
-		cp.DrawSpace(w.Space, w.PhysicsDrawer)
-	}
-
-	for _, arm := range w.Monster.Arms {
-		if arm.Path != nil {
-			RenderPath(arm.Path, rl.Blue)
-		}
-	}
-
-	w.Monster.Render(w)
-
-	// w.Player.Render(w)
-
-	rl.EndMode2D()
-
-	w.Player.RenderHud(w)
-	rl.DrawFPS(0, 0)
-
-}
-
-func v(v cp.Vector) rl.Vector2 {
-	return rl.Vector2{X: float32(v.X), Y: float32(v.Y)}
 }

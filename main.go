@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	. "game/game"
 	. "game/lib"
+	"image/color"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
@@ -13,7 +13,7 @@ func main() {
 	screenWidth := int32(1200)
 	screenHeight := int32(800)
 
-	pixelScale := int32(1)
+	pixelScale := int32(4)
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
 
@@ -23,10 +23,13 @@ func main() {
 
 	if rl.GetMonitorCount() > 1 {
 		pos := rl.GetMonitorPosition(1)
-		rl.SetWindowPosition(int(pos.X)+50, int(pos.Y)+50)
+		rl.SetWindowPosition(int(pos.X), int(pos.Y))
 	}
 
-	tilemap := NewTilemap(40, 40, 7)
+	tilemap := NewTilemap(2, 2, 7)
+
+	// GenerateMaze(tilemap, 10, 10, 10, 10)
+	// tilemap.Cols[18][19].Wall = 0
 
 	// roomWidth := 5
 	// roomHeight := 5
@@ -53,13 +56,6 @@ func main() {
 	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
 
 	shader := rl.LoadShader("./glsl330/pbr.vs", "./glsl330/pbr.fs")
-
-	cam := rl.Camera3D{}
-	cam.Fovy = 70
-	cam.Position = rl.Vector3{X: 0, Y: 2, Z: 0}
-	cam.Target = rl.Vector3{X: 0, Y: 0, Z: -0.2}
-	cam.Projection = rl.CameraOrthographic
-	cam.Up = rl.Vector3{X: 0, Y: 1, Z: 0}
 
 	l := Light{}
 	l.SetCombineShader(&shader)
@@ -93,23 +89,24 @@ func main() {
 	p.TextureMapNormal(wallMat, rl.LoadTexture("./models/wall_n.png"))
 	p.TextureMapMetalness(wallMat, rl.LoadTexture("./models/wall_mra.png"))
 
-	monsterArm := rl.LoadModel("./models/monster/cube3d.glb")
+	monsterArm := rl.LoadModel("./models/monster/monster_arm_segment.glb")
 	monsterArm.Materials.Shader = shader
-
-	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
-	monsterBody.Materials.Shader = shader
-
 	monsterArmMat := &monsterArm.GetMaterials()[0]
 	monsterArmMat.Shader = shader
 	p.TextureMapAlbedo(monsterArmMat, rl.LoadTexture("./models/monster/Segment.png"))
 	p.TextureMapNormal(monsterArmMat, rl.LoadTexture("./models/monster/Segment_normal.png"))
 	p.TextureMapMetalness(monsterArmMat, rl.LoadTexture("./models/monster/Segment_mra.png"))
 
+	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
+	monsterBody.Materials.Shader = shader
 	monsterBodyMat := &monsterBody.GetMaterials()[0]
 	monsterBodyMat.Shader = shader
 	p.TextureMapAlbedo(monsterBodyMat, rl.LoadTexture("./models/monster/Segment.png"))
 	p.TextureMapNormal(monsterBodyMat, rl.LoadTexture("./models/monster/Segment_normal.png"))
 	p.TextureMapMetalness(monsterBodyMat, rl.LoadTexture("./models/monster/Segment_mra.png"))
+
+	house := rl.LoadModel("./models/monster/house.glb")
+	house.Materials.Shader = shader
 
 	rl.SetTargetFPS(60)
 
@@ -122,22 +119,16 @@ func main() {
 
 		w.Update(float32(dt))
 
-		playerPos := w.Player.Body.Position()
-		fmt.Printf("%+v\n", playerPos)
-		position := rl.Vector3{X: float32(playerPos.X), Y: .1, Z: float32(playerPos.Y)}
+		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius)
 
-		cam.Target = rl.Vector3Add(position, rl.Vector3{Y: 0, Z: 0})
-		// cam.Position = rl.Vector3Add(position, rl.Vector3{X: float32(math.Cos(t/5)) * 55, Y: 55, Z: float32(math.Sin(t/5)) * 55})
-		cam.Position = rl.Vector3Add(position, rl.Vector3{X: 0, Y: 50, Z: 20})
+		l3.Position = playerPos.Add(NewVec(0, 10, 0)).Vector3
+		// l3.UpdateValues()
 
-		l3.Position = rl.Vector3Add(position, rl.Vector3{X: 0, Y: 10, Z: 0})
-		l3.UpdateValues()
-
-		p.UpdateByCamera(cam.Position)
+		p.UpdateByCamera(w.Camera.Position)
 
 		rl.BeginTextureMode(renderTexture)
 		rl.ClearBackground(rl.Black)
-		rl.BeginMode3D(cam)
+		rl.BeginMode3D(w.Camera)
 
 		p.AmbientColor(rl.Vector3{X: 1, Y: 1, Z: 1}, 0.1)
 
@@ -145,59 +136,28 @@ func main() {
 			for _, tile := range col {
 
 				scale := float32(w.Tilemap.Scale)
-				pos := rl.Vector3{X: float32(tile.X) * scale, Y: 0, Z: float32(tile.Y) * scale}
 
-				rl.DrawModel(plane, rl.Vector3Add(pos, rl.Vector3{X: scale / 2, Y: 0, Z: scale / 2}), scale/2, rl.White)
+				pos := VecFrom2D(tile.WorldPosition, 0)
+
+				rl.DrawModel(plane, pos.Add(XZ.Scale(scale/2)).Vector3, scale/2, rl.White)
+
+				scaleVec := XYZ.Scale(scale * 0.5).Vector3
 
 				if tile.Wall&WALL_L != 0 {
-					wallPos := rl.Vector3Add(pos, rl.NewVector3(0, 0, float32(w.Tilemap.Scale)))
-					rl.DrawModel(wall, wallPos, float32(w.Tilemap.Scale)/2, rl.White)
+					wallPos := pos.Add(NewVec(0, 0, scale))
+					rl.DrawModel(wall, wallPos.Vector3, scale/2, rl.White)
 				}
 				if tile.Wall&WALL_T != 0 {
-					wallPos := rl.Vector3Add(pos, rl.NewVector3(float32(w.Tilemap.Scale), 0, float32(w.Tilemap.Scale)*w.Tilemap.WallDepthRatio))
-					rl.DrawModelEx(
-						wall,
-						wallPos,
-						rl.Vector3{
-							X: 0,
-							Y: 1,
-							Z: 0,
-						},
-						90,
-						rl.Vector3{float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2},
-						rl.RayWhite,
-					)
+					wallPos := pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio))
+					rl.DrawModelEx(wall, wallPos.Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
 				}
-
 				if tile.Wall&WALL_R != 0 {
-					wallPos := rl.Vector3Add(pos, rl.Vector3{float32(w.Tilemap.Scale), 0, 0})
-					rl.DrawModelEx(
-						wall,
-						wallPos,
-						rl.Vector3{
-							X: 0,
-							Y: 1,
-							Z: 0,
-						},
-						180,
-						rl.Vector3{float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2},
-						rl.RayWhite,
-					)
+					wallPos := pos.Add(NewVec(scale, 0, 0))
+					rl.DrawModelEx(wall, wallPos.Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
 				}
 				if tile.Wall&WALL_B != 0 {
-					wallPos := rl.Vector3Add(pos, rl.Vector3{0, 0, float32(w.Tilemap.Scale) * (1 - w.Tilemap.WallDepthRatio)})
-					rl.DrawModelEx(
-						wall,
-						wallPos,
-						rl.Vector3{
-							X: 0,
-							Y: 1,
-							Z: 0,
-						},
-						270,
-						rl.Vector3{float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2, float32(w.Tilemap.Scale) / 2},
-						rl.RayWhite,
-					)
+					wallPos := pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio)))
+					rl.DrawModelEx(wall, wallPos.Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
 				}
 			}
 		}
@@ -207,44 +167,58 @@ func main() {
 		l.DrawSpherelight(&l3)
 		l.DrawSpherelight(&l4)
 
-		rl.DrawSphereEx(position, w.Player.Radius, 12, 12, rl.Red)
+		rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
+
+		for _, pitem := range w.Items {
+			rl.DrawSphereEx(VecFrom2D(pitem.Body.Position(), pitem.Radius).Vector3, float32(pitem.Radius), 12, 12, rl.Red)
+		}
 
 		if w.Monster != nil {
 
-			pos := w.Monster.Body.Position()
+			monsterRadius := float32(w.Monster.Radius)
 			rl.DrawModelEx(
 				monsterBody,
-				rl.NewVector3(float32(pos.X), float32(w.Monster.Radius), float32(pos.Y)),
-				rl.NewVector3(0, 1, 0),
-				float32(-w.Monster.Body.Angle())*rl.Rad2deg, rl.NewVector3(float32(w.Monster.Radius)*1.3, float32(w.Monster.Radius)/2, float32(w.Monster.Radius)),
-				rl.White,
+				VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius).Vector3,
+				Y.Vector3,
+				float32(-w.Monster.Body.Angle())*rl.Rad2deg,
+				NewVec(monsterRadius*1.3, monsterRadius/2, monsterRadius*1.3).Vector3,
+				rl.Gray,
 			)
 
 			for _, arm := range w.Monster.Arms {
 				for _, segment := range arm.Segments {
-					pos := segment.Body.Position()
-
 					rl.DrawModelEx(
 						monsterArm,
-						rl.NewVector3(float32(pos.X), float32(w.Monster.Radius), float32(pos.Y)),
-						rl.NewVector3(0, 1, 0),
+						VecFrom2D(segment.Body.Position(), w.Monster.Radius).Vector3,
+						Y.Vector3,
 						float32(-segment.Body.Angle())*rl.Rad2deg,
-						rl.Vector3{X: float32(segment.Length), Y: 1, Z: float32(segment.Width)},
-						rl.White,
+						NewVec(float32(segment.Length)*1.1, float32(segment.Width)/2, float32(segment.Width)).Vector3,
+						rl.Gray,
 					)
 				}
 			}
 		}
 
-		rl.DrawGrid(5, 5)
+		// rl.DrawGrid(5, 5)
 
-		cp.DrawSpace(w.Space, w.PhysicsDrawer)
+		// rl.DrawRenderBatchActive()
+		// rl.DisableDepthTest()
+		// // cp.DrawSpace(w.Space, w.PhysicsDrawer)
+		// DrawLine(rl.Red, w.Monster.Path...)
+		// if w.Monster != nil {
+		// 	for _, arm := range w.Monster.Arms {
+		// 		DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
+		// 	}
+		// 	DrawLine(rl.Green, w.Monster.Body.Position(), w.Monster.Target)
+		// }
+		// rl.DrawRenderBatchActive()
+		// rl.EnableDepthTest()
+
+		rl.DrawModelEx(house, (playerPos.Add(X.Scale(20))).Vector3, YZ.Normalize().Vector3, rl.Pi/4, XYZ.Scale(3).Vector3, rl.White)
 
 		rl.EndMode3D()
-
 		rl.EndTextureMode()
 
-		// Draw scaled-up texture to screen
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
 		rl.DrawTexturePro(
@@ -256,8 +230,25 @@ func main() {
 			rl.White,
 		)
 
+		w.Player.RenderHud(w)
 		rl.DrawFPS(10, 20)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
+}
+
+func DrawLine(col color.RGBA, ps ...cp.Vector) {
+	if len(ps) != 0 {
+
+		rl.DrawSphere(VecFrom2D(ps[0], 2).Vector3, 0.3, col)
+
+	}
+
+	for i := 0; i < len(ps)-1; i++ {
+		p1 := VecFrom2D(ps[i], 2)
+		p2 := VecFrom2D(ps[i+1], 2)
+		rl.DrawSphere(p2.Vector3, 0.3, col)
+		rl.DrawLine3D(p1.Vector3, p2.Vector3, col)
+	}
+
 }
