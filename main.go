@@ -6,31 +6,37 @@ import (
 	. "game/lib"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
 )
 
 func main() {
 	screenWidth := int32(1200)
 	screenHeight := int32(800)
 
-	pixelScale := int32(4)
+	pixelScale := int32(1)
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
 
-	rl.SetConfigFlags(rl.FlagWindowHighdpi | rl.FlagVsyncHint)
+	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 
-	tilemap := NewTilemap(40, 40, 10)
-
-	roomWidth := 5
-	roomHeight := 5
-	rooms := 5
-
-	for x := range rooms {
-		for y := range rooms {
-			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
-		}
+	if rl.GetMonitorCount() > 1 {
+		pos := rl.GetMonitorPosition(1)
+		rl.SetWindowPosition(int(pos.X)+50, int(pos.Y)+50)
 	}
+
+	tilemap := NewTilemap(40, 40, 7)
+
+	// roomWidth := 5
+	// roomHeight := 5
+	// rooms := 5
+
+	// for x := range rooms {
+	// 	for y := range rooms {
+	// 		tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
+	// 	}
+	// }
 
 	// tilemap.CreateRoom(1, 1, 4, 4, WALL_R)
 	// tilemap.CreateRoom(6, 1, 4, 4, WALL_R|WALL_L)
@@ -46,18 +52,7 @@ func main() {
 	defer rl.UnloadRenderTexture(renderTexture)
 	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
 
-	plane := rl.LoadModel("./models/plane.glb")
-
 	shader := rl.LoadShader("./glsl330/pbr.vs", "./glsl330/pbr.fs")
-
-	wall := rl.LoadModel("./models/cube.glb")
-	wall.Materials.Shader = shader
-
-	monsterArm := rl.LoadModel("./models/cube3d.glb")
-	monsterArm.Materials.Shader = shader
-
-	monsterBody := rl.LoadModel("./models/monster_body.glb")
-	monsterBody.Materials.Shader = shader
 
 	cam := rl.Camera3D{}
 	cam.Fovy = 70
@@ -71,7 +66,7 @@ func main() {
 	l.Init(0.0, rl.Vector3{X: 1, Y: 1, Z: 1})
 	l1 := l.NewLight(LightTypePoint, rl.Vector3{X: 10, Y: 5, Z: 30}, rl.Vector3{}, rl.Yellow, 10, &l.Shader)
 	l2 := l.NewLight(LightTypePoint, rl.Vector3{X: 2, Y: 5, Z: 1}, rl.Vector3{}, rl.Green, 10, &l.Shader)
-	l3 := l.NewLight(LightTypePoint, rl.Vector3{X: 30, Y: 5, Z: 12}, rl.Vector3{}, rl.White, 20, &l.Shader)
+	l3 := l.NewLight(LightTypePoint, rl.Vector3{X: 30, Y: 5, Z: 12}, rl.Vector3{}, rl.White, 12, &l.Shader)
 	l4 := l.NewLight(LightTypePoint, rl.Vector3{X: 10, Y: 5, Z: 30}, rl.Vector3{}, rl.Blue, 10, &l.Shader)
 
 	p := PhysicRender{}
@@ -79,36 +74,42 @@ func main() {
 	p.Init()
 
 	p.UseTexNormal()
-	p.RoughnessValue(0.75)
-	p.NormalValue(0.3)
+	p.UseTexMRA()
+	p.UseTexAlbedo()
+	p.SetTiling(rl.NewVector2(1, 1))
+
+	plane := rl.LoadModel("./models/plane.glb")
 	planeMat := &plane.GetMaterials()[0]
 	planeMat.Shader = shader
-	p.TextureMapAlbedo(planeMat, rl.LoadTexture("./models/bricks_a.png"))
-	p.TextureMapNormal(planeMat, rl.LoadTexture("./models/bricks_n.png"))
+	p.TextureMapAlbedo(planeMat, rl.LoadTexture("./models/ground_a.png"))
+	p.TextureMapNormal(planeMat, rl.LoadTexture("./models/ground_n.png"))
+	p.TextureMapMetalness(planeMat, rl.LoadTexture("./models/ground_mra.png"))
 
-	p.UseTexNormal()
-	p.RoughnessValue(0.75)
-	p.NormalValue(0.3)
+	wall := rl.LoadModel("./models/cube.glb")
+	wall.Materials.Shader = shader
 	wallMat := &wall.GetMaterials()[0]
 	wallMat.Shader = shader
-	p.TextureMapAlbedo(wallMat, rl.LoadTexture("./models/bricks_a.png"))
-	p.TextureMapNormal(wallMat, rl.LoadTexture("./models/bricks_n.png"))
+	p.TextureMapAlbedo(wallMat, rl.LoadTexture("./models/wall_a.png"))
+	p.TextureMapNormal(wallMat, rl.LoadTexture("./models/wall_n.png"))
+	p.TextureMapMetalness(wallMat, rl.LoadTexture("./models/wall_mra.png"))
 
-	p.UseTexNormal()
-	// p.RoughnessValue(0.75)
-	// p.NormalValue(0.3)
+	monsterArm := rl.LoadModel("./models/monster/cube3d.glb")
+	monsterArm.Materials.Shader = shader
+
+	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
+	monsterBody.Materials.Shader = shader
+
 	monsterArmMat := &monsterArm.GetMaterials()[0]
 	monsterArmMat.Shader = shader
-	p.TextureMapAlbedo(monsterArmMat, rl.LoadTexture("./models/Segment.png"))
-	p.TextureMapNormal(monsterArmMat, rl.LoadTexture("./models/Segment_normal.png"))
+	p.TextureMapAlbedo(monsterArmMat, rl.LoadTexture("./models/monster/Segment.png"))
+	p.TextureMapNormal(monsterArmMat, rl.LoadTexture("./models/monster/Segment_normal.png"))
+	p.TextureMapMetalness(monsterArmMat, rl.LoadTexture("./models/monster/Segment_mra.png"))
 
 	monsterBodyMat := &monsterBody.GetMaterials()[0]
 	monsterBodyMat.Shader = shader
-	p.TextureMapAlbedo(monsterBodyMat, rl.LoadTexture("./models/Segment.png"))
-	p.TextureMapNormal(monsterBodyMat, rl.LoadTexture("./models/Segment_normal.png"))
-
-	fmt.Printf("%+v\n", wallMat)
-	fmt.Printf("%+v\n", planeMat)
+	p.TextureMapAlbedo(monsterBodyMat, rl.LoadTexture("./models/monster/Segment.png"))
+	p.TextureMapNormal(monsterBodyMat, rl.LoadTexture("./models/monster/Segment_normal.png"))
+	p.TextureMapMetalness(monsterBodyMat, rl.LoadTexture("./models/monster/Segment_mra.png"))
 
 	rl.SetTargetFPS(60)
 
@@ -146,14 +147,14 @@ func main() {
 				scale := float32(w.Tilemap.Scale)
 				pos := rl.Vector3{X: float32(tile.X) * scale, Y: 0, Z: float32(tile.Y) * scale}
 
-				rl.DrawModel(plane, rl.Vector3Add(pos, rl.Vector3{X: scale / 2, Y: 0, Z: scale / 2}), scale/2, rl.RayWhite)
+				rl.DrawModel(plane, rl.Vector3Add(pos, rl.Vector3{X: scale / 2, Y: 0, Z: scale / 2}), scale/2, rl.White)
 
 				if tile.Wall&WALL_L != 0 {
-					wallPos := rl.Vector3Add(pos, rl.Vector3{0, 0, float32(w.Tilemap.Scale)})
-					rl.DrawModel(wall, wallPos, float32(w.Tilemap.Scale)/2, rl.RayWhite)
+					wallPos := rl.Vector3Add(pos, rl.NewVector3(0, 0, float32(w.Tilemap.Scale)))
+					rl.DrawModel(wall, wallPos, float32(w.Tilemap.Scale)/2, rl.White)
 				}
 				if tile.Wall&WALL_T != 0 {
-					wallPos := rl.Vector3Add(pos, rl.Vector3{float32(w.Tilemap.Scale), 0, float32(w.Tilemap.Scale) * w.Tilemap.WallDepthRatio})
+					wallPos := rl.Vector3Add(pos, rl.NewVector3(float32(w.Tilemap.Scale), 0, float32(w.Tilemap.Scale)*w.Tilemap.WallDepthRatio))
 					rl.DrawModelEx(
 						wall,
 						wallPos,
@@ -207,45 +208,40 @@ func main() {
 		l.DrawSpherelight(&l4)
 
 		rl.DrawSphereEx(position, w.Player.Radius, 12, 12, rl.Red)
-		// w.Monster.Render(w)
 
-		pos := w.Monster.Body.Position()
+		if w.Monster != nil {
 
-		rl.DrawModelEx(
-			monsterBody,
-			rl.Vector3{X: float32(pos.X), Y: float32(w.Monster.Radius), Z: float32(pos.Y)},
-			rl.Vector3{X: 0, Y: 1, Z: 0},
-			float32(-w.Monster.Body.Angle())*rl.Rad2deg, rl.Vector3Scale(rl.Vector3One(), float32(w.Monster.Radius)), rl.DarkGray)
+			pos := w.Monster.Body.Position()
+			rl.DrawModelEx(
+				monsterBody,
+				rl.NewVector3(float32(pos.X), float32(w.Monster.Radius), float32(pos.Y)),
+				rl.NewVector3(0, 1, 0),
+				float32(-w.Monster.Body.Angle())*rl.Rad2deg, rl.NewVector3(float32(w.Monster.Radius)*1.3, float32(w.Monster.Radius)/2, float32(w.Monster.Radius)),
+				rl.White,
+			)
 
-		for _, arm := range w.Monster.Arms {
-			for i, segment := range arm.Bodies {
-				pos := segment.Position()
-				angle := segment.Angle()
-				armPos := rl.Vector3Add(
-					rl.Vector3{X: float32(pos.X), Y: float32(w.Monster.Radius), Z: float32(pos.Y)},
-					rl.Vector3{X: 0, Y: 0, Z: 0},
-				)
-				width := w.Monster.Radius / 2
-				height := (w.Monster.Radius) / (1 + float64(i)/3)
-				rl.DrawModelEx(
-					monsterArm,
-					armPos,
-					rl.Vector3{
-						X: 0,
-						Y: 1,
-						Z: 0,
-					},
-					float32(-angle)*rl.Rad2deg,
-					rl.Vector3{X: float32(width), Y: 1, Z: float32(height)},
-					rl.DarkGray,
-				)
-				// rl.DrawSphereEx(rl.Vector3{X: float32(pos.X), Y: 1, Z: float32(pos.Y)}, float32(arm.Monster.Radius/(1.2+float64(i)/10)), 8, 8, rl.Black)
+			for _, arm := range w.Monster.Arms {
+				for _, segment := range arm.Segments {
+					pos := segment.Body.Position()
+
+					rl.DrawModelEx(
+						monsterArm,
+						rl.NewVector3(float32(pos.X), float32(w.Monster.Radius), float32(pos.Y)),
+						rl.NewVector3(0, 1, 0),
+						float32(-segment.Body.Angle())*rl.Rad2deg,
+						rl.Vector3{X: float32(segment.Length), Y: 1, Z: float32(segment.Width)},
+						rl.White,
+					)
+				}
 			}
 		}
 
 		rl.DrawGrid(5, 5)
 
+		cp.DrawSpace(w.Space, w.PhysicsDrawer)
+
 		rl.EndMode3D()
+
 		rl.EndTextureMode()
 
 		// Draw scaled-up texture to screen
@@ -259,6 +255,7 @@ func main() {
 			0,
 			rl.White,
 		)
+
 		rl.DrawFPS(10, 20)
 		rl.EndDrawing()
 	}

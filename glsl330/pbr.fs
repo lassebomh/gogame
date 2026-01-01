@@ -162,8 +162,8 @@ vec3 ComputePBR()
         }
 
     } 
-       
-    vec3 ambientFinal = (ambientColor + albedo)*ambient*0.5;
+    
+    vec3 ambientFinal = ambientColor * albedo * ambient;
     
     return ambientFinal+result*ao + emissive;
 
@@ -176,24 +176,19 @@ void main()
 
     // HDR tonemapping
     color = pow(color, color + vec3(1.0));
+    // color = color / (color + vec3(1.0));    
     
     // // Gamma correction
-   //  color = pow(color, vec3(1.0/2.5));
+    // color = pow(color, vec3(1.5));
 
     // Fog calculation
-    float dist = length(viewPos - fragPosition);
-
-    // these could be parameters...
-    const vec4 fogColor = vec4(0.5, 0.5, 0.5, 1.0);
-
-
-    // Exponential fog
-    float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
-
-
-    fogFactor = clamp(fogFactor, 0.0, 1.0);
-
-    finalColor = mix(fogColor,vec4(color,1.0), fogFactor);
+    // float dist = length(viewPos - fragPosition);
+    // const vec4 fogColor = vec4(0.5, 0.5, 0.5, 1.0);
+    // float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
+    // fogFactor = clamp(fogFactor, 0.0, 1.0);
+    // finalColor = mix(fogColor,vec4(color,1.0), fogFactor);
+    
+    finalColor = vec4(color,1.0);
 }
 
 

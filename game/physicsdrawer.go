@@ -1,10 +1,13 @@
 package game
 
 import (
-	"math"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
+)
+
+const (
+	WorldLevel  float32 = 0 // The base Z-height
+	ShapeHeight float32 = 3 // The vertical thickness of the wireframes
 )
 
 type RaylibDrawer struct {
@@ -12,73 +15,60 @@ type RaylibDrawer struct {
 	data  interface{}
 }
 
-func NewRaylibDrawer(shapes bool, constraints bool, collision_points bool) *RaylibDrawer {
-
-	var flags uint = 0
-
+func NewRaylibDrawer(shapes, constraints, collisionPoints bool) *RaylibDrawer {
+	var flags uint
 	if shapes {
 		flags |= cp.DRAW_SHAPES
 	}
 	if constraints {
 		flags |= cp.DRAW_CONSTRAINTS
 	}
-	if collision_points {
+	if collisionPoints {
 		flags |= cp.DRAW_COLLISION_POINTS
 	}
+	return &RaylibDrawer{flags: flags}
+}
 
-	return &RaylibDrawer{
-		flags: flags,
-		data:  nil,
-	}
+// v3 converts 2D physics vectors to 3D positions
+func v3(v cp.Vector, offset float32) rl.Vector3 {
+	return rl.Vector3{X: float32(v.X), Y: WorldLevel + offset, Z: float32(v.Y)}
 }
 
 func (d *RaylibDrawer) DrawCircle(pos cp.Vector, angle, radius float64, outline, fill cp.FColor, data interface{}) {
-	rl.DrawCircleV(v(pos), float32(radius), fColorToRaylib(fill))
-	if outline.A > 0 {
-		rl.DrawCircleLinesV(v(pos), float32(radius), fColorToRaylib(outline))
-	}
-
-	// Draw angle indicator line
-	if radius > 0 {
-		endX := pos.X + math.Cos(angle)*radius
-		endY := pos.Y + math.Sin(angle)*radius
-		end := cp.Vector{X: endX, Y: endY}
-		rl.DrawLineV(v(pos), v(end), fColorToRaylib(outline))
-	}
+	color := fColorToRaylib(fill)
+	// Draw a wireframe cylinder to represent the volume
+	rl.DrawCylinderWiresEx(v3(pos, 0), v3(pos, ShapeHeight), float32(radius), float32(radius), 16, color)
 }
 
 func (d *RaylibDrawer) DrawSegment(a, b cp.Vector, fill cp.FColor, data interface{}) {
-	rl.DrawLineV(v(a), v(b), fColorToRaylib(fill))
+	color := fColorToRaylib(fill)
+	rl.DrawLine3D(v3(a, 0), v3(b, 0), color)
+	rl.DrawLine3D(v3(a, ShapeHeight), v3(b, ShapeHeight), color)
+	rl.DrawLine3D(v3(a, 0), v3(a, ShapeHeight), color) // Vertical connector
 }
 
 func (d *RaylibDrawer) DrawFatSegment(a, b cp.Vector, radius float64, outline, fill cp.FColor, data interface{}) {
-	rl.DrawLineEx(v(a), v(b), max(1, float32(radius*2)), fColorToRaylib(fill))
-	if outline.A > 0 {
-		rl.DrawCircleV(v(a), float32(radius), fColorToRaylib(outline))
-		rl.DrawCircleV(v(b), float32(radius), fColorToRaylib(outline))
-	}
+	// Draw wireframe capsule
+	rl.DrawCapsuleWires(v3(a, 0), v3(b, 0), float32(radius), 8, 8, fColorToRaylib(fill))
 }
 
 func (d *RaylibDrawer) DrawPolygon(count int, verts []cp.Vector, radius float64, outline, fill cp.FColor, data interface{}) {
+	color := fColorToRaylib(fill)
+	for i := 0; i < count; i++ {
+		nextIdx := (i + 1) % count
+		currBottom := v3(verts[i], 0)
+		nextBottom := v3(verts[nextIdx], 0)
+		currTop := v3(verts[i], ShapeHeight)
+		nextTop := v3(verts[nextIdx], ShapeHeight)
 
-	// Draw filled polygon
-	if fill.A > 0 {
-		for i := 1; i < count-1; i++ {
-			rl.DrawTriangle(v(verts[0]), v(verts[i]), v(verts[i+1]), fColorToRaylib(fill))
-		}
-	}
-
-	// Draw outline
-	if outline.A > 0 {
-		for i := 0; i < count; i++ {
-			nextIdx := (i + 1) % count
-			rl.DrawLineEx(v(verts[i]), v(verts[nextIdx]), max(1, float32(radius*2)), fColorToRaylib(outline))
-		}
+		rl.DrawLine3D(currBottom, nextBottom, color) // Bottom ring
+		rl.DrawLine3D(currTop, nextTop, color)       // Top ring
+		rl.DrawLine3D(currBottom, currTop, color)    // Vertical ribs
 	}
 }
 
 func (d *RaylibDrawer) DrawDot(size float64, pos cp.Vector, fill cp.FColor, data interface{}) {
-	rl.DrawCircleV(v(pos), float32(size)/2, fColorToRaylib(fill))
+	rl.DrawSphereWires(v3(pos, 0), float32(size)/100, 8, 8, fColorToRaylib(fill))
 }
 
 func (d *RaylibDrawer) Flags() uint {
