@@ -199,7 +199,7 @@ vec3 CalcDirLight(Light light,vec3 normal,vec3 viewDir,vec3 albedo,vec3 baseRefl
     vec3 L = normalize(-light.direction);
     float diff=max(dot(normal,L),0.0);
     vec3 diffuse=light.lightColor*diff*vec3(texture(texture0,fragTexCoord));      
-    vec3 H = normalize(diffuse + L);
+    vec3 H = normalize(viewDir + L);
 
            // Cook-Torrance BRDF distribution function
     float nDotV = max(dot(normal,viewDir), 0.0000001);
@@ -218,7 +218,9 @@ vec3 CalcDirLight(Light light,vec3 normal,vec3 viewDir,vec3 albedo,vec3 baseRefl
     // Mult kD by the inverse of metallnes, only non-metals should have diffuse light
     kD *= 1.0 - metallic;
     // Angle of light has impact on result
-    return ((kD*albedo.rgb/PI + spec)*nDotL)*light.enabled;
+    // return ((kD*albedo.rgb/PI + spec)*nDotL)*light.enabled;
+    vec3 radiance = light.lightColor * light.enargy;
+    return ((kD*albedo.rgb/PI + spec) * radiance * nDotL);
 
 }
 

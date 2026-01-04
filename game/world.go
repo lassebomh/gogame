@@ -67,7 +67,7 @@ func NewWorld(tilemap *Tilemap) *World {
 	space.SetCollisionSlop(0.5)
 
 	cam := rl.Camera3D{}
-	cam.Fovy = 45
+	cam.Fovy = 80
 	cam.Position = rl.Vector3{X: 0, Y: 2, Z: 0}
 	cam.Target = rl.Vector3{X: 0, Y: 0, Z: -0.2}
 	cam.Projection = rl.CameraOrthographic
