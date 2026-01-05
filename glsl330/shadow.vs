@@ -1,10 +1,9 @@
 #version 330
-layout (location = 0) in vec3 position;
 
-uniform mat4 lightSpaceMatrix;
-uniform mat4 model;
+in vec3 vertexPosition;
+uniform mat4 mvp;
 
 void main()
 {
-    gl_Position = lightSpaceMatrix * model * vec4(position, 1.0);
+    gl_Position = mvp * vec4(vertexPosition, 1.0);
 }

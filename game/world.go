@@ -13,15 +13,17 @@ import (
 // }
 
 type World struct {
-	Player        *Player
-	Space         *cp.Space
-	Tilemap       *Tilemap
-	Monster       *Monster
-	Items         []*PhysicalItem
-	Accumulator   float32
-	DT            float32
-	Camera        rl.Camera3D
-	PhysicsDrawer *RaylibDrawer
+	Player             *Player
+	Space              *cp.Space
+	Tilemap            *Tilemap
+	Monster            *Monster
+	Items              []*PhysicalItem
+	Accumulator        float32
+	DT                 float32
+	Camera             rl.Camera3D
+	PhysicsDrawer      *RaylibDrawer
+	MousePosition      rl.Vector2
+	MouseWorldPosition cp.Vector
 }
 
 func (w *World) NewPhysicalItem(item Item, pos cp.Vector) *PhysicalItem {
@@ -83,7 +85,7 @@ func NewWorld(tilemap *Tilemap) *World {
 	world.Tilemap.GenerateBodies(world)
 
 	world.Player = NewPlayer(world, tilemap.CenterPosition.Add(cp.Vector{Y: 15}))
-	// world.Monster = NewMonster(world, tilemap.CenterPosition)
+	world.Monster = NewMonster(world, tilemap.CenterPosition)
 
 	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 
@@ -100,6 +102,14 @@ func (w *World) Update(dt float32) {
 		w.Accumulator -= physicsTickrate
 	}
 
+	w.MousePosition = rl.GetMousePosition()
+	mouseRay := rl.GetScreenToWorldRay(w.MousePosition, w.Camera)
+
+	w.MouseWorldPosition = cp.Vector{
+		X: float64(mouseRay.Position.X),
+		Y: float64(mouseRay.Position.Z - (mouseRay.Position.Y/mouseRay.Direction.Y)*mouseRay.Direction.Z),
+	}
+
 	playerPos := VecFrom2D(w.Player.Body.Position(), float64(w.Player.Radius))
 
 	w.Camera.Target = playerPos.Vector3
@@ -114,16 +124,7 @@ func (w *World) Update(dt float32) {
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseLeftButton) {
-		mouseRay := rl.GetScreenToWorldRay(rl.GetMousePosition(), w.Camera)
-
-		cpWorldPos := cp.Vector{
-			X: float64(mouseRay.Position.X),
-			Y: float64(mouseRay.Position.Z - (mouseRay.Position.Y/mouseRay.Direction.Y)*mouseRay.Direction.Z),
-		}
-		Debug("cp", cpWorldPos)
-		Debug("player", w.Player.Body.Position())
-
-		info := w.Space.PointQueryNearest(cpWorldPos, 0, cp.ShapeFilter{
+		info := w.Space.PointQueryNearest(w.MouseWorldPosition, 0, cp.ShapeFilter{
 			Group:      cp.NO_GROUP,
 			Categories: cp.ALL_CATEGORIES,
 			Mask:       cp.ALL_CATEGORIES,

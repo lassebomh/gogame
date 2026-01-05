@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
@@ -37,7 +38,7 @@ func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
 func NewPlayer(w *World, pos cp.Vector) *Player {
 
 	player := &Player{
-		Speed:     50,
+		Speed:     30,
 		Health:    100,
 		HealthMax: 100,
 
@@ -45,7 +46,7 @@ func NewPlayer(w *World, pos cp.Vector) *Player {
 		Radius: 2,
 	}
 
-	mass := player.Radius * player.Radius
+	mass := player.Radius * player.Radius * 4
 	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, player.Radius, cp.Vector{})))
 	body.SetPosition(pos)
 
@@ -85,6 +86,10 @@ func (p *Player) Update(w *World) {
 	for _, item := range p.Items {
 		item.InventoryUpdate(w, p)
 	}
+
+	mousePositionDiff := w.MouseWorldPosition.Sub(p.Body.Position())
+	angleToMouse := math.Atan2(mousePositionDiff.Y, mousePositionDiff.X)
+	p.Body.SetAngle(angleToMouse)
 
 }
 

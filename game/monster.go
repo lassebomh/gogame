@@ -32,63 +32,87 @@ type MonsterArmSegment struct {
 	Width  float64
 }
 
-const ARMS = 3
+const ARMS = 4
 const ARM_SEGMENTS = 12
 
-func (arm *MonsterArm) Update(w *World) {
+func NewMonster(w *World, position cp.Vector) *Monster {
+	var group uint = 1
 
-	tip := arm.Segments[len(arm.Segments)-1]
+	monster := &Monster{
+		Arms:   make([]*MonsterArm, 0),
+		Radius: 2.2,
+		Path:   []cp.Vector{},
+	}
 
-	closestTipPathPointI := 0
-	closestTipPathPointDistance := tip.Body.Position().Distance(arm.Monster.Path[0])
+	mass := monster.Radius * monster.Radius * 30
+	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, monster.Radius, cp.Vector{})))
+	body.SetPosition(position)
 
-	for i, pathPoint := range arm.Monster.Path[:min(3, len(arm.Monster.Path))] {
+	shape := w.Space.AddShape(cp.NewCircle(body, monster.Radius, cp.Vector{}))
+	shape.SetElasticity(0)
+	shape.SetFriction(0.9)
+	shape.Filter.Group = group
 
-		pathPointDistance := pathPoint.Distance(tip.Body.Position())
+	monster.Body = body
 
-		if pathPointDistance < closestTipPathPointDistance {
-			closestTipPathPointDistance = pathPointDistance
-			closestTipPathPointI = i
+	for i := range ARMS {
+
+		arm := &MonsterArm{
+			Index:     i,
+			GaitAngle: float64(i) / float64(ARMS),
+			Monster:   monster,
+			Segments:  make([]*MonsterArmSegment, 0),
 		}
-	}
+		monster.Arms = append(monster.Arms, arm)
 
-	arm.TipTarget = arm.Monster.Path[closestTipPathPointI]
+		var prevBody *cp.Body
 
-	if closestTipPathPointI != len(arm.Monster.Path)-1 {
-		arm.TipTarget = arm.TipTarget.Add(arm.Monster.Path[closestTipPathPointI+1]).Mult(0.5)
-	}
+		for segmentI := range ARM_SEGMENTS {
+			i := float64(segmentI)
 
-	arm.GaitAngle += float64(w.DT)
-	if arm.GaitAngle > 1 {
-		arm.GaitAngle = arm.GaitAngle - 1
-	}
-	pull := arm.GaitAngle > 0.5
+			segment := &MonsterArmSegment{
+				Length: monster.Radius * 0.8,
+				Width:  (monster.Radius * 1.5) / (0.8 + i/5),
+			}
+			arm.Segments = append(arm.Segments, segment)
 
-	segments := float64(len(arm.Segments))
+			mass := segment.Length * segment.Width
 
-	for i, segment := range arm.Segments {
-		f := (float64(i+1) - segments + 4) / 4
+			pos := position.Add(cp.Vector{X: (i + 0.5) * segment.Length, Y: 0})
+			segment.Body = w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
+			segment.Body.SetPosition(pos)
 
-		if f <= 0 {
-			continue
+			segment.Shape = w.Space.AddShape(cp.NewBox(segment.Body, segment.Length, segment.Width, 0))
+			segment.Shape.SetElasticity(5)
+			segment.Shape.SetFriction(5)
+			segment.Shape.Filter.Group = group
+
+			if prevBody != nil {
+				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
+				constraint := w.Space.AddConstraint(cp.NewPivotJoint(prevBody, segment.Body, pivot))
+				constraint.SetMaxForce(1000000)
+
+				rotaryLimitAngle := rl.Pi / 3
+				rotaryLimit := w.Space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, segment.Body, -rotaryLimitAngle, rotaryLimitAngle))
+				rotaryLimit.SetMaxForce(100000000)
+				segment.RotaryLimitJoint = rotaryLimit
+
+				stiffness := 40.0 * segment.Body.Moment()
+				damping := 2 * math.Sqrt(stiffness*segment.Body.Moment())
+				w.Space.AddConstraint(cp.NewDampedRotarySpring(prevBody, segment.Body, 0, stiffness, damping))
+
+			} else {
+				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
+				constraint := w.Space.AddConstraint(cp.NewPivotJoint(monster.Body, segment.Body, pivot))
+				constraint.SetMaxForce(1000000)
+			}
+
+			prevBody = segment.Body
+
 		}
 
-		f = math.Pow(f, 4)
-
-		delta := arm.TipTarget.Sub(segment.Body.Position())
-		currentDir := cp.ForAngle(tip.Body.Angle())
-		relativeAngle := math.Atan2(currentDir.Cross(delta), currentDir.Dot(delta))
-
-		segment.Body.SetTorque(relativeAngle * tip.Body.Moment() * 70 * f)
-
-		if pull {
-			segment.Body.SetForce(delta.Normalize().Mult(-50 * segment.Body.Mass()))
-			segment.Body.SetVelocityVector(segment.Body.Velocity().Mult(0.75))
-		} else {
-			segment.Body.SetForce(delta.Normalize().Mult(1000 * segment.Body.Mass() * f))
-		}
 	}
-
+	return monster
 }
 
 func (m *Monster) Update(w *World) {
@@ -124,7 +148,7 @@ func (m *Monster) Update(w *World) {
 			m.Target = m.Target.Lerp(m.Path[1], 0.3)
 		}
 
-		m.Body.SetForce(m.Target.Sub(m.Body.Position()).Normalize().Mult(100 * m.Body.Mass()))
+		m.Body.SetForce(m.Target.Sub(m.Body.Position()).Normalize().Mult(150 * m.Body.Mass()))
 	}
 
 	if len(m.Path) == 0 || closestPathPointDistance > w.Tilemap.Scale || m.Path[len(m.Path)-1].Distance(playerPos) > w.Tilemap.Scale*0.9 {
@@ -137,84 +161,86 @@ func (m *Monster) Update(w *World) {
 	}
 }
 
-func NewMonster(w *World, position cp.Vector) *Monster {
-	var group uint = 1
+func (arm *MonsterArm) Update(w *World) {
 
-	monster := &Monster{
-		Arms:   make([]*MonsterArm, 0),
-		Radius: 2.2,
-		Path:   []cp.Vector{},
+	tip := arm.Segments[len(arm.Segments)-1]
+
+	totalCurlAngle := 0.0
+	curlAngles := make([]float64, len(arm.Segments)-2)
+
+	for i, segment := range arm.Segments[:len(arm.Segments)-2] {
+		a := segment.Body.Position()
+		b := arm.Segments[i+1].Body.Position()
+		c := arm.Segments[i+2].Body.Position()
+		v1 := b.Sub(a)
+		v2 := c.Sub(b)
+		cross := v1.Cross(v2)
+		dot := v1.Dot(v2)
+
+		angle := math.Atan2(cross, dot)
+		totalCurlAngle += angle
+		curlAngles[i] = angle
+	}
+	for i, angle := range curlAngles {
+		segment := arm.Segments[i]
+		segment.Body.SetTorque(angle * tip.Body.Moment() * 1000)
 	}
 
-	mass := monster.Radius * monster.Radius * 10
-	body := w.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, monster.Radius, cp.Vector{})))
-	body.SetPosition(position)
-
-	shape := w.Space.AddShape(cp.NewCircle(body, monster.Radius, cp.Vector{}))
-	shape.SetElasticity(0)
-	shape.SetFriction(0.9)
-	shape.Filter.Group = group
-
-	monster.Body = body
-
-	for i := range ARMS {
-
-		arm := &MonsterArm{
-			Index:     i,
-			GaitAngle: float64(i) / float64(ARMS),
-			Monster:   monster,
-			Segments:  make([]*MonsterArmSegment, 0),
-		}
-		monster.Arms = append(monster.Arms, arm)
-
-		var prevBody *cp.Body
-
-		for segmentI := range ARM_SEGMENTS {
-			i := float64(segmentI)
-
-			segment := &MonsterArmSegment{
-				Length: monster.Radius * 0.6,
-				Width:  (monster.Radius * 1.5) / (1 + i/6),
-			}
-			arm.Segments = append(arm.Segments, segment)
-
-			mass := segment.Length * segment.Width
-
-			pos := position.Add(cp.Vector{X: (i + 0.5) * segment.Length, Y: 0})
-			segment.Body = w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
-			segment.Body.SetPosition(pos)
-
-			segment.Shape = w.Space.AddShape(cp.NewBox(segment.Body, segment.Length, segment.Width, 0))
-			segment.Shape.SetElasticity(0.5)
-			segment.Shape.SetFriction(0.7)
-			segment.Shape.Filter.Group = group
-
-			if prevBody != nil {
-				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
-				constraint := w.Space.AddConstraint(cp.NewPivotJoint(prevBody, segment.Body, pivot))
-				constraint.SetMaxForce(1000000)
-
-				rotaryLimitAngle := rl.Pi / 3
-				rotaryLimit := w.Space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, segment.Body, -rotaryLimitAngle, rotaryLimitAngle))
-				rotaryLimit.SetMaxForce(100000000)
-				segment.RotaryLimitJoint = rotaryLimit
-
-				stiffness := 40.0 * segment.Body.Moment()
-				damping := 2 * math.Sqrt(stiffness*segment.Body.Moment())
-				w.Space.AddConstraint(cp.NewDampedRotarySpring(prevBody, segment.Body, 0, stiffness, damping))
-
-			} else {
-				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
-				constraint := w.Space.AddConstraint(cp.NewPivotJoint(monster.Body, segment.Body, pivot))
-				constraint.SetMaxForce(1000000)
-			}
-
-			prevBody = segment.Body
-
+	entangleTarget := w.Player.Body.Position()
+	playerDist := entangleTarget.Distance(tip.Body.Position())
+	{
+		dir := entangleTarget.Sub(tip.Body.Position()).Normalize().Rotate(cp.Vector{Y: 1})
+		if arm.Index%2 == 0 {
+			dir = dir.Neg()
 		}
 
+		entangleTarget = entangleTarget.Add(dir.Mult(math.Sqrt(playerDist*w.Player.Radius) + w.Player.Radius))
 	}
-	return monster
+
+	var pathTarget cp.Vector
+
+	closestTipPathPointI := 0
+	closestTipPathPointDistance := tip.Body.Position().Distance(arm.Monster.Path[0])
+
+	for i, pathPoint := range arm.Monster.Path[:min(3, len(arm.Monster.Path))] {
+
+		pathPointDistance := pathPoint.Distance(tip.Body.Position())
+
+		if pathPointDistance < closestTipPathPointDistance {
+			closestTipPathPointDistance = pathPointDistance
+			closestTipPathPointI = i
+		}
+	}
+	pathTarget = arm.Monster.Path[closestTipPathPointI]
+	if closestTipPathPointI != len(arm.Monster.Path)-1 {
+		pathTarget = pathTarget.Lerp(arm.Monster.Path[closestTipPathPointI+1], 0.5)
+	}
+
+	if playerDist > arm.Segments[0].Length*ARM_SEGMENTS {
+		arm.TipTarget = pathTarget
+		arm.GaitAngle += float64(w.DT)
+	} else {
+		arm.TipTarget = entangleTarget
+		arm.GaitAngle += float64(w.DT) * 2
+	}
+
+	if arm.GaitAngle > 1 {
+		arm.GaitAngle = arm.GaitAngle - 1
+	}
+	pull := arm.GaitAngle < 0.5
+
+	delta := arm.TipTarget.Sub(tip.Body.Position())
+	currentDir := cp.ForAngle(tip.Body.Angle())
+	relativeAngle := math.Atan2(currentDir.Cross(delta), currentDir.Dot(delta))
+
+	tip.Body.SetTorque(relativeAngle * tip.Body.Moment() * 70)
+
+	if pull {
+		tip.Body.SetVelocityVector(tip.Body.Velocity().Mult(0.9))
+	} else {
+		tip.Body.SetForce(delta.Normalize().Mult(1000 * tip.Body.Mass()))
+	}
+
 }
 
 func (m *Monster) Render(w *World) {

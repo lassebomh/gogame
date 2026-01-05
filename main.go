@@ -3,6 +3,7 @@ package main
 import (
 	. "game/game"
 	"image/color"
+	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
@@ -38,6 +39,8 @@ func main() {
 		}
 	}
 
+	tilemap.Cols[25][27].Door = WALL_B
+
 	w := NewWorld(tilemap)
 	tilemap.GenerateBodies(w)
 
@@ -50,14 +53,14 @@ func main() {
 	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
 
 	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
-	shadowShader := rl.LoadShader("./glsl330/shadow.vs", "./glsl330/shadow.fs")
+	// shadowShader := rl.LoadShader("./glsl330/shadow.vs", "./glsl330/shadow.fs")
 
 	render := NewRender(shader)
 
-	render.NewLight(LIGHT_POINT, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, 1)
-	render.NewLight(LIGHT_POINT, rl.NewVector3(2, 1, 2), rl.NewVector3(0, 0, 0), rl.Red, 1)
-	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.Green, 2)
-	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(0, -1, 0), rl.White, 0.1)
+	// render.NewLight(LIGHT_POINT, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, 1)
+	// render.NewLight(LIGHT_POINT, rl.NewVector3(2, 1, 2), rl.NewVector3(0, 0, 0), rl.Red, 1)
+	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
+	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.5)
 
 	Debug(render)
 
@@ -72,8 +75,14 @@ func main() {
 	plane.Materials.Shader = shader
 	wall := rl.LoadModel("./models/cube.glb")
 	wall.Materials.Shader = shader
+	door := rl.LoadModel("./models/door.glb")
+	door.Materials.Shader = shader
+
 	monsterArm := rl.LoadModel("./models/monster/monster_arm_segment.glb")
+	monsterArm.Materials.Shader = shader
+
 	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
+	monsterBody.Materials.Shader = shader
 	// test := rl.LoadModel("./models/test/test.glb")
 
 	rl.SetTargetFPS(60)
@@ -86,47 +95,52 @@ func main() {
 		t = rl.GetTime()
 
 		w.Update(float32(dt))
-		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius)
-		flashlight.Position = playerPos.Vector3
-		flashlight.Target = playerPos.Add(X).Vector3
+		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*2)
+		lookDir := rl.NewVector3(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
+		flashlight.Position = rl.Vector3Subtract(playerPos.Vector3, rl.Vector3Scale(lookDir, float32(w.Player.Radius)*3))
+		flashlight.Target = rl.Vector3Add(flashlight.Position, lookDir)
+
 		render.UpdateValues()
 
-		lightCam := rl.Camera3D{
-			Position:   flashlight.Position,
-			Target:     flashlight.Target,
-			Up:         Y.Vector3,
-			Fovy:       flashlight.OuterCutOff,
-			Projection: rl.CameraPerspective,
-		}
+		// lightCam := rl.Camera3D{
+		// 	Position:   flashlight.Position,
+		// 	Target:     flashlight.Target,
+		// 	Up:         Y.Vector3,
+		// 	Fovy:       30,
+		// 	Projection: rl.CameraPerspective,
+		// }
 
-		rl.BeginTextureMode(shadowTexture)
-		rl.ClearBackground(rl.Black)
-		rl.BeginMode3D(lightCam)
-		rl.BeginShaderMode(shadowShader)
-		oldWallShader := wall.Materials.Shader
-		wall.Materials.Shader = shadowShader
+		// rl.BeginTextureMode(shadowTexture)
+		// rl.ClearBackground(rl.Black)
+		// rl.BeginMode3D(lightCam)
+		// rl.BeginShaderMode(shadowShader)
+		// oldWallShader := wall.Materials.Shader
+		// oldPlaneShader := plane.Materials.Shader
+		// wall.Materials.Shader = shadowShader
+		// plane.Materials.Shader = shadowShader
 
-		for _, col := range w.Tilemap.Cols {
-			for _, tile := range col {
-				scale := float32(w.Tilemap.Scale)
-				pos := VecFrom2D(tile.WorldPosition, 0)
-				rl.DrawModel(plane, pos.Add(XZ.Scale(scale/2)).Vector3, scale/2, rl.White)
-				scaleVec := XYZ.Scale(scale * 0.5).Vector3
-				if tile.Wall&WALL_L != 0 {
-					rl.DrawModel(wall, pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
-				}
-				if tile.Wall&WALL_T != 0 {
-					rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio)).Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
-				}
-				if tile.Wall&WALL_R != 0 {
-					rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, 0)).Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
-				}
-				if tile.Wall&WALL_B != 0 {
-					rl.DrawModelEx(wall, pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
-				}
-			}
-		}
-		wall.Materials.Shader = oldWallShader
+		// for _, col := range w.Tilemap.Cols {
+		// 	for _, tile := range col {
+		// 		scale := float32(w.Tilemap.Scale)
+		// 		pos := VecFrom2D(tile.WorldPosition, 0)
+		// 		rl.DrawModel(plane, pos.Add(XZ.Scale(scale/2)).Vector3, scale/2, rl.White)
+		// 		scaleVec := XYZ.Scale(scale * 0.5).Vector3
+		// 		if tile.Wall&WALL_L != 0 {
+		// 			rl.DrawModel(wall, pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
+		// 		}
+		// 		if tile.Wall&WALL_T != 0 {
+		// 			rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio)).Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
+		// 		}
+		// 		if tile.Wall&WALL_R != 0 {
+		// 			rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, 0)).Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
+		// 		}
+		// 		if tile.Wall&WALL_B != 0 {
+		// 			rl.DrawModelEx(wall, pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
+		// 		}
+		// 	}
+		// }
+		// wall.Materials.Shader = oldWallShader
+		// plane.Materials.Shader = oldPlaneShader
 
 		rl.EndShaderMode()
 		rl.EndMode3D()
@@ -154,6 +168,9 @@ func main() {
 				if tile.Wall&WALL_B != 0 {
 					rl.DrawModelEx(wall, pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
 				}
+				if tile.DoorBody != nil {
+					rl.DrawModelEx(door, VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Vector3, 0, XYZ.Scale(scale/2).Vector3, rl.White)
+				}
 			}
 		}
 
@@ -173,8 +190,8 @@ func main() {
 				VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius).Vector3,
 				Y.Vector3,
 				float32(-w.Monster.Body.Angle())*rl.Rad2deg,
-				NewVec(monsterRadius*1.3, monsterRadius/2, monsterRadius*1.3).Vector3,
-				rl.Gray,
+				NewVec(monsterRadius*1, monsterRadius, monsterRadius*1).Vector3,
+				rl.DarkGray,
 			)
 
 			for _, arm := range w.Monster.Arms {
@@ -184,8 +201,8 @@ func main() {
 						VecFrom2D(segment.Body.Position(), w.Monster.Radius).Vector3,
 						Y.Vector3,
 						float32(-segment.Body.Angle())*rl.Rad2deg,
-						NewVec(float32(segment.Length)*1.1, float32(segment.Width)/2, float32(segment.Width)).Vector3,
-						rl.Gray,
+						NewVec(float32(segment.Length)*1.1, float32(segment.Width), float32(segment.Width)).Vector3,
+						rl.DarkGray,
 					)
 				}
 			}
@@ -209,16 +226,24 @@ func main() {
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
+		rl.DrawTexturePro(
+			renderTexture.Texture,
+			rl.Rectangle{X: 0, Y: 0, Width: float32(renderWidth), Height: -float32(renderHeight)},
+			rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
 		// rl.DrawTexturePro(
-		// 	renderTexture.Texture,
-		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(renderWidth), Height: -float32(renderHeight)}, // Negative height to flip
-		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
+		// 	shadowTexture.Texture,
+		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(shadowWidth), Height: -float32(shadowHeight)},
+		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(shadowWidth), Height: float32(shadowHeight)},
 		// 	rl.Vector2{X: 0, Y: 0},
 		// 	0,
 		// 	rl.White,
 		// )
+
 		// w.Player.RenderHud(w)
-		rl.DrawTexture(shadowTexture.Texture, 0, 0, rl.White)
 		rl.DrawFPS(10, 20)
 		rl.EndDrawing()
 

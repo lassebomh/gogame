@@ -20,6 +20,7 @@ const (
 
 type Tile struct {
 	Wall int
+	Door int
 	X    int
 	Y    int
 
@@ -27,6 +28,7 @@ type Tile struct {
 
 	tilemap  *Tilemap
 	wallBody *cp.Body
+	DoorBody *cp.Body
 }
 
 type Tilemap struct {
@@ -177,14 +179,15 @@ func (t *Tilemap) CreateRoom(x, y, width, height int, doorDirection int) {
 		t.Cols[x+width-1][y+height/2].Wall = 0
 	}
 }
-
 func (t *Tilemap) GenerateBodies(w *World) {
+	addSegment := func(body *cp.Body, start, end cp.Vector, radius float64) {
+		shape := cp.NewSegment(body, start, end, radius)
+		w.Space.AddShape(shape)
+	}
+
 	for x, rows := range t.Cols {
 		for y := range rows {
 			tile := &t.Cols[x][y]
-			if tile.Wall == 0 {
-				continue
-			}
 
 			tileX := float64(x) * t.Scale
 			tileY := float64(y) * t.Scale
@@ -192,55 +195,66 @@ func (t *Tilemap) GenerateBodies(w *World) {
 			th := t.Scale * float64(t.WallDepthRatio)
 			s := t.Scale
 
-			body := cp.NewStaticBody()
+			if tile.Wall != 0 {
+				body := cp.NewStaticBody()
 
-			// tile bounds (inside edges)
-			left := tileX + th/2
-			right := tileX + s - th/2
-			top := tileY + th/2
-			bottom := tileY + s - th/2
+				left := tileX + th/2
+				right := tileX + s - th/2
+				top := tileY + th/2
+				bottom := tileY + s - th/2
 
-			// Top wall
-			if tile.Wall&WALL_T != 0 {
-				shape := cp.NewSegment(body,
-					cp.Vector{X: left, Y: top},
-					cp.Vector{X: right, Y: top},
-					th/2,
-				)
-				w.Space.AddShape(shape)
+				if tile.Wall&WALL_T != 0 {
+					addSegment(body, cp.Vector{X: left, Y: top}, cp.Vector{X: right, Y: top}, th/2)
+				}
+				if tile.Wall&WALL_R != 0 {
+					addSegment(body, cp.Vector{X: right, Y: top}, cp.Vector{X: right, Y: bottom}, th/2)
+				}
+				if tile.Wall&WALL_B != 0 {
+					addSegment(body, cp.Vector{X: left, Y: bottom}, cp.Vector{X: right, Y: bottom}, th/2)
+				}
+				if tile.Wall&WALL_L != 0 {
+					addSegment(body, cp.Vector{X: left, Y: top}, cp.Vector{X: left, Y: bottom}, th/2)
+				}
+
+				tile.wallBody = body
 			}
 
-			// Right wall
-			if tile.Wall&WALL_R != 0 {
-				shape := cp.NewSegment(body,
-					cp.Vector{X: right, Y: top},
-					cp.Vector{X: right, Y: bottom},
-					th/2,
-				)
-				w.Space.AddShape(shape)
-			}
+			if tile.Door != 0 {
+				mass := 10.0
+				moment := cp.MomentForBox(mass, s, th)
+				body := w.Space.AddBody(cp.NewBody(mass, moment))
 
-			// Bottom wall
-			if tile.Wall&WALL_B != 0 {
-				shape := cp.NewSegment(body,
-					cp.Vector{X: left, Y: bottom},
-					cp.Vector{X: right, Y: bottom},
-					th/2,
-				)
-				w.Space.AddShape(shape)
-			}
+				var start, end cp.Vector
 
-			// Left wall
-			if tile.Wall&WALL_L != 0 {
-				shape := cp.NewSegment(body,
-					cp.Vector{X: left, Y: top},
-					cp.Vector{X: left, Y: bottom},
-					th/2,
-				)
-				w.Space.AddShape(shape)
-			}
+				// Position door along the side indicated by the flag
+				switch {
+				case tile.Door&WALL_T != 0:
+					start = cp.Vector{X: tileX + th/2, Y: tileY + th/2}
+					end = cp.Vector{X: tileX + s - th/2, Y: tileY + th/2}
+					body.SetPosition(cp.Vector{X: tileX + s/2, Y: tileY + th/2})
+				case tile.Door&WALL_R != 0:
+					start = cp.Vector{X: tileX + s - th/2, Y: tileY + th/2}
+					end = cp.Vector{X: tileX + s - th/2, Y: tileY + s - th/2}
+					body.SetPosition(cp.Vector{X: tileX + s - th/2, Y: tileY + s/2})
+				case tile.Door&WALL_B != 0:
+					start = cp.Vector{X: tileX + th/2, Y: tileY + s - th/2}
+					end = cp.Vector{X: tileX + s - th/2, Y: tileY + s - th/2}
+					body.SetPosition(cp.Vector{X: tileX + s/2, Y: tileY + s - th/2})
+				case tile.Door&WALL_L != 0:
+					start = cp.Vector{X: tileX + th/2, Y: tileY + th/2}
+					end = cp.Vector{X: tileX + th/2, Y: tileY + s - th/2}
+					body.SetPosition(cp.Vector{X: tileX + th/2, Y: tileY + s/2})
+				}
 
-			tile.wallBody = body
+				shape := cp.NewSegment(body, start, end.Add(start.Sub(end).Mult(5)), th*10)
+
+				shape.SetElasticity(0)
+				shape.SetFriction(0.9)
+
+				// body.AddShape(shape)
+				// w.Space.AddBody(body)
+				tile.DoorBody = body
+			}
 		}
 	}
 }
