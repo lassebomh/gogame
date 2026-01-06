@@ -77,7 +77,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 			}
 			arm.Segments = append(arm.Segments, segment)
 
-			mass := segment.Length * segment.Width
+			mass := segment.Length * segment.Width / 3
 
 			pos := position.Add(cp.Vector{X: (i + 0.5) * segment.Length, Y: 0})
 			segment.Body = w.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
@@ -85,17 +85,17 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 
 			segment.Shape = w.Space.AddShape(cp.NewBox(segment.Body, segment.Length, segment.Width, 0))
 			segment.Shape.SetElasticity(0.5)
-			segment.Shape.SetFriction(1)
+			segment.Shape.SetFriction(0.1)
 			segment.Shape.Filter.Group = group
 
 			if prevBody != nil {
 				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
 				constraint := w.Space.AddConstraint(cp.NewPivotJoint(prevBody, segment.Body, pivot))
-				constraint.SetMaxForce(1000000)
+				constraint.SetMaxForce(1e12)
 
 				rotaryLimitAngle := rl.Pi / 3
 				rotaryLimit := w.Space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, segment.Body, -rotaryLimitAngle, rotaryLimitAngle))
-				rotaryLimit.SetMaxForce(100000000)
+				rotaryLimit.SetMaxForce(1e12)
 				segment.RotaryLimitJoint = rotaryLimit
 
 				stiffness := 40.0 * segment.Body.Moment()
@@ -105,7 +105,7 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 			} else {
 				pivot := pos.Add(cp.Vector{X: -segment.Length / 2, Y: 0})
 				constraint := w.Space.AddConstraint(cp.NewPivotJoint(monster.Body, segment.Body, pivot))
-				constraint.SetMaxForce(1000000)
+				constraint.SetMaxForce(1e12)
 			}
 
 			prevBody = segment.Body

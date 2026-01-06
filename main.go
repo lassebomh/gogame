@@ -12,15 +12,15 @@ import (
 const DEBUG = false
 
 func main() {
-	screenWidth := int32(1200)
-	screenHeight := int32(800)
+	screenWidth := int32(1920)
+	screenHeight := int32(1080)
 
 	var pixelScale int32
 
 	if DEBUG {
 		pixelScale = 1
 	} else {
-		pixelScale = 4
+		pixelScale = 5
 	}
 
 	renderWidth := screenWidth / pixelScale
@@ -102,7 +102,8 @@ func main() {
 		t = rl.GetTime()
 
 		w.Update(float32(dt))
-		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*2)
+		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+
 		lookDir := rl.NewVector3(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
 		flashlight.Position = rl.Vector3Subtract(playerPos.Vector3, rl.Vector3Scale(lookDir, float32(w.Player.Radius)*3))
 		flashlight.Target = rl.Vector3Add(flashlight.Position, lookDir)
@@ -187,25 +188,27 @@ func main() {
 
 		if w.Monster != nil {
 
+			color := color.RGBA{R: 40, G: 40, B: 40, A: 255}
+
 			monsterRadius := float32(w.Monster.Radius)
 			rl.DrawModelEx(
 				monsterBody,
-				VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius).Vector3,
+				VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius/2).Vector3,
 				Y.Vector3,
 				float32(-w.Monster.Body.Angle())*rl.Rad2deg,
 				NewVec(monsterRadius*1, monsterRadius, monsterRadius*1).Vector3,
-				rl.DarkGray,
+				color,
 			)
 
 			for _, arm := range w.Monster.Arms {
 				for _, segment := range arm.Segments {
 					rl.DrawModelEx(
 						monsterArm,
-						VecFrom2D(segment.Body.Position(), w.Monster.Radius).Vector3,
+						VecFrom2D(segment.Body.Position(), w.Monster.Radius*2-segment.Width).Vector3,
 						Y.Vector3,
 						float32(-segment.Body.Angle())*rl.Rad2deg,
 						NewVec(float32(segment.Length)*1.1, float32(segment.Width), float32(segment.Width)).Vector3,
-						rl.DarkGray,
+						color,
 					)
 				}
 			}
