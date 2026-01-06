@@ -35,22 +35,7 @@ func main() {
 		rl.SetWindowPosition(int(pos.X), int(pos.Y))
 	}
 
-	tilemap := NewTilemap(40, 40, 7.5)
-
-	// GenerateMaze(tilemap, 5, 5, 20, 20)
-	tilemap.Cols[18][19].Wall = 0
-	roomWidth := 5
-	roomHeight := 5
-	rooms := 5
-	for x := range rooms {
-		for y := range rooms {
-			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
-		}
-	}
-	tilemap.Cols[25][27].Door = WALL_B
-	tilemap.Cols[27][25].Door = WALL_R
-
-	w := NewWorld(tilemap)
+	game := NewGame()
 
 	// shadowWidth, shadowHeight := int32(1000), int32(1000)
 	// shadowTexture := rl.LoadRenderTexture(shadowWidth, shadowHeight)
@@ -61,14 +46,13 @@ func main() {
 	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
 
 	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
+	// backgroundShader := rl.LoadShader("./glsl330/station.vs", "./glsl330/station.fs")
 	// shadowShader := rl.LoadShader("./glsl330/shadow.vs", "./glsl330/shadow.fs")
 
 	render := NewRender(shader)
 
-	// render.NewLight(LIGHT_POINT, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, 1)
-	// render.NewLight(LIGHT_POINT, rl.NewVector3(2, 1, 2), rl.NewVector3(0, 0, 0), rl.Red, 1)
 	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
-	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.2)
+	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.0)
 
 	Debug(render)
 
@@ -78,6 +62,9 @@ func main() {
 	rl.SetShaderValue(shader, ambientLoc, shaderValue, rl.ShaderUniformVec4)
 
 	render.UpdateValues()
+
+	// background := rl.LoadModel("./models/plane.glb")
+	// background.Materials.Shader = backgroundShader
 
 	plane := rl.LoadModel("./models/plane.glb")
 	plane.Materials.Shader = shader
@@ -93,7 +80,6 @@ func main() {
 	monsterBody.Materials.Shader = shader
 
 	rl.SetTargetFPS(60)
-
 	t := rl.GetTime()
 
 	for !rl.WindowShouldClose() {
@@ -101,7 +87,16 @@ func main() {
 		dt := rl.GetTime() - t
 		t = rl.GetTime()
 
-		w.Update(float32(dt))
+		game.Update(float32(dt))
+
+		var w *World
+
+		if game.Earth.Player != nil {
+			w = game.Earth
+		} else {
+			w = game.Station
+		}
+
 		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
 
 		lookDir := rl.NewVector3(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
@@ -216,7 +211,7 @@ func main() {
 		if DEBUG {
 			rl.DrawRenderBatchActive()
 			rl.DisableDepthTest()
-			cp.DrawSpace(w.Space, w.PhysicsDrawer)
+			cp.DrawSpace(w.Space, game.PhysicsDrawer)
 			if w.Monster != nil {
 				DrawLine(rl.Red, w.Monster.Path...)
 				if w.Monster != nil {

@@ -5,23 +5,75 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
-// type Game struct {
-// 	Accumulator   float32
-// 	DT            float32
-// 	Camera        rl.Camera3D
-// 	PhysicsDrawer *RaylibDrawer
-// }
+type Game struct {
+	Accumulator   float32
+	DT            float32
+	PhysicsDrawer *RaylibDrawer
+
+	Earth   *World
+	Station *World
+}
+
+func NewGame() *Game {
+
+	game := &Game{}
+
+	tilemap := NewTilemap(40, 40, 7.5)
+	tilemap.Cols[18][19].Wall = 0
+	roomWidth := 5
+	roomHeight := 5
+	rooms := 5
+	for x := range rooms {
+		for y := range rooms {
+			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
+		}
+	}
+	tilemap.Cols[25][27].Door = WALL_B
+	tilemap.Cols[27][25].Door = WALL_R
+
+	game.Earth = NewWorld(tilemap)
+	game.Earth.Monster = NewMonster(game.Earth, tilemap.CenterPosition.Add(cp.Vector{Y: 40}))
+
+	tilemap = NewTilemap(10, 7, 7.5)
+	tilemap.CreateRoom(0, 0, 10, 7, 0)
+
+	game.Station = NewWorld(tilemap)
+	game.Station.Player = NewPlayer(game.Station, tilemap.CenterPosition)
+
+	game.PhysicsDrawer = NewRaylibDrawer(true, false, true)
+
+	return game
+
+}
+
+func (g *Game) Update(dt float32) {
+	g.DT = dt
+	g.Accumulator += dt
+	var world *World
+
+	if g.Earth.Player != nil {
+		world = g.Earth
+	} else {
+		world = g.Station
+	}
+
+	for g.Accumulator >= physicsTickrate {
+		world.Space.Step(physicsTickrate)
+		g.Accumulator -= physicsTickrate
+	}
+
+	world.Update(dt)
+}
 
 type World struct {
-	Player             *Player
-	Space              *cp.Space
-	Tilemap            *Tilemap
-	Monster            *Monster
-	Items              []*PhysicalItem
-	Accumulator        float32
-	DT                 float32
-	Camera             rl.Camera3D
-	PhysicsDrawer      *RaylibDrawer
+	Player  *Player
+	Space   *cp.Space
+	Tilemap *Tilemap
+	Monster *Monster
+	Items   []*PhysicalItem
+
+	Camera rl.Camera3D
+
 	MousePosition      rl.Vector2
 	MouseWorldPosition cp.Vector
 }
@@ -84,24 +136,12 @@ func NewWorld(tilemap *Tilemap) *World {
 	world.Tilemap = tilemap
 	world.Tilemap.GenerateBodies(world)
 
-	world.Player = NewPlayer(world, tilemap.CenterPosition)
-	world.Monster = NewMonster(world, tilemap.CenterPosition.Add(cp.Vector{Y: 40}))
-
-	world.PhysicsDrawer = NewRaylibDrawer(true, false, true)
-
 	return world
 }
 
 const physicsTickrate = 1.0 / 60.0
 
 func (w *World) Update(dt float32) {
-	w.DT = dt
-	w.Accumulator += dt
-	for w.Accumulator >= physicsTickrate {
-		w.Space.Step(physicsTickrate)
-		w.Accumulator -= physicsTickrate
-	}
-
 	w.MousePosition = rl.GetMousePosition()
 	mouseRay := rl.GetScreenToWorldRay(w.MousePosition, w.Camera)
 
@@ -110,12 +150,10 @@ func (w *World) Update(dt float32) {
 		Y: float64(mouseRay.Position.Z - (mouseRay.Position.Y/mouseRay.Direction.Y)*mouseRay.Direction.Z),
 	}
 
-	playerPos := VecFrom2D(w.Player.Body.Position(), float64(w.Player.Radius))
-
-	w.Camera.Target = playerPos.Vector3
-	w.Camera.Position = playerPos.Add(NewVec(0, 50, 20)).Vector3
-
 	if w.Player != nil {
+		playerPos := VecFrom2D(w.Player.Body.Position(), float64(w.Player.Radius))
+		w.Camera.Target = playerPos.Vector3
+		w.Camera.Position = playerPos.Add(NewVec(0, 50, 20)).Vector3
 		w.Player.Update(w)
 	}
 
@@ -123,7 +161,7 @@ func (w *World) Update(dt float32) {
 		w.Monster.Update(w)
 	}
 
-	if rl.IsMouseButtonReleased(rl.MouseLeftButton) {
+	if w.Player != nil && rl.IsMouseButtonReleased(rl.MouseLeftButton) {
 		info := w.Space.PointQueryNearest(w.MouseWorldPosition, 0, cp.ShapeFilter{
 			Group:      cp.NO_GROUP,
 			Categories: cp.ALL_CATEGORIES,
