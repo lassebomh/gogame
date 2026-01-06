@@ -8,11 +8,12 @@ import (
 )
 
 type Monster struct {
-	Body   *cp.Body
-	Arms   []*MonsterArm
-	Radius float64
-	Path   []cp.Vector
-	Target cp.Vector
+	Body         *cp.Body
+	Arms         []*MonsterArm
+	Radius       float64
+	Path         []cp.Vector
+	PathDistance float64
+	Target       cp.Vector
 }
 
 type MonsterArm struct {
@@ -49,8 +50,8 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 	body.SetPosition(position)
 
 	shape := w.Space.AddShape(cp.NewCircle(body, monster.Radius, cp.Vector{}))
-	shape.SetElasticity(0)
-	shape.SetFriction(0.9)
+	shape.SetElasticity(0.5)
+	shape.SetFriction(1)
 	shape.Filter.Group = group
 
 	monster.Body = body
@@ -83,8 +84,8 @@ func NewMonster(w *World, position cp.Vector) *Monster {
 			segment.Body.SetPosition(pos)
 
 			segment.Shape = w.Space.AddShape(cp.NewBox(segment.Body, segment.Length, segment.Width, 0))
-			segment.Shape.SetElasticity(5)
-			segment.Shape.SetFriction(5)
+			segment.Shape.SetElasticity(0.5)
+			segment.Shape.SetFriction(1)
 			segment.Shape.Filter.Group = group
 
 			if prevBody != nil {
@@ -144,15 +145,11 @@ func (m *Monster) Update(w *World) {
 	if len(m.Path) > 0 {
 		m.Target = m.Path[0]
 
-		if len(m.Path) > 1 {
-			m.Target = m.Target.Lerp(m.Path[1], 0.3)
-		}
-
-		m.Body.SetForce(m.Target.Sub(m.Body.Position()).Normalize().Mult(150 * m.Body.Mass()))
+		m.Body.SetForce(m.Target.Sub(m.Body.Position()).Normalize().Mult(175 * m.Body.Mass()))
 	}
 
 	if len(m.Path) == 0 || closestPathPointDistance > w.Tilemap.Scale || m.Path[len(m.Path)-1].Distance(playerPos) > w.Tilemap.Scale*0.9 {
-		m.Path = w.Tilemap.FindPath(m.Body.Position(), playerPos)
+		m.PathDistance, m.Path = w.Tilemap.FindPath(m.Body.Position(), playerPos)
 		m.Path = append(m.Path[:max(len(m.Path)-1, 0)], playerPos)
 	}
 
@@ -212,22 +209,15 @@ func (arm *MonsterArm) Update(w *World) {
 		}
 	}
 	pathTarget = arm.Monster.Path[closestTipPathPointI]
-	if closestTipPathPointI != len(arm.Monster.Path)-1 {
-		pathTarget = pathTarget.Lerp(arm.Monster.Path[closestTipPathPointI+1], 0.5)
+	if closestTipPathPointI < len(arm.Monster.Path)-1 {
+		pathTarget = arm.Monster.Path[closestTipPathPointI+1]
 	}
 
-	if playerDist > arm.Segments[0].Length*ARM_SEGMENTS {
+	if arm.Monster.PathDistance/(w.Player.Radius*2) > 8 {
 		arm.TipTarget = pathTarget
-		arm.GaitAngle += float64(w.DT)
 	} else {
 		arm.TipTarget = entangleTarget
-		arm.GaitAngle += float64(w.DT) * 2
 	}
-
-	if arm.GaitAngle > 1 {
-		arm.GaitAngle = arm.GaitAngle - 1
-	}
-	pull := arm.GaitAngle < 0.5
 
 	delta := arm.TipTarget.Sub(tip.Body.Position())
 	currentDir := cp.ForAngle(tip.Body.Angle())
@@ -235,11 +225,7 @@ func (arm *MonsterArm) Update(w *World) {
 
 	tip.Body.SetTorque(relativeAngle * tip.Body.Moment() * 70)
 
-	if pull {
-		tip.Body.SetVelocityVector(tip.Body.Velocity().Mult(0.9))
-	} else {
-		tip.Body.SetForce(delta.Normalize().Mult(1000 * tip.Body.Mass()))
-	}
+	tip.Body.SetForce(delta.Normalize().Mult(1000 * tip.Body.Mass()))
 
 }
 

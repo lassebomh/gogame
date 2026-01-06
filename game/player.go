@@ -38,7 +38,7 @@ func (p *Player) TakeItem(w *World, pitem *PhysicalItem) {
 func NewPlayer(w *World, pos cp.Vector) *Player {
 
 	player := &Player{
-		Speed:     30,
+		Speed:     40,
 		Health:    100,
 		HealthMax: 100,
 

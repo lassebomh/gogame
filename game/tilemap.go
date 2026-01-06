@@ -41,37 +41,77 @@ type Tilemap struct {
 }
 
 func (t *Tile) PathNeighbors() []astar.Pather {
-	neighbors := make([]astar.Pather, 0, 4)
+	neighbors := make([]astar.Pather, 0, 8)
 
 	if t.Wall&WALL_L == 0 && t.X > 0 {
 		left := &t.tilemap.Cols[t.X-1][t.Y]
-
 		if left.Wall&WALL_R == 0 {
 			neighbors = append(neighbors, left)
 		}
 	}
 
 	if t.Wall&WALL_T == 0 && t.Y > 0 {
-		TOP := &t.tilemap.Cols[t.X][t.Y-1]
-
-		if TOP.Wall&WALL_B == 0 {
-			neighbors = append(neighbors, TOP)
+		top := &t.tilemap.Cols[t.X][t.Y-1]
+		if top.Wall&WALL_B == 0 {
+			neighbors = append(neighbors, top)
 		}
 	}
 
 	if t.Wall&WALL_R == 0 && t.X < t.tilemap.Width-1 {
-		left := &t.tilemap.Cols[t.X+1][t.Y]
-
-		if left.Wall&WALL_L == 0 {
-			neighbors = append(neighbors, left)
+		right := &t.tilemap.Cols[t.X+1][t.Y]
+		if right.Wall&WALL_L == 0 {
+			neighbors = append(neighbors, right)
 		}
 	}
 
 	if t.Wall&WALL_B == 0 && t.Y < t.tilemap.Height-1 {
-		left := &t.tilemap.Cols[t.X][t.Y+1]
+		bottom := &t.tilemap.Cols[t.X][t.Y+1]
+		if bottom.Wall&WALL_T == 0 {
+			neighbors = append(neighbors, bottom)
+		}
+	}
 
-		if left.Wall&WALL_T == 0 {
-			neighbors = append(neighbors, left)
+	if t.X > 0 && t.Y > 0 {
+		left := &t.tilemap.Cols[t.X-1][t.Y]
+		top := &t.tilemap.Cols[t.X][t.Y-1]
+		topleft := &t.tilemap.Cols[t.X-1][t.Y-1]
+
+		if t.Wall&WALL_L == 0 && t.Wall&WALL_T == 0 &&
+			left.Wall&WALL_R == 0 && top.Wall&WALL_B == 0 {
+			neighbors = append(neighbors, topleft)
+		}
+	}
+
+	if t.X < t.tilemap.Width-1 && t.Y > 0 {
+		right := &t.tilemap.Cols[t.X+1][t.Y]
+		top := &t.tilemap.Cols[t.X][t.Y-1]
+		topright := &t.tilemap.Cols[t.X+1][t.Y-1]
+
+		if t.Wall&WALL_R == 0 && t.Wall&WALL_T == 0 &&
+			right.Wall&WALL_L == 0 && top.Wall&WALL_B == 0 {
+			neighbors = append(neighbors, topright)
+		}
+	}
+
+	if t.X > 0 && t.Y < t.tilemap.Height-1 {
+		left := &t.tilemap.Cols[t.X-1][t.Y]
+		bottom := &t.tilemap.Cols[t.X][t.Y+1]
+		bottomleft := &t.tilemap.Cols[t.X-1][t.Y+1]
+
+		if t.Wall&WALL_L == 0 && t.Wall&WALL_B == 0 &&
+			left.Wall&WALL_R == 0 && bottom.Wall&WALL_T == 0 {
+			neighbors = append(neighbors, bottomleft)
+		}
+	}
+
+	if t.X < t.tilemap.Width-1 && t.Y < t.tilemap.Height-1 {
+		right := &t.tilemap.Cols[t.X+1][t.Y]
+		bottom := &t.tilemap.Cols[t.X][t.Y+1]
+		bottomright := &t.tilemap.Cols[t.X+1][t.Y+1]
+
+		if t.Wall&WALL_R == 0 && t.Wall&WALL_B == 0 &&
+			right.Wall&WALL_L == 0 && bottom.Wall&WALL_T == 0 {
+			neighbors = append(neighbors, bottomright)
 		}
 	}
 
@@ -79,12 +119,15 @@ func (t *Tile) PathNeighbors() []astar.Pather {
 }
 
 func (t *Tile) PathNeighborCost(to astar.Pather) float64 {
-	return 1
+	other := to.(*Tile)
+	dist := t.WorldPosition.Distance(other.WorldPosition)
+
+	return dist
 }
 
 func (t *Tile) PathEstimatedCost(to astar.Pather) float64 {
 	other := to.(*Tile)
-	return math.Hypot(float64(t.X-other.X), float64(t.Y-other.Y))
+	return t.WorldPosition.Distance(other.WorldPosition)
 }
 func NewTilemap(width int, height int, scale float64) *Tilemap {
 	tilemap := &Tilemap{
@@ -121,18 +164,18 @@ func (t *Tilemap) GetTileAtWorldPosition(pos cp.Vector) *Tile {
 	return &t.Cols[x][y]
 }
 
-func (t *Tilemap) FindPath(start, end cp.Vector) []cp.Vector {
+func (t *Tilemap) FindPath(start, end cp.Vector) (float64, []cp.Vector) {
 
 	startTile := t.GetTileAtWorldPosition(start)
 	endTile := t.GetTileAtWorldPosition(end)
 
 	if startTile == nil || endTile == nil {
-		return nil
+		return 0, nil
 	}
 
-	path, _, found := astar.Path(endTile, startTile)
+	path, distance, found := astar.Path(endTile, startTile)
 	if !found {
-		return nil
+		return 0, nil
 	}
 
 	worldPath := make([]cp.Vector, len(path))
@@ -141,7 +184,7 @@ func (t *Tilemap) FindPath(start, end cp.Vector) []cp.Vector {
 		worldPath[i] = cp.Vector{X: float64(tile.X) + 0.5, Y: float64(tile.Y) + 0.5}.Mult(t.Scale)
 	}
 
-	return worldPath
+	return distance, worldPath
 }
 
 func (t *Tilemap) Render() {
@@ -174,15 +217,20 @@ func (t *Tilemap) CreateRoom(x, y, width, height int, doorDirection int) {
 	}
 	if doorDirection&WALL_B != 0 {
 		t.Cols[x+width/2][y+height-1].Wall = 0
+		t.Cols[x+width/2][y+height-1].Door = WALL_B
 	}
 	if doorDirection&WALL_R != 0 {
 		t.Cols[x+width-1][y+height/2].Wall = 0
+		t.Cols[x+width-1][y+height/2].Door = WALL_R
 	}
 }
 func (t *Tilemap) GenerateBodies(w *World) {
+	var shapeFilterGroup uint = 2
+
 	addSegment := func(body *cp.Body, start, end cp.Vector, radius float64) {
 		shape := cp.NewSegment(body, start, end, radius)
 		w.Space.AddShape(shape)
+		shape.Filter.Group = shapeFilterGroup
 	}
 
 	for x, rows := range t.Cols {
@@ -220,41 +268,89 @@ func (t *Tilemap) GenerateBodies(w *World) {
 			}
 
 			if tile.Door != 0 {
-				mass := 10.0
-				moment := cp.MomentForBox(mass, s, th)
-				body := w.Space.AddBody(cp.NewBody(mass, moment))
+				mass := 20.0
 
-				var start, end cp.Vector
+				// Variables for rectangle and constraints
+				var width, height float64
+				var bodyPos, pivot cp.Vector
+				var angle float64
 
-				// Position door along the side indicated by the flag
 				switch {
 				case tile.Door&WALL_T != 0:
-					start = cp.Vector{X: tileX + th/2, Y: tileY + th/2}
-					end = cp.Vector{X: tileX + s - th/2, Y: tileY + th/2}
-					body.SetPosition(cp.Vector{X: tileX + s/2, Y: tileY + th/2})
+					// Top wall (horizontal door)
+					angle = 0
+					width = s - th/2
+					height = th
+					bodyPos = cp.Vector{X: tileX + s/2, Y: tileY + th/2}
+					pivot = cp.Vector{X: tileX + th/2, Y: tileY + th/2} // left edge
 				case tile.Door&WALL_R != 0:
-					start = cp.Vector{X: tileX + s - th/2, Y: tileY + th/2}
-					end = cp.Vector{X: tileX + s - th/2, Y: tileY + s - th/2}
-					body.SetPosition(cp.Vector{X: tileX + s - th/2, Y: tileY + s/2})
+					// Right wall (vertical door)
+					angle = rl.Pi * 0.5
+					width = th
+					height = s - th/2
+					bodyPos = cp.Vector{X: tileX + s - th/2, Y: tileY + s/2}
+					pivot = cp.Vector{X: tileX + s - th/2, Y: tileY + th/2} // top edge
 				case tile.Door&WALL_B != 0:
-					start = cp.Vector{X: tileX + th/2, Y: tileY + s - th/2}
-					end = cp.Vector{X: tileX + s - th/2, Y: tileY + s - th/2}
-					body.SetPosition(cp.Vector{X: tileX + s/2, Y: tileY + s - th/2})
+					// Bottom wall (horizontal door)
+					angle = rl.Pi * 1
+					width = s - th/2
+					height = th
+					bodyPos = cp.Vector{X: tileX + s/2, Y: tileY + s - th/2}
+					pivot = cp.Vector{X: tileX + th/2, Y: tileY + s - th/2} // left edge
 				case tile.Door&WALL_L != 0:
-					start = cp.Vector{X: tileX + th/2, Y: tileY + th/2}
-					end = cp.Vector{X: tileX + th/2, Y: tileY + s - th/2}
-					body.SetPosition(cp.Vector{X: tileX + th/2, Y: tileY + s/2})
+					// Left wall (vertical door)
+					angle = rl.Pi * 1.5
+					width = th
+					height = s - th/2
+					bodyPos = cp.Vector{X: tileX + th/2, Y: tileY + s/2}
+					pivot = cp.Vector{X: tileX + th/2, Y: tileY + th/2} // top edge
 				}
 
-				shape := cp.NewSegment(body, start, end.Add(start.Sub(end).Mult(5)), th*10)
+				// Create dynamic body
+				moment := cp.MomentForBox(mass, width, height)
+				body := cp.NewBody(mass, moment)
+				body.SetPosition(bodyPos)
+				body.SetAngle(angle)
+				w.Space.AddBody(body)
 
+				// Rectangle vertices centered at body
+				hw := width / 2
+				hh := height / 2
+				verts := []cp.Vector{
+					{X: -hw, Y: -hh},
+					{X: hw, Y: -hh},
+					{X: hw, Y: hh},
+					{X: -hw, Y: hh},
+				}
+
+				// Create polygon shape
+				shape := cp.NewPolyShape(body, 4, verts, cp.NewTransformRotate(angle), 0)
+				shape.Filter.Group = shapeFilterGroup
 				shape.SetElasticity(0)
 				shape.SetFriction(0.9)
+				body.AddShape(shape)
+				w.Space.AddShape(shape)
 
-				// body.AddShape(shape)
-				// w.Space.AddBody(body)
+				// Add pivot joint to static body
+				pivotJoint := cp.NewPivotJoint(w.Space.StaticBody, body, pivot)
+				pivotJoint.SetMaxForce(1e6)
+				w.Space.AddConstraint(pivotJoint)
+
+				// Add rotary limit to constrain door swing
+				minAngle := angle - rl.Pi/1.2 // adjust as needed
+				maxAngle := angle + rl.Pi/1.2
+				rotaryLimit := cp.NewRotaryLimitJoint(w.Space.StaticBody, body, minAngle, maxAngle)
+				rotaryLimit.SetMaxForce(1e8)
+				w.Space.AddConstraint(rotaryLimit)
+
+				stiffness := 50.0 * body.Moment()
+				damping := 2 * math.Sqrt(stiffness*body.Moment())
+				dampedSpring := cp.NewDampedRotarySpring(w.Space.StaticBody, body, -angle, stiffness, damping)
+				w.Space.AddConstraint(dampedSpring)
+
 				tile.DoorBody = body
 			}
+
 		}
 	}
 }
@@ -323,4 +419,6 @@ func GenerateMaze(tilemap *Tilemap, startX, startY, width, height int) {
 			stack = stack[:len(stack)-1]
 		}
 	}
+
+	tilemap.Cols[startX+width-2][startY+height-1].Wall = 0
 }

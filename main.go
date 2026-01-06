@@ -9,11 +9,20 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
+const DEBUG = false
+
 func main() {
 	screenWidth := int32(1200)
 	screenHeight := int32(800)
 
-	pixelScale := int32(4)
+	var pixelScale int32
+
+	if DEBUG {
+		pixelScale = 1
+	} else {
+		pixelScale = 4
+	}
+
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
 
@@ -26,10 +35,10 @@ func main() {
 		rl.SetWindowPosition(int(pos.X), int(pos.Y))
 	}
 
-	tilemap := NewTilemap(40, 40, 7)
+	tilemap := NewTilemap(40, 40, 7.5)
 
-	// GenerateMaze(tilemap, 10, 10, 10, 10)
-	// tilemap.Cols[18][19].Wall = 0
+	// GenerateMaze(tilemap, 5, 5, 20, 20)
+	tilemap.Cols[18][19].Wall = 0
 	roomWidth := 5
 	roomHeight := 5
 	rooms := 5
@@ -38,15 +47,14 @@ func main() {
 			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
 		}
 	}
-
 	tilemap.Cols[25][27].Door = WALL_B
+	tilemap.Cols[27][25].Door = WALL_R
 
 	w := NewWorld(tilemap)
-	tilemap.GenerateBodies(w)
 
-	shadowWidth, shadowHeight := int32(1000), int32(1000)
-	shadowTexture := rl.LoadRenderTexture(shadowWidth, shadowHeight)
-	defer rl.UnloadRenderTexture(shadowTexture)
+	// shadowWidth, shadowHeight := int32(1000), int32(1000)
+	// shadowTexture := rl.LoadRenderTexture(shadowWidth, shadowHeight)
+	// defer rl.UnloadRenderTexture(shadowTexture)
 
 	renderTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(renderTexture)
@@ -60,7 +68,7 @@ func main() {
 	// render.NewLight(LIGHT_POINT, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, 1)
 	// render.NewLight(LIGHT_POINT, rl.NewVector3(2, 1, 2), rl.NewVector3(0, 0, 0), rl.Red, 1)
 	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
-	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.5)
+	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.2)
 
 	Debug(render)
 
@@ -76,14 +84,13 @@ func main() {
 	wall := rl.LoadModel("./models/cube.glb")
 	wall.Materials.Shader = shader
 	door := rl.LoadModel("./models/door.glb")
-	door.Materials.Shader = shader
+	door.GetMaterials()[1].Shader = shader
 
 	monsterArm := rl.LoadModel("./models/monster/monster_arm_segment.glb")
 	monsterArm.Materials.Shader = shader
 
 	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
 	monsterBody.Materials.Shader = shader
-	// test := rl.LoadModel("./models/test/test.glb")
 
 	rl.SetTargetFPS(60)
 
@@ -109,7 +116,6 @@ func main() {
 		// 	Fovy:       30,
 		// 	Projection: rl.CameraPerspective,
 		// }
-
 		// rl.BeginTextureMode(shadowTexture)
 		// rl.ClearBackground(rl.Black)
 		// rl.BeginMode3D(lightCam)
@@ -141,10 +147,9 @@ func main() {
 		// }
 		// wall.Materials.Shader = oldWallShader
 		// plane.Materials.Shader = oldPlaneShader
-
-		rl.EndShaderMode()
-		rl.EndMode3D()
-		rl.EndTextureMode()
+		// rl.EndShaderMode()
+		// rl.EndMode3D()
+		// rl.EndTextureMode()
 
 		rl.BeginTextureMode(renderTexture)
 		rl.ClearBackground(rl.Black)
@@ -169,12 +174,10 @@ func main() {
 					rl.DrawModelEx(wall, pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
 				}
 				if tile.DoorBody != nil {
-					rl.DrawModelEx(door, VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Vector3, 0, XYZ.Scale(scale/2).Vector3, rl.White)
+					rl.DrawModelEx(door, VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Negate().Vector3, float32(tile.DoorBody.Angle()*rl.Rad2deg), scaleVec, rl.RayWhite)
 				}
 			}
 		}
-
-		// rl.DrawModelEx(taest, playerPos.Add(NewVec(0, 4, 0)).Vector3, Y.Vector3, float32(t)*30, XYZ.Scale(3).Vector3, rl.White)
 
 		rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
 
@@ -207,20 +210,22 @@ func main() {
 				}
 			}
 		}
-
-		// rl.DrawRenderBatchActive()
-		// rl.DisableDepthTest()
-		// // cp.DrawSpace(w.Space, w.PhysicsDrawer)
-		// DrawLine(rl.Red, w.Monster.Path...)
-		// if w.Monster != nil {
-		// 	for _, arm := range w.Monster.Arms {
-		// 		DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
-		// 	}
-		// 	DrawLine(rl.Green, w.Monster.Body.Position(), w.Monster.Target)
-		// }
-		// rl.DrawRenderBatchActive()
-		// rl.EnableDepthTest()
-
+		if DEBUG {
+			rl.DrawRenderBatchActive()
+			rl.DisableDepthTest()
+			cp.DrawSpace(w.Space, w.PhysicsDrawer)
+			if w.Monster != nil {
+				DrawLine(rl.Red, w.Monster.Path...)
+				if w.Monster != nil {
+					for _, arm := range w.Monster.Arms {
+						DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
+					}
+					DrawLine(rl.Green, w.Monster.Body.Position(), w.Monster.Target)
+				}
+			}
+			rl.DrawRenderBatchActive()
+			rl.EnableDepthTest()
+		}
 		rl.EndMode3D()
 		rl.EndTextureMode()
 
