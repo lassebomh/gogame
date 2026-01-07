@@ -28,6 +28,10 @@ func (u *ShaderUniform) SetInt(value int32) {
 func (u *ShaderUniform) SetFloat(value float32) {
 	rl.SetShaderValue(u.Shader, u.Location, []float32{value}, rl.ShaderUniformFloat)
 }
+
+func (u *ShaderUniform) SetVec2(x, y float32) {
+	rl.SetShaderValue(u.Shader, u.Location, []float32{x, y}, rl.ShaderUniformVec2)
+}
 func (u *ShaderUniform) SetVec3(x, y, z float32) {
 	rl.SetShaderValue(u.Shader, u.Location, []float32{x, y, z}, rl.ShaderUniformVec3)
 }
@@ -35,7 +39,7 @@ func (u *ShaderUniform) SetVec4(x, y, z, w float32) {
 	rl.SetShaderValue(u.Shader, u.Location, []float32{x, y, z, w}, rl.ShaderUniformVec4)
 }
 
-func (r *Render) GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
+func GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
 
 	uniform := &ShaderUniform{
 		Location: rl.GetShaderLocation(shader, fmt.Sprintf(format, args...)),
@@ -71,14 +75,14 @@ func (r *Render) NewLight(lightType LightType, position rl.Vector3, target rl.Ve
 		Strength:       strength,
 		CutOff:         float32(math.Cos(0 * rl.Deg2rad)),
 		OuterCutOff:    float32(math.Cos(30 * rl.Deg2rad)),
-		enabledLoc:     r.GetUniform(r.Shader, "lights[%d].enabled", lightsCount),
-		lightTypeLoc:   r.GetUniform(r.Shader, "lights[%d].type", lightsCount),
-		positionLoc:    r.GetUniform(r.Shader, "lights[%d].position", lightsCount),
-		targetLoc:      r.GetUniform(r.Shader, "lights[%d].target", lightsCount),
-		colorLoc:       r.GetUniform(r.Shader, "lights[%d].color", lightsCount),
-		cutOffLoc:      r.GetUniform(r.Shader, "lights[%d].cutOff", lightsCount),
-		outerCutOffLoc: r.GetUniform(r.Shader, "lights[%d].outerCutOff", lightsCount),
-		strengthLoc:    r.GetUniform(r.Shader, "lights[%d].strength", lightsCount),
+		enabledLoc:     GetUniform(r.Shader, "lights[%d].enabled", lightsCount),
+		lightTypeLoc:   GetUniform(r.Shader, "lights[%d].type", lightsCount),
+		positionLoc:    GetUniform(r.Shader, "lights[%d].position", lightsCount),
+		targetLoc:      GetUniform(r.Shader, "lights[%d].target", lightsCount),
+		colorLoc:       GetUniform(r.Shader, "lights[%d].color", lightsCount),
+		cutOffLoc:      GetUniform(r.Shader, "lights[%d].cutOff", lightsCount),
+		outerCutOffLoc: GetUniform(r.Shader, "lights[%d].outerCutOff", lightsCount),
+		strengthLoc:    GetUniform(r.Shader, "lights[%d].strength", lightsCount),
 	}
 
 	r.Lights = append(r.Lights, light)

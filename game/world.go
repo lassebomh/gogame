@@ -34,8 +34,8 @@ func NewGame() *Game {
 	game.Earth = NewWorld(tilemap)
 	game.Earth.Monster = NewMonster(game.Earth, tilemap.CenterPosition.Add(cp.Vector{Y: 40}))
 
-	tilemap = NewTilemap(10, 7, 7.5)
-	tilemap.CreateRoom(0, 0, 10, 7, 0)
+	tilemap = NewTilemap(1, 1, 7.5)
+	tilemap.CreateRoom(0, 0, 1, 1, 0)
 
 	game.Station = NewWorld(tilemap)
 	game.Station.Player = NewPlayer(game.Station, tilemap.CenterPosition)

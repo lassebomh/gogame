@@ -26,9 +26,10 @@ func main() {
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
 
-	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused)
+	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUndecorated | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
+	defer rl.CloseWindow()
 
 	if rl.GetMonitorCount() > 1 {
 		pos := rl.GetMonitorPosition(1)
@@ -46,37 +47,54 @@ func main() {
 	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
 
 	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
-	// backgroundShader := rl.LoadShader("./glsl330/station.vs", "./glsl330/station.fs")
-	// shadowShader := rl.LoadShader("./glsl330/shadow.vs", "./glsl330/shadow.fs")
+	defer rl.UnloadShader(shader)
+
+	backgroundShader := rl.LoadShader("./glsl330/station.vs", "./glsl330/planet2.fs")
+	defer rl.UnloadShader(backgroundShader)
+
+	img := rl.LoadImage("./models/organic.png")
+	defer rl.UnloadImage(img)
+
+	iChannel0 := rl.LoadTextureFromImage(img)
+	defer rl.UnloadTexture(iChannel0)
+
+	rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
+	loc := rl.GetShaderLocation(backgroundShader, "iChannel0")
+	rl.SetShaderValueTexture(backgroundShader, loc, iChannel0)
+	backgroundShaderTime := GetUniform(backgroundShader, "iTime")
+	backgroundShaderResolution := GetUniform(backgroundShader, "iResolution")
+	backgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
 
 	render := NewRender(shader)
 
 	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
-	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.0)
-
-	Debug(render)
+	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.5)
 
 	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
-	ambientLoc := rl.GetShaderLocation(shader, "ambient")
-	shaderValue := []float32{0.1, 0.1, 0.1, 1.0}
-	rl.SetShaderValue(shader, ambientLoc, shaderValue, rl.ShaderUniformVec4)
+	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
 
 	render.UpdateValues()
 
-	// background := rl.LoadModel("./models/plane.glb")
-	// background.Materials.Shader = backgroundShader
+	background := rl.LoadModel("./models/plane.glb")
+	defer rl.UnloadModel(background)
+	background.Materials.Shader = backgroundShader
 
 	plane := rl.LoadModel("./models/plane.glb")
+	defer rl.UnloadModel(plane)
 	plane.Materials.Shader = shader
 	wall := rl.LoadModel("./models/cube.glb")
+	defer rl.UnloadModel(wall)
 	wall.Materials.Shader = shader
 	door := rl.LoadModel("./models/door.glb")
+	defer rl.UnloadModel(door)
 	door.GetMaterials()[1].Shader = shader
 
 	monsterArm := rl.LoadModel("./models/monster/monster_arm_segment.glb")
+	defer rl.UnloadModel(monsterArm)
 	monsterArm.Materials.Shader = shader
 
 	monsterBody := rl.LoadModel("./models/monster/monster_body.glb")
+	defer rl.UnloadModel(monsterBody)
 	monsterBody.Materials.Shader = shader
 
 	rl.SetTargetFPS(60)
@@ -105,51 +123,20 @@ func main() {
 
 		render.UpdateValues()
 
-		// lightCam := rl.Camera3D{
-		// 	Position:   flashlight.Position,
-		// 	Target:     flashlight.Target,
-		// 	Up:         Y.Vector3,
-		// 	Fovy:       30,
-		// 	Projection: rl.CameraPerspective,
-		// }
-		// rl.BeginTextureMode(shadowTexture)
-		// rl.ClearBackground(rl.Black)
-		// rl.BeginMode3D(lightCam)
-		// rl.BeginShaderMode(shadowShader)
-		// oldWallShader := wall.Materials.Shader
-		// oldPlaneShader := plane.Materials.Shader
-		// wall.Materials.Shader = shadowShader
-		// plane.Materials.Shader = shadowShader
-
-		// for _, col := range w.Tilemap.Cols {
-		// 	for _, tile := range col {
-		// 		scale := float32(w.Tilemap.Scale)
-		// 		pos := VecFrom2D(tile.WorldPosition, 0)
-		// 		rl.DrawModel(plane, pos.Add(XZ.Scale(scale/2)).Vector3, scale/2, rl.White)
-		// 		scaleVec := XYZ.Scale(scale * 0.5).Vector3
-		// 		if tile.Wall&WALL_L != 0 {
-		// 			rl.DrawModel(wall, pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
-		// 		}
-		// 		if tile.Wall&WALL_T != 0 {
-		// 			rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio)).Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
-		// 		}
-		// 		if tile.Wall&WALL_R != 0 {
-		// 			rl.DrawModelEx(wall, pos.Add(NewVec(scale, 0, 0)).Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
-		// 		}
-		// 		if tile.Wall&WALL_B != 0 {
-		// 			rl.DrawModelEx(wall, pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
-		// 		}
-		// 	}
-		// }
-		// wall.Materials.Shader = oldWallShader
-		// plane.Materials.Shader = oldPlaneShader
-		// rl.EndShaderMode()
-		// rl.EndMode3D()
-		// rl.EndTextureMode()
-
 		rl.BeginTextureMode(renderTexture)
 		rl.ClearBackground(rl.Black)
 		rl.BeginMode3D(w.Camera)
+
+		backgroundShaderTime.SetFloat(float32(t))
+
+		cameraPos := Vec{Vector3: w.Camera.Position}
+		cameraTarget := Vec{Vector3: w.Camera.Target}
+		cameraDir := cameraTarget.Subtract(cameraPos).Normalize()
+
+		angle := float32(math.Acos(float64(Z.DotProduct(cameraDir))))
+		axis := Z.Normalize().CrossProduct(cameraDir).Normalize()
+		scale := X.Scale(w.Camera.Fovy * float32(renderWidth) / float32(renderHeight)).Add(Z.Scale(w.Camera.Fovy)).Add(Y)
+		rl.DrawModelEx(background, cameraPos.Add(cameraDir.Scale(w.Camera.Fovy*2)).Vector3, axis.Vector3, angle, scale.Vector3, rl.White)
 
 		for _, col := range w.Tilemap.Cols {
 			for _, tile := range col {
@@ -208,6 +195,7 @@ func main() {
 				}
 			}
 		}
+
 		if DEBUG {
 			rl.DrawRenderBatchActive()
 			rl.DisableDepthTest()
@@ -237,21 +225,13 @@ func main() {
 			0,
 			rl.White,
 		)
-		// rl.DrawTexturePro(
-		// 	shadowTexture.Texture,
-		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(shadowWidth), Height: -float32(shadowHeight)},
-		// 	rl.Rectangle{X: 0, Y: 0, Width: float32(shadowWidth), Height: float32(shadowHeight)},
-		// 	rl.Vector2{X: 0, Y: 0},
-		// 	0,
-		// 	rl.White,
-		// )
 
 		// w.Player.RenderHud(w)
 		rl.DrawFPS(10, 20)
+
 		rl.EndDrawing()
 
 	}
-	rl.CloseWindow()
 }
 
 func DrawLine(col color.RGBA, ps ...cp.Vector) {
