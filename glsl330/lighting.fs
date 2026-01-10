@@ -145,13 +145,15 @@ void main()
             }
             if (lights[i].type == LIGHT_SPOT)
             {
-                vec3 lightDir = normalize(lights[i].position - fragPosition);
-                vec3 spotDir = normalize(lights[i].target - lights[i].position);
+              vec3 lightDir = normalize(lights[i].position - fragPosition);
+    
+                vec3 rayDir = normalize(lights[i].position - lights[i].target); 
 
-                float theta = dot(lightDir, -spotDir);
+                float theta = dot(lightDir, rayDir); 
+                
                 float epsilon = lights[i].cutOff - lights[i].outerCutOff;
                 float intensity = clamp((theta - lights[i].outerCutOff) / epsilon, 0.0, 1.0);
-
+                
                 light = lightDir;
 
                 float NdotL = max(dot(normal, light), 0.0);

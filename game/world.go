@@ -233,30 +233,6 @@ var HOUR_MORNING float64 = 8
 var HOUR_NIGHT float64 = 20
 var HOURS_TRANSITION float64 = 1
 
-// func SkyHSV(hour float64) (h, s, v float64) {
-// 	// solar phase: sunrise ≈ 6, noon ≈ 12
-// 	x := math.Sin(2 * math.Pi * (hour - 6) / 24)
-
-// 	Debug(x)
-
-// 	// daylight factor
-// 	day := 1 + math.Min(0, x)
-
-// 	// twilight factor (strongest near horizon)
-// 	// t := math.Exp(-8 * x * x)
-
-// 	// hue: white(day) → orange/red/purple → blue(night)
-// 	h = 55
-
-// 	// saturation: minimal at noon, higher at twilight/night
-// 	s = 0.5
-
-// 	// value: bright day, dark night
-// 	v = 1 // 0.1 + 0.9*d
-
-// 	return
-// }
-
 func c(x float64) float64 {
 	return (1 + math.Tanh(x)) / 2
 }
@@ -270,14 +246,16 @@ func (w *World) RenderEarth(r *Render) {
 
 	sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
 
-	r.Light(LIGHT_DIRECTIONAL, NewVec(0, 0, 0), NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
+	r.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
 
 	playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
 	lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
 	flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
 	flashlightTarget := flashlightPos.Add(lookDir)
 
-	r.Light(LIGHT_SPOT, flashlightPos, flashlightTarget, rl.NewColor(255, 255, 100, 255), 2)
+	r.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
+
+	r.LightPoint(playerPos, rl.Green, 1)
 
 	r.UpdateValues()
 

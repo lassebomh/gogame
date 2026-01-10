@@ -118,12 +118,49 @@ func (r *Render) Unload() {
 	}
 }
 
-func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
+// func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
+// 	light := r.Lights[r.LightI]
+// 	light.Enabled = 1
+// 	light.Type = lightType
+// 	light.Position = position.Vector3
+// 	light.Target = target.Vector3
+// 	light.Color = color
+// 	light.Strength = strength
+
+// 	r.LightI++
+// }
+
+func (r *Render) LightDirectional(direction Vec, color rl.Color, strength float32) {
 	light := r.Lights[r.LightI]
 	light.Enabled = 1
-	light.Type = lightType
+	light.Type = LIGHT_DIRECTIONAL
+	light.Position = rl.Vector3{}
+	light.Target = direction.Vector3
+	light.Color = color
+	light.Strength = strength
+
+	r.LightI++
+}
+
+func (r *Render) LightSpot(position Vec, target Vec, cutoff float32, outerCutOff float32, color rl.Color, strength float32) {
+	light := r.Lights[r.LightI]
+	light.Enabled = 1
+	light.Type = LIGHT_SPOT
 	light.Position = position.Vector3
 	light.Target = target.Vector3
+	light.CutOff = float32(math.Cos(float64(cutoff * rl.Deg2rad)))
+	light.OuterCutOff = float32(math.Cos(float64(outerCutOff * rl.Deg2rad)))
+	light.Color = color
+	light.Strength = strength
+
+	r.LightI++
+}
+
+func (r *Render) LightPoint(position Vec, color rl.Color, strength float32) {
+	light := r.Lights[r.LightI]
+	light.Enabled = 1
+	light.Type = LIGHT_POINT
+	light.Position = position.Vector3
 	light.Color = color
 	light.Strength = strength
 
