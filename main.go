@@ -53,14 +53,17 @@ func main() {
 	backgroundShader := rl.LoadShader("./glsl330/station.vs", "./glsl330/planet2.fs")
 	defer rl.UnloadShader(backgroundShader)
 
-	img := rl.LoadImage("./models/organic.png")
-	defer rl.UnloadImage(img)
-
-	iChannel0 := rl.LoadTextureFromImage(img)
+	iChannel0 := rl.LoadTexture("./models/organic.png")
+	rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
 	defer rl.UnloadTexture(iChannel0)
 
-	rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
-	loc := rl.GetShaderLocation(backgroundShader, "iChannel0")
+	iChannel1 := rl.LoadTexture("./models/earth_elevation.png")
+	rl.SetTextureWrap(iChannel1, rl.WrapRepeat)
+	defer rl.UnloadTexture(iChannel1)
+
+	iChannel0Location := GetUniform(backgroundShader, "iChannel0")
+	iChannel1Location := GetUniform(backgroundShader, "iChannel1")
+
 	backgroundShaderTime := GetUniform(backgroundShader, "iTime")
 	backgroundShaderResolution := GetUniform(backgroundShader, "iResolution")
 	backgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
@@ -118,7 +121,9 @@ func main() {
 		rl.BeginMode3D(w.Camera)
 
 		backgroundShaderTime.SetFloat(float32(game.Day))
-		rl.SetShaderValueTexture(backgroundShader, loc, iChannel0)
+		// rl.SetShaderValueTexture(backgroundShader, loc, iChannel0)
+		iChannel0Location.SetTexture(iChannel0)
+		iChannel1Location.SetTexture(iChannel1)
 
 		cameraPos := Vec{Vector3: w.Camera.Position}
 		cameraTarget := Vec{Vector3: w.Camera.Target}

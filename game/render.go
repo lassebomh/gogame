@@ -39,6 +39,9 @@ func (u *ShaderUniform) SetVec3(x, y, z float32) {
 func (u *ShaderUniform) SetVec4(x, y, z, w float32) {
 	rl.SetShaderValue(u.Shader, u.Location, []float32{x, y, z, w}, rl.ShaderUniformVec4)
 }
+func (u *ShaderUniform) SetTexture(texture rl.Texture2D) {
+	rl.SetShaderValueTexture(u.Shader, u.Location, texture)
+}
 
 func GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
 
