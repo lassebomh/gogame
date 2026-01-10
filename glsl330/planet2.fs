@@ -6,6 +6,7 @@
 
 #define PLANET_RADIUS 0.5
 #define ATMOSPHERE_RADIUS (PLANET_RADIUS * 1.3)
+#define PI 3.14159265358979323846
 
 uniform float iTime;
 uniform vec2 iResolution;
@@ -146,7 +147,7 @@ vec3 atmosphereScattering(vec3 ro, vec3 rd, float tPlanetHit) {
         if (t1 <= t0) return vec3(0.0);
     }
 
-    const int VIEW_SAMPLES = 32;
+    const int VIEW_SAMPLES = 128;
     float dt = (t1 - t0) / float(VIEW_SAMPLES);
     vec3 sum = vec3(0.0);
     float opticalDepth = 0.0;
@@ -196,38 +197,42 @@ vec3 atmosphereTransmittance(vec3 ro, vec3 rd, float tPlanetHit) {
 /* -----------------------------------------------------------------------------
  * Planet Generation
  * -------------------------------------------------------------------------- */
-
 vec3 planet_color(vec3 p, out float height, out float landMask, out float mountainMask) {
-    // texture mapping
+    float longitude = atan(p.x, p.z);         
+    float latitude = acos(p.y / length(p)); 
+
     vec2 uv;
-    // uv.x = atan(p.x,p.z)/6.2831 - 0.03*iTime;
-    // uv.y = acos(p.y)/1.1416;
-	  // uv.y *= 0.5;
-    uv.x = atan(p.x, p.z)/6.2831 - 0.03*iTime;
-    uv.y = 1.0 - (acos(p.y)/1.1416 * 0.5);
+    uv.x = longitude / 6.2831 + 0.5 - (iTime); 
+    uv.y = latitude / 3.1415;
     
-
-    vec3 col = vec3(0.2,0.3,0.4);
-    vec3 te  = 0.8*texture( iChannel0, .5*uv.yx ).xyz;
-         te += 0.3*texture( iChannel0, 2.5*uv.yx ).xyz;
-	  col = mix( col, (vec3(0.2,0.5,0.1)*0.55 + 0.45*te + 0.5*texture( iChannel0, 15.5*uv.yx ).xyz)*0.4, smoothstep( 0.45,0.5,te.x) );
-
-    vec3 cl = texture( iChannel0, 1.0*uv ).xxx;
-	  col = mix( col, vec3(0.9), 0.75*smoothstep( 0.45,0.8,cl.x) );
-
-    height = te.x;
-    landMask = smoothstep(0.14, 0.5, te.x);
-    mountainMask = smoothstep(0.5, 0.6, cl.x);
+    vec3 finalColor = vec3(0.2, 0.3, 0.4); // Ocean base
     
-    vec3 baseLandCol = vec3(0.15, 0.35, 0.12); // darker, richer green
-    vec3 texDetail   = 0.45*te + 0.5*texture(iChannel0, 15.5*uv.yx).xyz;
-    vec3 landCol     = baseLandCol * 0.8 + texDetail * 0.2;  // stronger base color, weaker texture
+    // Terrain noise sampling
+    vec3 terrainNoise = 0.8 * texture(iChannel0, 0.5 * uv.yx).xyz;
+         terrainNoise += 0.3 * texture(iChannel0, 2.5 * uv.yx).xyz;
+    
+    // Initial land/water mix
+    vec3 lowDetailLand = (vec3(0.2, 0.5, 0.1) * 0.55 + 0.45 * terrainNoise + 0.5 * texture(iChannel0, 15.5 * uv.yx).xyz) * 0.4;
+    finalColor = mix(finalColor, lowDetailLand, smoothstep(0.45, 0.5, terrainNoise.x));
 
-    col = mix(col, landCol, smoothstep(0.4, 0.6, te.x));
+    // Cloud layer sampling
+    vec3 cloudNoise = texture(iChannel0, 1.0 * uv).xxx;
+    finalColor = mix(finalColor, vec3(0.9), 0.75 * smoothstep(0.45, 0.8, cloudNoise.x));
 
-    return col;
+    // Assign output parameters
+    landMask = smoothstep(0.14, 0.5, terrainNoise.x);
+    height = terrainNoise.x;
+    mountainMask = smoothstep(0.5, 0.6, cloudNoise.x);
+    
+    // Final high-detail land coloring
+    vec3 baseLandCol = vec3(0.15, 0.35, 0.12); 
+    vec3 surfaceDetail = 0.45 * terrainNoise + 0.5 * texture(iChannel0, 15.5 * uv.yx).xyz;
+    vec3 polishedLandCol = baseLandCol * 0.8 + surfaceDetail * 0.2; 
+
+    finalColor = mix(finalColor, polishedLandCol, smoothstep(0.4, 0.6, terrainNoise.x));
+
+    return finalColor;
 }
-
 /* -----------------------------------------------------------------------------
  * Camera and Shading
  * -------------------------------------------------------------------------- */
@@ -250,7 +255,7 @@ vec3 shade(vec3 rd, vec3 p) {
   dif += SUN_COLOR * sun_dif;
 
   float height, landMask, mountainMask;
-  float rotSpeed = 0.05;
+  
   vec3 mate = planet_color(p, height, landMask, mountainMask) * 0.4;
   float rockSpec = pow(max(dot(reflect(-SUN_DIR, normal), -rd), 0.0), 16.0);
   mate += mountainMask * rockSpec * vec3(0.25, 0.22, 0.2);
@@ -268,8 +273,8 @@ vec3 get_background(vec3 rd) {
   vec3 col;
   col = (col + vec3(1.0, 0.9, 0.9) * expstep(sun_dif, 20000.0));
   col = (col + (vec3(1.0, 1.0, 0.1) * expstep(sun_dif, 10000.0)));
-  // col = (col + (vec3(1.0, 0.7, 0.7) * expstep(sun_dif, 1000.0)));
   col = (col + (vec3(1.0, 0.6, 0.05) * expstep(sun_dif, 2000.0))/5.0);
+  col = (col + (vec3(1.0, 0.7, 0.2) * expstep(sun_dif, 500.0))/5.0);
   return col;
 }
 
@@ -307,15 +312,71 @@ vec3 sun_glare(vec3 rd) {
   return GLARE_COL * pow(max(dot(SUN_DIR, rd), 0.0), 2.0) / 10.0;
 }
 
+vec3 rgb2lab(vec3 c)
+{
+    // sRGB to linear
+    vec3 rgb = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+
+    // Linear RGB to XYZ (D65)
+    const mat3 M = mat3(
+        0.4124564, 0.3575761, 0.1804375,
+        0.2126729, 0.7151522, 0.0721750,
+        0.0193339, 0.1191920, 0.9503041
+    );
+    vec3 xyz = M * rgb;
+    xyz /= vec3(0.95047, 1.0, 1.08883); // normalize by reference white
+
+    // XYZ to Lab
+    vec3 f = mix(pow(xyz, vec3(1.0 / 3.0)), (7.787 * xyz) + vec3(16.0 / 116.0), step(xyz, vec3(0.008856)));
+    float L = 116.0 * f.y - 16.0;
+    float a = 500.0 * (f.x - f.y);
+    float b = 200.0 * (f.y - f.z);
+
+    // normalize to 0–1
+    return vec3(L / 100.0, (a + 128.0) / 255.0, (b + 128.0) / 255.0);
+}
+
+vec3 lab2rgb(vec3 c)
+{
+    // denormalize from 0–1
+    float L = c.x * 100.0;
+    float a = c.y * 255.0 - 128.0;
+    float b = c.z * 255.0 - 128.0;
+
+    float y = (L + 16.0) / 116.0;
+    float x = a / 500.0 + y;
+    float z = y - b / 200.0;
+
+    vec3 xyz = vec3(x, y, z);
+    vec3 xyz3 = pow(xyz, vec3(3.0));
+    xyz = mix(xyz3, (xyz - vec3(16.0 / 116.0)) / 7.787, step(xyz3, vec3(0.008856)));
+
+    // Denormalize by reference white
+    xyz *= vec3(0.95047, 1.0, 1.08883);
+
+    // XYZ to linear RGB
+    const mat3 M = mat3(
+         3.2404542, -1.5371385, -0.4985314,
+        -0.9692660,  1.8760108,  0.0415560,
+         0.0556434, -0.2040259,  1.0572252
+    );
+    vec3 rgb = M * xyz;
+
+    // linear to sRGB
+    rgb = mix(rgb * 12.92, 1.055 * pow(rgb, vec3(1.0/2.4)) - 0.055, step(0.0031308, rgb));
+
+    return clamp(rgb, 0.0, 1.0);
+}
+
 void main() {
   vec2 fragCoord = gl_FragCoord.xy;
   vec2 res = vec2(iResolution.x, iResolution.y);
   vec2 coord = ((2.0 * (fragCoord - (res * 0.5))) / iResolution.y);
-  float theta = 1.88495559 + iTime * 0.1;
+  float theta = iTime * PI * 2.0 - PI;
   vec3 lookat = vec3(0.0, 0.0, 0.0);
   vec2 sc = 2.0 * sincos(theta);
-  vec3 ro = vec3(sc.x, 0.5, sc.y);
-  vec3 rd = perspective_camera(ro, lookat, 0.0, 50.0, coord);
+  vec3 ro = vec3(sc.x, 0.0, sc.y);
+  vec3 rd = perspective_camera(ro, lookat, 0.0, 30.0, coord);
 
   float t = sphere_intersect(ro, rd, vec3(0.0, 0.0, 0.0), PLANET_RADIUS);
   vec3 col = get_background(rd);
@@ -342,7 +403,25 @@ void main() {
   col = color_tone_1(col, 1.7, 0.002, 1.2);
   col = color_saturate(col, 0.9);
   col = color_gamma_correction(col);
-  col = vignette(col, (fragCoord / res), 0.25, 0.7);
-  col = dither(col, fragCoord, 0.01);
+  // col = vignette(col, (fragCoord / res), 0.25, 0.7);
+  // col = dither(col, fragCoord, 0.01);
   finalColor = vec4(col.x, col.y, col.z, depth);
+  
+
+  float roundoff = 16.0;
+  
+  
+  float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) * 2;
+  dither -= 1;
+  
+  vec3 lab = rgb2lab(finalColor.xyz);
+  
+  lab.x = floor((lab.x) * 25.0 + dither / 2.0) / 25.0;
+  lab.y = floor((lab.y) * 80.0 + dither / 2.0) / 80.0;
+  lab.z = floor((lab.z) * 80.0 + dither / 2.0) / 80.0;
+    
+  finalColor = vec4(
+    lab2rgb(lab.xyz),
+    finalColor.w
+  );
 }

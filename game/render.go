@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"unsafe"
 
@@ -52,6 +53,7 @@ func GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
 type Render struct {
 	Shader rl.Shader
 	Lights []*Light
+	LightI int
 }
 
 func NewRender(shader rl.Shader) *Render {
@@ -60,7 +62,40 @@ func NewRender(shader rl.Shader) *Render {
 		Lights: make([]*Light, 0, MAX_LIGHTS),
 	}
 
+	for i := range MAX_LIGHTS {
+		render.Lights = append(render.Lights, &Light{
+			Type:           LIGHT_SPOT,
+			Position:       rl.NewVector3(0, 0, 0),
+			Target:         rl.NewVector3(0, 0, 0),
+			Color:          color.RGBA{},
+			Enabled:        0,
+			Strength:       0,
+			CutOff:         float32(math.Cos(0 * rl.Deg2rad)),
+			OuterCutOff:    float32(math.Cos(30 * rl.Deg2rad)),
+			enabledLoc:     GetUniform(shader, "lights[%d].enabled", i),
+			lightTypeLoc:   GetUniform(shader, "lights[%d].type", i),
+			positionLoc:    GetUniform(shader, "lights[%d].position", i),
+			targetLoc:      GetUniform(shader, "lights[%d].target", i),
+			colorLoc:       GetUniform(shader, "lights[%d].color", i),
+			cutOffLoc:      GetUniform(shader, "lights[%d].cutOff", i),
+			outerCutOffLoc: GetUniform(shader, "lights[%d].outerCutOff", i),
+			strengthLoc:    GetUniform(shader, "lights[%d].strength", i),
+		})
+	}
+
 	return render
+}
+
+func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
+	light := r.Lights[r.LightI]
+	light.Enabled = 1
+	light.Type = lightType
+	light.Position = position.Vector3
+	light.Target = target.Vector3
+	light.Color = color
+	light.Strength = strength
+
+	r.LightI++
 }
 
 func (r *Render) NewLight(lightType LightType, position rl.Vector3, target rl.Vector3, color rl.Color, strength float32) *Light {
@@ -121,6 +156,8 @@ func (r *Render) UpdateValues() {
 			lt.positionLoc.SetVec3(lt.Position.X, lt.Position.Y, lt.Position.Z)
 			lt.targetLoc.SetVec3(lt.Target.X, lt.Target.Y, lt.Target.Z)
 			lt.colorLoc.SetVec4(float32(lt.Color.R)/255, float32(lt.Color.G)/255, float32(lt.Color.B)/255, float32(lt.Color.A)/255)
+			lt.Enabled = 0
 		}
 	}
+	r.LightI = 0
 }

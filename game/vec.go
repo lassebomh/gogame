@@ -1,6 +1,8 @@
 package game
 
 import (
+	"image/color"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
@@ -12,6 +14,12 @@ func NewVec(x, y, z float32) Vec {
 }
 func VecFrom2D(v cp.Vector, y float64) Vec {
 	return Vec{rl.Vector3{X: float32(v.X), Y: float32(y), Z: float32(v.Y)}}
+}
+func VecFromColor(color color.RGBA) Vec {
+	return Vec{rl.Vector3{X: float32(color.R), Y: float32(color.G), Z: float32(color.B)}}
+}
+func (v Vec) ToRGBA() color.Color {
+	return color.RGBA{uint8(v.X), uint8(v.Y), uint8(v.Z), 255}
 }
 
 func (v Vec) Add(o Vec) Vec {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	. "game/game"
 	"image/color"
 	"math"
@@ -12,8 +13,8 @@ import (
 const DEBUG = false
 
 func main() {
-	screenWidth := int32(1920)
-	screenHeight := int32(1080)
+	screenWidth := int32(1700)
+	screenHeight := int32(1000)
 
 	var pixelScale int32
 
@@ -26,7 +27,7 @@ func main() {
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
 
-	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUndecorated | rl.FlagWindowUnfocused)
+	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 	defer rl.CloseWindow()
@@ -60,15 +61,14 @@ func main() {
 
 	rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
 	loc := rl.GetShaderLocation(backgroundShader, "iChannel0")
-	rl.SetShaderValueTexture(backgroundShader, loc, iChannel0)
 	backgroundShaderTime := GetUniform(backgroundShader, "iTime")
 	backgroundShaderResolution := GetUniform(backgroundShader, "iResolution")
 	backgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
 
 	render := NewRender(shader)
 
-	flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
-	render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), rl.White, 0.5)
+	// flashlight := render.NewLight(LIGHT_SPOT, rl.NewVector3(-2, 1, 2), rl.NewVector3(0, 0, 0), rl.NewColor(255, 255, 100, 255), 2)
+	// sun := render.NewLight(LIGHT_DIRECTIONAL, rl.NewVector3(2, 1, -2), rl.NewVector3(-0.2, -1, 0), color.RGBA{255, 230, 120, 255}, 0.5)
 
 	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
 	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
@@ -105,21 +105,11 @@ func main() {
 		dt := rl.GetTime() - t
 		t = rl.GetTime()
 
-		game.Update(float32(dt))
-
-		var w *World
-
-		if game.Earth.Player != nil {
-			w = game.Earth
-		} else {
-			w = game.Station
-		}
+		w := game.Update(float32(dt))
 
 		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
 
-		lookDir := rl.NewVector3(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
-		flashlight.Position = rl.Vector3Subtract(playerPos.Vector3, rl.Vector3Scale(lookDir, float32(w.Player.Radius)*3))
-		flashlight.Target = rl.Vector3Add(flashlight.Position, lookDir)
+		w.RenderEarth(render)
 
 		render.UpdateValues()
 
@@ -127,7 +117,8 @@ func main() {
 		rl.ClearBackground(rl.Black)
 		rl.BeginMode3D(w.Camera)
 
-		backgroundShaderTime.SetFloat(float32(t))
+		backgroundShaderTime.SetFloat(float32(game.Day))
+		rl.SetShaderValueTexture(backgroundShader, loc, iChannel0)
 
 		cameraPos := Vec{Vector3: w.Camera.Position}
 		cameraTarget := Vec{Vector3: w.Camera.Target}
@@ -225,6 +216,8 @@ func main() {
 			0,
 			rl.White,
 		)
+
+		rl.DrawText(fmt.Sprintf("%.1f", math.Mod(game.Day*24, 24)), 10, 100, 20, rl.RayWhite)
 
 		// w.Player.RenderHud(w)
 		rl.DrawFPS(10, 20)

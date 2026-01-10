@@ -1,6 +1,9 @@
 package game
 
 import (
+	"fmt"
+	"math"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
@@ -9,6 +12,7 @@ type Game struct {
 	Accumulator   float32
 	DT            float32
 	PhysicsDrawer *RaylibDrawer
+	Day           float64
 
 	Earth   *World
 	Station *World
@@ -31,14 +35,15 @@ func NewGame() *Game {
 	tilemap.Cols[25][27].Door = WALL_B
 	tilemap.Cols[27][25].Door = WALL_R
 
-	game.Earth = NewWorld(tilemap)
+	game.Earth = NewWorld(tilemap, false)
 	game.Earth.Monster = NewMonster(game.Earth, tilemap.CenterPosition.Add(cp.Vector{Y: 40}))
 
 	tilemap = NewTilemap(1, 1, 7.5)
 	tilemap.CreateRoom(0, 0, 1, 1, 0)
 
-	game.Station = NewWorld(tilemap)
-	game.Station.Player = NewPlayer(game.Station, tilemap.CenterPosition)
+	game.Station = NewWorld(tilemap, true)
+
+	game.Station.Player = NewPlayer(game.Station, game.Station.Tilemap.CenterPosition)
 
 	game.PhysicsDrawer = NewRaylibDrawer(true, false, true)
 
@@ -46,9 +51,14 @@ func NewGame() *Game {
 
 }
 
-func (g *Game) Update(dt float32) {
+func (g *Game) Update(dt float32) *World {
 	g.DT = dt
 	g.Accumulator += dt
+	g.Day += float64(dt) / (5 * 1)
+
+	g.Earth.Day = g.Day
+	g.Station.Day = g.Day
+
 	var world *World
 
 	if g.Earth.Player != nil {
@@ -62,7 +72,9 @@ func (g *Game) Update(dt float32) {
 		g.Accumulator -= physicsTickrate
 	}
 
-	world.Update(dt)
+	world.Update()
+
+	return world
 }
 
 type World struct {
@@ -71,6 +83,9 @@ type World struct {
 	Tilemap *Tilemap
 	Monster *Monster
 	Items   []*PhysicalItem
+
+	IsStation bool
+	Day       float64
 
 	Camera rl.Camera3D
 
@@ -115,7 +130,7 @@ func (w *World) RemovePhysicalItem(item *PhysicalItem) {
 	item.Body = nil
 }
 
-func NewWorld(tilemap *Tilemap) *World {
+func NewWorld(tilemap *Tilemap, isStation bool) *World {
 	space := cp.NewSpace()
 	space.Iterations = 20
 	space.SetCollisionSlop(0.5)
@@ -128,9 +143,10 @@ func NewWorld(tilemap *Tilemap) *World {
 	cam.Up = rl.Vector3{X: 0, Y: 1, Z: 0}
 
 	world := &World{
-		Space:  space,
-		Camera: cam,
-		Items:  make([]*PhysicalItem, 0),
+		Space:     space,
+		Camera:    cam,
+		Items:     make([]*PhysicalItem, 0),
+		IsStation: isStation,
 	}
 
 	world.Tilemap = tilemap
@@ -141,7 +157,7 @@ func NewWorld(tilemap *Tilemap) *World {
 
 const physicsTickrate = 1.0 / 60.0
 
-func (w *World) Update(dt float32) {
+func (w *World) Update() {
 	w.MousePosition = rl.GetMousePosition()
 	mouseRay := rl.GetScreenToWorldRay(w.MousePosition, w.Camera)
 
@@ -186,4 +202,73 @@ func (w *World) Update(dt float32) {
 	for _, item := range w.Items {
 		item.Update(w)
 	}
+}
+
+var NIGHT = NewVec(-115, 0.3, .1)
+var DAWN = NewVec(5, 0.5, 1)
+var DAY = NewVec(55, 0.1, 1)
+var HOUR_MORNING float64 = 8
+var HOUR_NIGHT float64 = 20
+var HOURS_TRANSITION float64 = 1
+
+// func SkyHSV(hour float64) (h, s, v float64) {
+// 	// solar phase: sunrise ≈ 6, noon ≈ 12
+// 	x := math.Sin(2 * math.Pi * (hour - 6) / 24)
+
+// 	Debug(x)
+
+// 	// daylight factor
+// 	day := 1 + math.Min(0, x)
+
+// 	// twilight factor (strongest near horizon)
+// 	// t := math.Exp(-8 * x * x)
+
+// 	// hue: white(day) → orange/red/purple → blue(night)
+// 	h = 55
+
+// 	// saturation: minimal at noon, higher at twilight/night
+// 	s = 0.5
+
+// 	// value: bright day, dark night
+// 	v = 1 // 0.1 + 0.9*d
+
+// 	return
+// }
+
+func c(x float64) float64 {
+	return (1 + math.Tanh(x)) / 2
+}
+
+func (w *World) RenderEarth(r *Render) {
+
+	hour := math.Mod(w.Day, 1) * 24
+	day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+	transition := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+
+	sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transition))
+
+	// sunColor :=
+	fmt.Printf("day %.2f tra %.2f\n", day, transition)
+
+	// sun.Strength = 0.1
+	// sun.Color = color.RGBA{20, 0, 255, 255}
+	// sun.Position = NewVec(0, 0, 0).Vector3
+	// sun.Target = NewVec(0, -1, 0).Vector3
+
+	// sun.Strength = 0.5
+	// sun.Color = color.RGBA{255, 0, 100, 255}
+	// sun.Position = NewVec(0, 0, 0).Vector3
+	// sun.Target = NewVec(0.5, -1, 0).Vector3
+
+	// strength := min(1+math.Sin(hoursRadians), 0.8) + 0.2
+	// sun.Strength = float32(strength)
+
+	r.Light(LIGHT_DIRECTIONAL, NewVec(0, 0, 0), NewVec(0, -1, 0), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
+
+	playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+	lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
+	flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
+	flashlightTarget := flashlightPos.Add(lookDir)
+
+	r.Light(LIGHT_SPOT, flashlightPos, flashlightTarget, rl.NewColor(255, 255, 100, 255), 2)
 }
