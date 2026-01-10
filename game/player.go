@@ -93,6 +93,18 @@ func (p *Player) Update(w *World) {
 
 }
 
+func (p *Player) Teleport(from *World, to *World) {
+	p.Body.EachShape(func(shape *cp.Shape) {
+		from.Space.RemoveShape(shape)
+	})
+	from.Space.RemoveBody(p.Body)
+
+	temp := NewPlayer(to, from.Tilemap.CenterPosition.Sub(p.Body.Position()).Add(to.Tilemap.CenterPosition))
+	p.Body = temp.Body
+	from.Player = nil
+	to.Player = p
+}
+
 func (p *Player) RenderHud(w *World) {
 
 	cursor := rl.Vector2{X: 20, Y: 20}

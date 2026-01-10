@@ -5,10 +5,11 @@
  * -------------------------------------------------------------------------- */
 
 #define PLANET_RADIUS 0.5
-#define ATMOSPHERE_RADIUS (PLANET_RADIUS * 1.3)
+#define ATMOSPHERE_RADIUS (PLANET_RADIUS * 1.15)
 #define PI 3.14159265358979323846
 
 uniform float iTime;
+uniform float iFov;
 uniform vec2 iResolution;
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
@@ -18,10 +19,10 @@ in vec2 fragTexCoord;
 
 const vec3 ATM_CENTER = vec3(0.0);
 const vec3 SUN_DIR = vec3(0.0, 0.0, 1.0);
-const vec3 SUN_COLOR = vec3(1.0, 0.9, 0.9) * 4.0;
+const vec3 SUN_COLOR = vec3(1.0, 0.95, 0.95);
 const vec3 GLARE_COL = vec3(1.0, 0.6, 0.2);
-const vec3 ATM_SCATTER = 40.0 * vec3(0.2, 0.5, 1.2);
-const float ATM_DENS_FALL = 4.0;
+const vec3 ATM_SCATTER = 30.0 * vec3(0.2, 0.5, 1.2);
+const float ATM_DENS_FALL = 8.0;
 
 /* -----------------------------------------------------------------------------
  * Utility Functions
@@ -199,38 +200,51 @@ vec3 atmosphereTransmittance(vec3 ro, vec3 rd, float tPlanetHit) {
  * Planet Generation
  * -------------------------------------------------------------------------- */
 vec3 planet_color(vec3 p, out float height, out float landMask, out float mountainMask) {
-    float longitude = atan(p.x, p.z);         
+    float longitude = atan(p.x, p.z) - 0.83;
     float latitude = acos(p.y / length(p)); 
 
     vec2 uv;
-    uv.x = longitude / 6.2831 + 0.5 - (iTime); 
-    uv.y = latitude / 3.1415;
-    
-    vec3 finalColor = vec3(0.2, 0.3, 0.4); // Ocean base
-    
-    // Terrain noise sampling
-    vec3 terrainNoise = 0.8 * texture(iChannel0, 0.5 * uv.yx).xyz;
-         terrainNoise += 0.3 * texture(iChannel0, 2.5 * uv.yx).xyz;
-    
-    // Initial land/water mix
-    vec3 lowDetailLand = (vec3(0.2, 0.5, 0.1) * 0.55 + 0.45 * terrainNoise + 0.5 * texture(iChannel0, 15.5 * uv.yx).xyz) * 0.4;
-    finalColor = mix(finalColor, lowDetailLand, smoothstep(0.45, 0.5, terrainNoise.x));
+    uv.x = longitude / (PI*2.0) - (iTime*3); 
+    uv.y = latitude / PI;               
 
-    // Cloud layer sampling
-    vec3 cloudNoise = texture(iChannel0, 1.0 * uv).xxx;
-    finalColor = mix(finalColor, vec3(0.9), 0.75 * smoothstep(0.45, 0.8, cloudNoise.x));
+    // 1. ELEVATION DATA
+    float rawElevation = texture(iChannel1, uv).r;
+    // Layer organic noise to break up the "perfect" map edges
+    float noise = texture(iChannel0, uv * 4.0).r * 0.1;
+    float altitude = rawElevation + noise;
 
-    // Assign output parameters
-    landMask = smoothstep(0.14, 0.5, terrainNoise.x);
-    height = terrainNoise.x;
-    mountainMask = smoothstep(0.5, 0.6, cloudNoise.x);
+    // 2. BIOME COLORS (Earth Palette)
+    vec3 deepOcean    = vec3(0.02, 0.05, 0.15);
+    vec3 shallowWater = vec3(0.05, 0.1, 0.3);
+    vec3 beach        = vec3(0.75, 0.7, 0.5);
+    vec3 forest       = vec3(0.15, 0.15, 0.05);
+    vec3 mountain     = vec3(0.08, 0.08, 0.02);
+    vec3 snow         = vec3(0.95, 0.95, 1.0);
+
+    // 3. COLOR MIXING (Building the layers)
+    vec3 col;
     
-    // Final high-detail land coloring
-    vec3 baseLandCol = vec3(0.15, 0.35, 0.12); 
-    vec3 surfaceDetail = 0.45 * terrainNoise + 0.5 * texture(iChannel0, 15.5 * uv.yx).xyz;
-    vec3 polishedLandCol = baseLandCol * 0.8 + surfaceDetail * 0.2; 
+    // Water gradient (based on depth)
+    col = mix(deepOcean, shallowWater, smoothstep(0.0, 0.48, altitude));
+    
+    // Land transition (Sea level at 0.5)
+    float landWeight = smoothstep(0.6, 0.62, altitude);
+    
+    // Land biomes
+    vec3 landCol = mix(forest, mountain, smoothstep(0.6, 0.85, altitude+noise*2.0));
+    
 
-    finalColor = mix(finalColor, polishedLandCol, smoothstep(0.4, 0.6, terrainNoise.x));
+    // Final merge of Water and Land
+    vec3 finalColor = mix(col, landCol, landWeight);
+
+    // 4. CLOUDS (Optional aesthetic layer)
+    float clouds = smoothstep(0.6, 1.0, texture(iChannel0, uv + vec2(-iTime*0.5, 0)).r);
+    finalColor = mix(finalColor, vec3(0.9), clouds * 0.6);
+
+    // 5. OUTPUTS
+    height = altitude;
+    landMask = landWeight;
+    mountainMask = smoothstep(0.8, 1.0, altitude);
 
     return finalColor;
 }
@@ -250,22 +264,20 @@ vec3 perspective_camera(vec3 lookfrom, vec3 lookat, float tilt, float vfov, vec2
 
 vec3 shade(vec3 rd, vec3 p) {
   vec3 normal = normalize(p);
-  float ambient_dif = 0.03;
+  float ambient_dif = 0.5;
   vec3 dif = vec3(ambient_dif);
   float sun_dif = clamp(dot(normal, SUN_DIR) * 0.9 + 0.1, 0.0, 1.0);
   dif += SUN_COLOR * sun_dif;
 
   float height, landMask, mountainMask;
   
-  vec3 mate = planet_color(p, height, landMask, mountainMask) * 0.4;
+  vec3 mate = planet_color(p, height, landMask, mountainMask) * 0.6;
   float rockSpec = pow(max(dot(reflect(-SUN_DIR, normal), -rd), 0.0), 16.0);
   mate += mountainMask * rockSpec * vec3(0.25, 0.22, 0.2);
 
   vec3 col = (mate * dif);
   float fres = clamp((1.0 + dot(normal, rd)), 0.0, 1.0);
-  float sun_fres = (fres * clamp(dot(rd, SUN_DIR), 0.0, 1.0));
   col = (col * (1.0 - fres));
-  col = (col + ((pow(sun_fres, 8.0) * vec3(0.4, 0.3, 0.1)) * 5.0));
   return col;
 }
 
@@ -373,11 +385,11 @@ void main() {
   vec2 fragCoord = gl_FragCoord.xy;
   vec2 res = vec2(iResolution.x, iResolution.y);
   vec2 coord = ((2.0 * (fragCoord - (res * 0.5))) / iResolution.y);
-  float theta = iTime * PI * 2.0 - PI;
+  float theta = (iTime - 0.1) * PI * 2.0 - PI;
   vec3 lookat = vec3(0.0, 0.0, 0.0);
   vec2 sc = 2.0 * sincos(theta);
   vec3 ro = vec3(sc.x, 0.0, sc.y);
-  vec3 rd = perspective_camera(ro, lookat, 0.0, 30.0, coord);
+  vec3 rd = perspective_camera(ro, lookat, 0.0, iFov, coord);
 
   float t = sphere_intersect(ro, rd, vec3(0.0, 0.0, 0.0), PLANET_RADIUS);
   vec3 col = get_background(rd);
@@ -386,19 +398,12 @@ void main() {
   if(t >= 0.0) {
     vec3 p = (ro + (rd * t));
     col = shade(rd, p);
-    depth = smoothstep(2.0, 2.0-PLANET_RADIUS, t);
+    depth = smoothstep(1.5, 2.0-PLANET_RADIUS, t);
   }
 
-  vec3 atmIns = atmosphereScattering(ro, rd, t);
-  vec3 trans  = atmosphereTransmittance(ro, rd, t);
 
-  if (t >= 0.0) {
-    col *= trans;
-  } else {
-    col = col * trans;
-  }
-
-  col += atmIns;
+  col *= atmosphereTransmittance(ro, rd, t);
+  col += atmosphereScattering(ro, rd, t);
   col = (col + (0.2 * sun_glare(rd)));
   col = color_tonemap_aces(col);
   col = color_tone_1(col, 1.7, 0.002, 1.2);

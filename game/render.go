@@ -57,13 +57,27 @@ type Render struct {
 	Shader rl.Shader
 	Lights []*Light
 	LightI int
+
+	Models map[string]rl.Model
 }
 
 func NewRender(shader rl.Shader) *Render {
 	render := &Render{
 		Shader: shader,
 		Lights: make([]*Light, 0, MAX_LIGHTS),
+		Models: map[string]rl.Model{},
 	}
+
+	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
+	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
+
+	render.UpdateValues()
+
+	render.LoadModel("plane", "./models/plane.glb")
+	render.LoadModel("wall", "./models/cube.glb")
+	render.LoadModel("door", "./models/door.glb")
+	render.LoadModel("monster_arm_segment", "./models/monster/monster_arm_segment.glb")
+	render.LoadModel("monster_body", "./models/monster/monster_body.glb")
 
 	for i := range MAX_LIGHTS {
 		render.Lights = append(render.Lights, &Light{
@@ -89,6 +103,21 @@ func NewRender(shader rl.Shader) *Render {
 	return render
 }
 
+func (r *Render) LoadModel(name string, path string) {
+	model := rl.LoadModel(path)
+	model.Materials.Shader = r.Shader
+	for i := range model.GetMaterials() {
+		model.GetMaterials()[i].Shader = r.Shader
+	}
+	r.Models[name] = model
+}
+
+func (r *Render) Unload() {
+	for _, model := range r.Models {
+		rl.UnloadModel(model)
+	}
+}
+
 func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
 	light := r.Lights[r.LightI]
 	light.Enabled = 1
@@ -99,33 +128,6 @@ func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.C
 	light.Strength = strength
 
 	r.LightI++
-}
-
-func (r *Render) NewLight(lightType LightType, position rl.Vector3, target rl.Vector3, color rl.Color, strength float32) *Light {
-	lightsCount := len(r.Lights)
-
-	light := &Light{
-		Type:           lightType,
-		Position:       position,
-		Target:         target,
-		Color:          color,
-		Enabled:        1,
-		Strength:       strength,
-		CutOff:         float32(math.Cos(0 * rl.Deg2rad)),
-		OuterCutOff:    float32(math.Cos(30 * rl.Deg2rad)),
-		enabledLoc:     GetUniform(r.Shader, "lights[%d].enabled", lightsCount),
-		lightTypeLoc:   GetUniform(r.Shader, "lights[%d].type", lightsCount),
-		positionLoc:    GetUniform(r.Shader, "lights[%d].position", lightsCount),
-		targetLoc:      GetUniform(r.Shader, "lights[%d].target", lightsCount),
-		colorLoc:       GetUniform(r.Shader, "lights[%d].color", lightsCount),
-		cutOffLoc:      GetUniform(r.Shader, "lights[%d].cutOff", lightsCount),
-		outerCutOffLoc: GetUniform(r.Shader, "lights[%d].outerCutOff", lightsCount),
-		strengthLoc:    GetUniform(r.Shader, "lights[%d].strength", lightsCount),
-	}
-
-	r.Lights = append(r.Lights, light)
-
-	return light
 }
 
 type Light struct {
