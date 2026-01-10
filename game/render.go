@@ -73,7 +73,7 @@ func NewRender(shader rl.Shader) *Render {
 
 	render.UpdateValues()
 
-	render.LoadModel("plane", "./models/plane.glb")
+	render.LoadModel("plane", "./models/plane2.glb")
 	render.LoadModel("wall", "./models/cube.glb")
 	render.LoadModel("door", "./models/door.glb")
 	render.LoadModel("monster_arm_segment", "./models/monster/monster_arm_segment.glb")

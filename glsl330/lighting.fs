@@ -137,13 +137,23 @@ void main()
             if (lights[i].type == LIGHT_DIRECTIONAL)
             {
                 light = -normalize(lights[i].target - lights[i].position);
+                
+                float NdotL = max(dot(normal, light), 0.0);
+                lightDot += lights[i].color.rgb * NdotL * lights[i].strength;
+
+                if (NdotL > 1.0) specular += pow(max(0.0, dot(viewD, reflect(-(light), normal))), 16.0) * lights[i].strength; 
             }
 
-            if (lights[i].type == LIGHT_POINT)
+            else if (lights[i].type == LIGHT_POINT)
             {
                 light = normalize(lights[i].position - fragPosition);
+                
+                float NdotL = max(dot(normal, light), 0.0);
+                lightDot += lights[i].color.rgb * NdotL * lights[i].strength;
+
+                if (NdotL > 1.0) specular += pow(max(0.0, dot(viewD, reflect(-(light), normal))), 16.0) * lights[i].strength; 
             }
-            if (lights[i].type == LIGHT_SPOT)
+            else if (lights[i].type == LIGHT_SPOT)
             {
               vec3 lightDir = normalize(lights[i].position - fragPosition);
     
@@ -159,21 +169,10 @@ void main()
                 float NdotL = max(dot(normal, light), 0.0);
                 lightDot += lights[i].color.rgb * NdotL * intensity * lights[i].strength;
 
-                float specCo = 0.0;
-                if (NdotL > 0.0)
-                    specCo = pow(max(0.0, dot(viewD, reflect(-light, normal))), 16.0) * intensity;
-
-                specular += specCo;
-                continue;
+                if (NdotL > 1.0) specular += pow(max(0.0, dot(viewD, reflect(-light, normal))), 16.0) * intensity;
             }
 
 
-            float NdotL = max(dot(normal, light), 0.0);
-            lightDot += lights[i].color.rgb * NdotL * lights[i].strength;
-
-            float specCo = 0.0;
-            if (NdotL > 0.0) specCo = pow(max(0.0, dot(viewD, reflect(-(light), normal))), 16.0); // 16 refers to shine
-            specular += specCo * lights[i].strength;
         }
     }
 

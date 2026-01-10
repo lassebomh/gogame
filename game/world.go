@@ -23,7 +23,7 @@ type Game struct {
 func NewGame() *Game {
 
 	game := &Game{
-		Day: 0,
+		Day: 0.3,
 
 		TeleportTransition: 1,
 
@@ -53,7 +53,7 @@ func NewGame() *Game {
 
 	game.Station = NewWorld(tilemap, true)
 
-	game.Station.Player = NewPlayer(game.Station, game.Station.Tilemap.CenterPosition)
+	game.Earth.Player = NewPlayer(game.Earth, game.Earth.Tilemap.CenterPosition)
 
 	return game
 
@@ -254,8 +254,6 @@ func (w *World) RenderEarth(r *Render) {
 	flashlightTarget := flashlightPos.Add(lookDir)
 
 	r.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
-
-	r.LightPoint(playerPos, rl.Green, 1)
 
 	r.UpdateValues()
 
