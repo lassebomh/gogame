@@ -39,38 +39,50 @@ func main() {
 
 	game := NewGame()
 
-	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
-	defer rl.UnloadShader(shader)
-
-	render := NewRender(shader)
+	render := NewRender(renderWidth, renderHeight)
 	defer render.Unload()
 
-	renderTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
-	defer rl.UnloadRenderTexture(renderTexture)
-	rl.SetTextureFilter(renderTexture.Texture, rl.FilterPoint)
+	earthTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
+	defer rl.UnloadRenderTexture(earthTexture)
+	rl.SetTextureFilter(earthTexture.Texture, rl.FilterPoint)
+	rl.SetTextureWrap(earthTexture.Texture, rl.WrapClamp)
 
-	backgroundShader := rl.LoadShader("./glsl330/station.vs", "./glsl330/planet2.fs")
+	stationTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
+	defer rl.UnloadRenderTexture(stationTexture)
+	rl.SetTextureFilter(stationTexture.Texture, rl.FilterPoint)
+	rl.SetTextureWrap(stationTexture.Texture, rl.WrapClamp)
+
+	// iChannel0 := rl.LoadTexture("./models/organic.png")
+	// rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
+	// defer rl.UnloadTexture(iChannel0)
+	// iChannel1 := rl.LoadTexture("./models/earth_elevation.png")
+	// rl.SetTextureWrap(iChannel1, rl.WrapRepeat)
+	// defer rl.UnloadTexture(iChannel1)
+
+	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
 	defer rl.UnloadShader(backgroundShader)
 
-	background := rl.LoadModel("./models/plane.glb")
-	defer rl.UnloadModel(background)
-	background.Materials.Shader = backgroundShader
+	displayTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
+	defer rl.UnloadRenderTexture(displayTexture)
+	rl.SetTextureFilter(displayTexture.Texture, rl.FilterPoint)
+	fadeShader := rl.LoadShader("", "./glsl330/fade.fs")
+	defer rl.UnloadShader(fadeShader)
 
-	iChannel0 := rl.LoadTexture("./models/organic.png")
-	rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
-	defer rl.UnloadTexture(iChannel0)
+	fadeiChannel0Location := GetUniform(fadeShader, "iChannel0")
+	fadeiChannel1Location := GetUniform(fadeShader, "iChannel1")
+	// fadeiChannel0LocationDepth := GetUniform(fadeShader, "iChannel0Depth")
+	// fadeiChannel1LocationDepth := GetUniform(fadeShader, "iChannel1Depth")
+	fadeiChannelPrevLocation := GetUniform(fadeShader, "iChannelPrev")
+	fadebackgroundShaderTime := GetUniform(fadeShader, "iTime")
+	fadebackgroundShaderTransition := GetUniform(fadeShader, "iTransition")
+	fadebackgroundShaderResolution := GetUniform(fadeShader, "iResolution")
 
-	iChannel1 := rl.LoadTexture("./models/earth_elevation.png")
-	rl.SetTextureWrap(iChannel1, rl.WrapRepeat)
-	defer rl.UnloadTexture(iChannel1)
-
-	iChannel0Location := GetUniform(backgroundShader, "iChannel0")
-	iChannel1Location := GetUniform(backgroundShader, "iChannel1")
-
-	backgroundShaderTime := GetUniform(backgroundShader, "iTime")
-	backgroundShaderFov := GetUniform(backgroundShader, "iFov")
-	backgroundShaderResolution := GetUniform(backgroundShader, "iResolution")
-	backgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
+	rl.BeginTextureMode(earthTexture)
+	game.Earth.Render(render)
+	rl.EndTextureMode()
+	rl.BeginTextureMode(stationTexture)
+	game.Station.Render(render)
+	rl.EndTextureMode()
 
 	rl.SetTargetFPS(60)
 	t := rl.GetTime()
@@ -82,49 +94,41 @@ func main() {
 
 		w := game.Update(float32(dt))
 
-		rl.BeginTextureMode(renderTexture)
-		rl.ClearBackground(rl.Black)
-		rl.BeginMode3D(w.Camera)
-
-		w.RenderEarth(render)
-
-		backgroundShaderTime.SetFloat(float32(game.Day))
-		backgroundShaderFov.SetFloat(float32(game.TeleportTransition * 30.0))
-		iChannel0Location.SetTexture(iChannel0)
-		iChannel1Location.SetTexture(iChannel1)
-
-		cameraPos := Vec{Vector3: w.Camera.Position}
-		cameraTarget := Vec{Vector3: w.Camera.Target}
-		cameraDir := cameraTarget.Subtract(cameraPos).Normalize()
-
-		angle := float32(math.Acos(float64(Z.DotProduct(cameraDir))))
-		axis := Z.Normalize().CrossProduct(cameraDir).Normalize()
-		scale := X.Scale(w.Camera.Fovy * float32(renderWidth) / float32(renderHeight)).Add(Z.Scale(w.Camera.Fovy)).Add(Y)
-		rl.DrawModelEx(background, cameraPos.Add(cameraDir.Scale(w.Camera.Fovy*2)).Vector3, axis.Vector3, angle, scale.Vector3, rl.White)
-
-		if DEBUG {
-			rl.DrawRenderBatchActive()
-			rl.DisableDepthTest()
-			cp.DrawSpace(w.Space, game.PhysicsDrawer)
-			if w.Monster != nil {
-				DrawLine(rl.Red, w.Monster.Path...)
-				if w.Monster != nil {
-					for _, arm := range w.Monster.Arms {
-						DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
-					}
-					DrawLine(rl.Green, w.Monster.Body.Position(), w.Monster.Target)
-				}
-			}
-			rl.DrawRenderBatchActive()
-			rl.EnableDepthTest()
+		if w.IsStation {
+			rl.BeginTextureMode(stationTexture)
+			w.Render(render)
+			rl.EndTextureMode()
+		} else {
+			rl.BeginTextureMode(earthTexture)
+			w.Render(render)
+			rl.EndTextureMode()
 		}
-		rl.EndMode3D()
+
+		rl.BeginTextureMode(displayTexture)
+		rl.BeginShaderMode(fadeShader)
+		if w.IsStation {
+			fadeiChannel0Location.SetTexture(earthTexture.Texture)
+			fadeiChannel1Location.SetTexture(stationTexture.Texture)
+			fadebackgroundShaderTransition.SetFloat(game.TeleportTransition)
+		} else {
+			fadeiChannel0Location.SetTexture(stationTexture.Texture)
+			fadeiChannel1Location.SetTexture(earthTexture.Texture)
+			fadebackgroundShaderTransition.SetFloat(1 - game.TeleportTransition)
+		}
+		fadeiChannelPrevLocation.SetTexture(displayTexture.Texture)
+		fadebackgroundShaderTime.SetFloat(float32(t))
+		Debug(game.TeleportTransition)
+		fadebackgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
+		rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
+
+		rl.EndShaderMode()
 		rl.EndTextureMode()
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
+
 		rl.DrawTexturePro(
-			renderTexture.Texture,
+			displayTexture.Texture,
 			rl.Rectangle{X: 0, Y: 0, Width: float32(renderWidth), Height: -float32(renderHeight)},
 			rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
 			rl.Vector2{X: 0, Y: 0},
@@ -137,7 +141,6 @@ func main() {
 		rl.DrawRectangle(int32(screenWidth*20./24.), screenHeight-40, 20, 20, rl.Red)
 
 		clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(game.Day * 24 * float64(time.Hour))))
-
 		rl.DrawTextEx(rl.GetFontDefault(), clock.Format("15:04"), rl.NewVector2(float32(screenWidth)/2-45, 10), 40, 2, rl.White)
 
 		// w.Player.RenderHud(w)

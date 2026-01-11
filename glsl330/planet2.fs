@@ -412,22 +412,5 @@ void main() {
   // col = vignette(col, (fragCoord / res), 0.25, 0.7);
   // col = dither(col, fragCoord, 0.01);
   finalColor = vec4(col.x, col.y, col.z, depth);
-  
-
-  float roundoff = 16.0;
-  
-  
-  float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) * 2;
-  dither -= 1;
-  
-  vec3 lab = rgb2lab(finalColor.xyz);
-  
-  lab.x = floor((lab.x) * 25.0 + dither / 2.0) / 25.0;
-  lab.y = floor((lab.y) * 80.0 + dither / 2.0) / 80.0;
-  lab.z = floor((lab.z) * 80.0 + dither / 2.0) / 80.0;
-    
-  finalColor = vec4(
-    lab2rgb(lab.xyz),
-    finalColor.w
-  );
+   
 }

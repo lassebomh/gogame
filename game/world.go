@@ -14,7 +14,7 @@ type Game struct {
 	PhysicsDrawer *RaylibDrawer
 	Day           float64
 
-	TeleportTransition float64
+	TeleportTransition float32
 
 	Earth   *World
 	Station *World
@@ -23,7 +23,7 @@ type Game struct {
 func NewGame() *Game {
 
 	game := &Game{
-		Day: 0.3,
+		Day: 0.25,
 
 		TeleportTransition: 1,
 
@@ -92,6 +92,16 @@ func (g *Game) Update(dt float32) *World {
 	for g.Accumulator >= physicsTickrate {
 		currentWorld.Space.Step(physicsTickrate)
 		g.Accumulator -= physicsTickrate
+	}
+
+	if currentWorld.IsStation && g.TeleportTransition < 1 {
+		g.TeleportTransition = min(1, g.TeleportTransition+dt/2)
+	}
+
+	if !currentWorld.IsStation {
+		if g.TeleportTransition > 0 {
+			g.TeleportTransition = max(0, g.TeleportTransition-dt/2)
+		}
 	}
 
 	currentWorld.Update()
@@ -237,23 +247,47 @@ func c(x float64) float64 {
 	return (1 + math.Tanh(x)) / 2
 }
 
-func (w *World) RenderEarth(r *Render) {
+func (w *World) Render(r *Render) {
+	rl.ClearBackground(rl.Black)
 
-	hour := math.Mod(w.Day, 1) * 24
-	day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
-	transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
-	transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+	if w.IsStation {
+		rl.BeginShaderMode(r.BackgroundShader)
+		r.BackgroundShaderTime.SetFloat(float32(w.Day))
+		r.BackgroundShaderFov.SetFloat(30.0)
+		r.IChannel0Location.SetTexture(r.Textures["organic"])
+		r.IChannel1Location.SetTexture(r.Textures["earth_elevation"])
+		r.BackgroundShaderResolution.SetVec2(float32(r.RenderWidth), float32(r.RenderHeight))
+		rl.DrawRectangle(0, 0, r.RenderWidth, r.RenderHeight, rl.White)
+		rl.EndShaderMode()
+	}
 
-	sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
+	rl.BeginMode3D(w.Camera)
+	defer rl.EndMode3D()
 
-	r.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
+	if !w.IsStation {
 
-	playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
-	lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
-	flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
-	flashlightTarget := flashlightPos.Add(lookDir)
+		hour := math.Mod(w.Day, 1) * 24
+		day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+		transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+		transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
 
-	r.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
+		sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
+
+		r.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
+
+	} else {
+		r.LightDirectional(NewVec(0, -1, 0).Normalize(), rl.White, 0.25)
+
+	}
+
+	if w.Player != nil {
+		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+		lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
+		flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
+		flashlightTarget := flashlightPos.Add(lookDir)
+
+		r.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
+	}
 
 	r.UpdateValues()
 
@@ -281,7 +315,11 @@ func (w *World) RenderEarth(r *Render) {
 		}
 	}
 
-	rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
+	if w.Player != nil {
+		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+		rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
+
+	}
 
 	for _, pitem := range w.Items {
 		rl.DrawSphereEx(VecFrom2D(pitem.Body.Position(), pitem.Radius).Vector3, float32(pitem.Radius), 12, 12, rl.Red)
@@ -315,4 +353,20 @@ func (w *World) RenderEarth(r *Render) {
 		}
 	}
 
+	// if DEBUG {
+	// 	rl.DrawRenderBatchActive()
+	// 	rl.DisableDepthTest()
+	// 	cp.DrawSpace(game.Earth.Space, game.PhysicsDrawer)
+	// 	if game.Earth.Monster != nil {
+	// 		DrawLine(rl.Red, game.Earth.Monster.Path...)
+	// 		if game.Earth.Monster != nil {
+	// 			for _, arm := range game.Earth.Monster.Arms {
+	// 				DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
+	// 			}
+	// 			DrawLine(rl.Green, game.Earth.Monster.Body.Position(), game.Earth.Monster.Target)
+	// 		}
+	// 	}
+	// 	rl.DrawRenderBatchActive()
+	// 	rl.EnableDepthTest()
+	// }
 }

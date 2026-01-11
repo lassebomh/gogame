@@ -54,18 +54,45 @@ func GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
 }
 
 type Render struct {
-	Shader rl.Shader
-	Lights []*Light
-	LightI int
+	Shader           rl.Shader
+	BackgroundShader rl.Shader
+	Lights           []*Light
+	LightI           int
 
-	Models map[string]rl.Model
+	IChannel0Location          *ShaderUniform
+	IChannel1Location          *ShaderUniform
+	BackgroundShaderTime       *ShaderUniform
+	BackgroundShaderFov        *ShaderUniform
+	BackgroundShaderResolution *ShaderUniform
+
+	Models   map[string]rl.Model
+	Textures map[string]rl.Texture2D
+
+	RenderWidth  int32
+	RenderHeight int32
 }
 
-func NewRender(shader rl.Shader) *Render {
+func NewRender(renderWidth int32, renderHeight int32) *Render {
+
+	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
+
+	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
+
 	render := &Render{
-		Shader: shader,
-		Lights: make([]*Light, 0, MAX_LIGHTS),
-		Models: map[string]rl.Model{},
+		Shader:           shader,
+		BackgroundShader: backgroundShader,
+		Lights:           make([]*Light, 0, MAX_LIGHTS),
+		Models:           map[string]rl.Model{},
+		Textures:         map[string]rl.Texture2D{},
+
+		IChannel0Location:          GetUniform(backgroundShader, "iChannel0"),
+		IChannel1Location:          GetUniform(backgroundShader, "iChannel1"),
+		BackgroundShaderTime:       GetUniform(backgroundShader, "iTime"),
+		BackgroundShaderFov:        GetUniform(backgroundShader, "iFov"),
+		BackgroundShaderResolution: GetUniform(backgroundShader, "iResolution"),
+
+		RenderWidth:  renderWidth,
+		RenderHeight: renderHeight,
 	}
 
 	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
@@ -78,6 +105,9 @@ func NewRender(shader rl.Shader) *Render {
 	render.LoadModel("door", "./models/door.glb")
 	render.LoadModel("monster_arm_segment", "./models/monster/monster_arm_segment.glb")
 	render.LoadModel("monster_body", "./models/monster/monster_body.glb")
+
+	render.LoadTexture("organic", "./models/organic.png")
+	render.LoadTexture("earth_elevation", "./models/earth_elevation.png")
 
 	for i := range MAX_LIGHTS {
 		render.Lights = append(render.Lights, &Light{
@@ -112,10 +142,22 @@ func (r *Render) LoadModel(name string, path string) {
 	r.Models[name] = model
 }
 
+func (r *Render) LoadTexture(name string, path string) {
+	texture := rl.LoadTexture(path)
+	rl.SetTextureWrap(texture, rl.WrapRepeat)
+	r.Textures[name] = texture
+}
+
 func (r *Render) Unload() {
 	for _, model := range r.Models {
 		rl.UnloadModel(model)
 	}
+	for _, texture := range r.Textures {
+		rl.UnloadTexture(texture)
+	}
+	rl.UnloadShader(r.Shader)
+	rl.UnloadShader(r.BackgroundShader)
+
 }
 
 // func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
