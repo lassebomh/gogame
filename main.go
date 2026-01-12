@@ -3,8 +3,6 @@ package main
 import (
 	. "game/game"
 	"image/color"
-	"math"
-	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
@@ -21,11 +19,17 @@ func main() {
 	if DEBUG {
 		pixelScale = 1
 	} else {
-		pixelScale = 5
+		pixelScale = 4
 	}
 
 	renderWidth := screenWidth / pixelScale
 	renderHeight := screenHeight / pixelScale
+
+	// screenWidth /= pixelScale
+	// screenHeight /= pixelScale
+
+	// screenWidth *= pixelScale
+	// screenHeight *= pixelScale
 
 	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
@@ -52,15 +56,11 @@ func main() {
 	rl.SetTextureFilter(stationTexture.Texture, rl.FilterPoint)
 	rl.SetTextureWrap(stationTexture.Texture, rl.WrapClamp)
 
-	// iChannel0 := rl.LoadTexture("./models/organic.png")
-	// rl.SetTextureWrap(iChannel0, rl.WrapRepeat)
-	// defer rl.UnloadTexture(iChannel0)
-	// iChannel1 := rl.LoadTexture("./models/earth_elevation.png")
-	// rl.SetTextureWrap(iChannel1, rl.WrapRepeat)
-	// defer rl.UnloadTexture(iChannel1)
-
 	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
 	defer rl.UnloadShader(backgroundShader)
+
+	hudTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
+	defer rl.UnloadRenderTexture(hudTexture)
 
 	displayTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(displayTexture)
@@ -70,12 +70,13 @@ func main() {
 
 	fadeiChannel0Location := GetUniform(fadeShader, "iChannel0")
 	fadeiChannel1Location := GetUniform(fadeShader, "iChannel1")
-	// fadeiChannel0LocationDepth := GetUniform(fadeShader, "iChannel0Depth")
-	// fadeiChannel1LocationDepth := GetUniform(fadeShader, "iChannel1Depth")
 	fadeiChannelPrevLocation := GetUniform(fadeShader, "iChannelPrev")
 	fadebackgroundShaderTime := GetUniform(fadeShader, "iTime")
 	fadebackgroundShaderTransition := GetUniform(fadeShader, "iTransition")
 	fadebackgroundShaderResolution := GetUniform(fadeShader, "iResolution")
+
+	font := rl.LoadFont("./fonts/setback.png")
+	defer rl.UnloadFont(font)
 
 	rl.BeginTextureMode(earthTexture)
 	game.Earth.Render(render)
@@ -119,8 +120,13 @@ func main() {
 		fadebackgroundShaderTime.SetFloat(float32(t))
 		fadebackgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
 		rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
-
 		rl.EndShaderMode()
+
+		rl.EndTextureMode()
+
+		rl.BeginTextureMode(hudTexture)
+		rl.ClearBackground(color.RGBA{})
+		w.Player.RenderHud(w, font)
 		rl.EndTextureMode()
 
 		rl.BeginDrawing()
@@ -135,15 +141,17 @@ func main() {
 			rl.White,
 		)
 
-		rl.DrawRectangle(0, screenHeight-20, int32(math.Mod(game.Day, 1)*float64(screenWidth)), 20, rl.White)
-		rl.DrawRectangle(int32(screenWidth*8./24.), screenHeight-40, 20, 20, rl.Red)
-		rl.DrawRectangle(int32(screenWidth*20./24.), screenHeight-40, 20, 20, rl.Red)
-
-		clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(game.Day * 24 * float64(time.Hour))))
-		rl.DrawTextEx(rl.GetFontDefault(), clock.Format("15:04"), rl.NewVector2(float32(screenWidth)/2-45, 10), 40, 2, rl.White)
+		rl.DrawTexturePro(
+			hudTexture.Texture,
+			rl.Rectangle{X: 0, Y: 0, Width: float32(hudTexture.Texture.Width), Height: -float32(hudTexture.Texture.Height)},
+			rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
 
 		// w.Player.RenderHud(w)
-		rl.DrawFPS(10, 20)
+		// rl.DrawFPS(10, 20)
 
 		rl.EndDrawing()
 

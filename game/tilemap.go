@@ -268,7 +268,7 @@ func (t *Tilemap) GenerateBodies(w *World) {
 			}
 
 			if tile.Door != 0 {
-				mass := 20.0
+				mass := 5.0
 
 				// Variables for rectangle and constraints
 				var width, height float64
@@ -343,8 +343,8 @@ func (t *Tilemap) GenerateBodies(w *World) {
 				rotaryLimit.SetMaxForce(1e8)
 				w.Space.AddConstraint(rotaryLimit)
 
-				stiffness := 50.0 * body.Moment()
-				damping := 2 * math.Sqrt(stiffness*body.Moment())
+				stiffness := 30.0 * body.Moment()
+				damping := 3 * math.Sqrt(stiffness*body.Moment())
 				dampedSpring := cp.NewDampedRotarySpring(w.Space.StaticBody, body, -angle, stiffness, damping)
 				w.Space.AddConstraint(dampedSpring)
 
