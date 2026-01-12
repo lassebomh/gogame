@@ -53,7 +53,7 @@ func NewGame() *Game {
 
 	game.Station = NewWorld(tilemap, true)
 
-	game.Earth.Player = NewPlayer(game.Earth, game.Earth.Tilemap.CenterPosition)
+	game.Station.Player = NewPlayer(game.Station, game.Station.Tilemap.CenterPosition)
 
 	return game
 
@@ -63,7 +63,7 @@ func (g *Game) Update(dt float32) *World {
 	g.DT = dt
 	g.Accumulator += dt
 
-	dayDiff := float64(dt) / (60 * 2)
+	dayDiff := float64(dt) / (60 * 0.5)
 	g.Day += dayDiff
 
 	g.Earth.Day = g.Day

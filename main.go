@@ -117,7 +117,6 @@ func main() {
 		}
 		fadeiChannelPrevLocation.SetTexture(displayTexture.Texture)
 		fadebackgroundShaderTime.SetFloat(float32(t))
-		Debug(game.TeleportTransition)
 		fadebackgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
 		rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
 
