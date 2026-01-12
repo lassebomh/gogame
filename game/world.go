@@ -63,7 +63,7 @@ func (g *Game) Update(dt float32) *World {
 	g.DT = dt
 	g.Accumulator += dt
 
-	dayDiff := float64(dt) / (60 * 0.5)
+	dayDiff := float64(dt) / (60 * 4)
 	g.Day += dayDiff
 
 	g.Earth.Day = g.Day
@@ -82,7 +82,7 @@ func (g *Game) Update(dt float32) *World {
 
 	hours := math.Mod(g.Day, 1)
 
-	teleport := (hours >= 8./24 && hours-dayDiff < 8./24.) || (hours >= 20./24 && hours-dayDiff < 20./24.)
+	teleport := (hours >= HOUR_MORNING/24 && hours-dayDiff < HOUR_MORNING/24.) || (hours >= HOUR_NIGHT/24 && hours-dayDiff < HOUR_NIGHT/24.)
 
 	if teleport && currentWorld.Player.Body.Position().Distance(currentWorld.Tilemap.CenterPosition) < 10 {
 		currentWorld.Player.Teleport(currentWorld, otherWorld)
@@ -95,12 +95,12 @@ func (g *Game) Update(dt float32) *World {
 	}
 
 	if currentWorld.IsStation && g.TeleportTransition < 1 {
-		g.TeleportTransition = min(1, g.TeleportTransition+dt/2)
+		g.TeleportTransition = min(1, g.TeleportTransition+dt/5)
 	}
 
 	if !currentWorld.IsStation {
 		if g.TeleportTransition > 0 {
-			g.TeleportTransition = max(0, g.TeleportTransition-dt/2)
+			g.TeleportTransition = max(0, g.TeleportTransition-dt/5)
 		}
 	}
 
@@ -239,8 +239,8 @@ func (w *World) Update() {
 var NIGHT = NewVec(-115, 0.3, .1)
 var DAWN = NewVec(5, 0.5, 1)
 var DAY = NewVec(55, 0.1, 1)
-var HOUR_MORNING float64 = 8
-var HOUR_NIGHT float64 = 20
+var HOUR_MORNING float64 = 9
+var HOUR_NIGHT float64 = 21
 var HOURS_TRANSITION float64 = 1
 
 func c(x float64) float64 {

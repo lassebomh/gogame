@@ -123,7 +123,12 @@ func (p *Player) Teleport(from *World, to *World) {
 
 func (p *Player) RenderHud(w *World, font rl.Font) {
 
-	clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(w.Day * 24 * float64(time.Hour)))).Format("15:04")
+	t := w.Day * 24 * float64(time.Hour)
+	t /= (10 * float64(time.Minute))
+	t = math.Floor(t)
+	t *= (10 * float64(time.Minute))
+
+	clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(t))).Format("15:04")
 	rl.DrawTextEx(font, clock, rl.NewVector2(12, 12), float32(font.BaseSize), 1, rl.Green)
 
 }
