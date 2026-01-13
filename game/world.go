@@ -20,10 +20,12 @@ type Game struct {
 	Station *World
 }
 
+const TIME_SCALE float64 = 1
+
 func NewGame() *Game {
 
 	game := &Game{
-		Day: 0.25,
+		Day: 0.35,
 
 		TeleportTransition: 1,
 
@@ -42,14 +44,32 @@ func NewGame() *Game {
 			tilemap.CreateRoom(x*roomWidth+3, y*roomHeight+3, roomWidth, roomHeight, WALL_R|WALL_L|WALL_B|WALL_T)
 		}
 	}
-	tilemap.Cols[25][27].Door = WALL_B
-	tilemap.Cols[27][25].Door = WALL_R
+
+	x := tilemap.Width/2 + 1
+	y := tilemap.Height/2 + 1
+	size := 2
+
+	for w := range size {
+		for h := range size {
+			tile := &tilemap.Cols[x+w-size/2][y+h-size/2]
+			tile.TextureBaseX = 3
+			tile.TextureBaseY = 1
+		}
+	}
 
 	game.Earth = NewWorld(tilemap, false)
 	// game.Earth.Monster = NewMonster(game.Earth, tilemap.CenterPosition.Add(cp.Vector{Y: 40}))
 
 	tilemap = NewTilemap(4, 4, 7.5)
 	tilemap.CreateRoom(0, 0, 4, 4, 0)
+
+	// for w := range size {
+	// 	for h := range size {
+	// 		tile := &tilemap.Cols[x+w-size/2][y+h-size/2]
+	// 		tile.TextureBaseX = 3
+	// 		tile.TextureBaseY = 1
+	// 	}
+	// }
 
 	game.Station = NewWorld(tilemap, true)
 
@@ -63,7 +83,7 @@ func (g *Game) Update(dt float32) *World {
 	g.DT = dt
 	g.Accumulator += dt
 
-	dayDiff := float64(dt) / (60 * 4)
+	dayDiff := float64(dt) / (60 * TIME_SCALE)
 	g.Day += dayDiff
 
 	g.Earth.Day = g.Day
@@ -261,6 +281,9 @@ func (w *World) Render(r *Render) {
 		rl.EndShaderMode()
 	}
 
+	rl.BeginShaderMode(r.Shader)
+	defer rl.EndShaderMode()
+
 	rl.BeginMode3D(w.Camera)
 	defer rl.EndMode3D()
 
@@ -295,8 +318,16 @@ func (w *World) Render(r *Render) {
 		for _, tile := range col {
 			scale := float32(w.Tilemap.Scale)
 			pos := VecFrom2D(tile.WorldPosition, 0)
-			rl.DrawModel(r.Models["plane"], pos.Add(XZ.Scale(scale/2)).Vector3, scale/2, rl.White)
-			scaleVec := XYZ.Scale(scale * 0.5).Vector3
+
+			// floorY := float32(0)
+			// if tile.TextureBaseX == 0 && tile.TextureBaseY == 3 {
+			// 	floorY = -0.1
+			// }
+			r.DrawModel(r.Models["plane"], tile.TextureBaseX, tile.TextureBaseY, pos.Add(XZ.Scale(scale/2)), NewVec(scale/2, scale/2, scale/2), Y, 0)
+
+			scaleV := XYZ.Scale(scale * 0.5)
+			scaleVec := scaleV.Vector3
+
 			if tile.Wall&WALL_L != 0 {
 				rl.DrawModel(r.Models["wall"], pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
 			}
@@ -310,6 +341,7 @@ func (w *World) Render(r *Render) {
 				rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
 			}
 			if tile.DoorBody != nil {
+				r.DrawModel(r.Models["door"], 3, 0, VecFrom2D(tile.DoorBody.Position(), 0), scaleV, Y.Negate(), float32(tile.DoorBody.Angle()*rl.Rad2deg))
 				rl.DrawModelEx(r.Models["door"], VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Negate().Vector3, float32(tile.DoorBody.Angle()*rl.Rad2deg), scaleVec, rl.RayWhite)
 			}
 		}
@@ -318,7 +350,6 @@ func (w *World) Render(r *Render) {
 	if w.Player != nil {
 		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
 		rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
-
 	}
 
 	for _, pitem := range w.Items {

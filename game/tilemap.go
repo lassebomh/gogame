@@ -24,6 +24,9 @@ type Tile struct {
 	X    int
 	Y    int
 
+	TextureBaseX float32
+	TextureBaseY float32
+
 	WorldPosition cp.Vector
 
 	tilemap  *Tilemap
@@ -141,7 +144,16 @@ func NewTilemap(width int, height int, scale float64) *Tilemap {
 	for x := range width {
 		col := make([]Tile, height)
 		for y := range height {
-			col[y] = Tile{X: x, Y: y, tilemap: tilemap, WorldPosition: cp.Vector{X: float64(x) * tilemap.Scale, Y: float64(y) * tilemap.Scale}}
+			col[y] = Tile{
+				X:            x,
+				Y:            y,
+				tilemap:      tilemap,
+				TextureBaseX: 0,
+				TextureBaseY: 3,
+				WorldPosition: cp.Vector{X: float64(x) * tilemap.Scale,
+					Y: float64(y) * tilemap.Scale,
+				},
+			}
 		}
 
 		tilemap.Cols[x] = col
@@ -223,6 +235,15 @@ func (t *Tilemap) CreateRoom(x, y, width, height int, doorDirection int) {
 		t.Cols[x+width-1][y+height/2].Wall = 0
 		t.Cols[x+width-1][y+height/2].Door = WALL_R
 	}
+
+	for w := range width {
+		for h := range height {
+			t.Cols[x+w][y+h].TextureBaseX = 0
+			t.Cols[x+w][y+h].TextureBaseY = 2
+
+		}
+	}
+
 }
 func (t *Tilemap) GenerateBodies(w *World) {
 	var shapeFilterGroup uint = 2

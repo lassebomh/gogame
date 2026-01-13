@@ -14,22 +14,8 @@ func main() {
 	screenWidth := int32(1700)
 	screenHeight := int32(1000)
 
-	var pixelScale int32
-
-	if DEBUG {
-		pixelScale = 1
-	} else {
-		pixelScale = 4
-	}
-
-	renderWidth := screenWidth / pixelScale
-	renderHeight := screenHeight / pixelScale
-
-	// screenWidth /= pixelScale
-	// screenHeight /= pixelScale
-
-	// screenWidth *= pixelScale
-	// screenHeight *= pixelScale
+	renderHeight := int32(250)
+	renderWidth := int32(float32(renderHeight) * (float32(screenWidth) / float32(screenHeight)))
 
 	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
@@ -43,8 +29,10 @@ func main() {
 
 	game := NewGame()
 
-	render := NewRender(renderWidth, renderHeight)
-	defer render.Unload()
+	stationRender := NewRender(renderWidth, renderHeight)
+	defer stationRender.Unload()
+	earthRender := NewRender(renderWidth, renderHeight)
+	defer earthRender.Unload()
 
 	earthTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(earthTexture)
@@ -70,7 +58,6 @@ func main() {
 
 	fadeiChannel0Location := GetUniform(fadeShader, "iChannel0")
 	fadeiChannel1Location := GetUniform(fadeShader, "iChannel1")
-	fadeiChannelPrevLocation := GetUniform(fadeShader, "iChannelPrev")
 	fadebackgroundShaderTime := GetUniform(fadeShader, "iTime")
 	fadebackgroundShaderTransition := GetUniform(fadeShader, "iTransition")
 	fadebackgroundShaderResolution := GetUniform(fadeShader, "iResolution")
@@ -78,14 +65,7 @@ func main() {
 	font := rl.LoadFont("./fonts/setback.png")
 	defer rl.UnloadFont(font)
 
-	rl.BeginTextureMode(earthTexture)
-	game.Earth.Render(render)
-	rl.EndTextureMode()
-	rl.BeginTextureMode(stationTexture)
-	game.Station.Render(render)
-	rl.EndTextureMode()
-
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(144)
 	t := rl.GetTime()
 
 	for !rl.WindowShouldClose() {
@@ -97,11 +77,11 @@ func main() {
 
 		if w.IsStation {
 			rl.BeginTextureMode(stationTexture)
-			w.Render(render)
+			w.Render(stationRender)
 			rl.EndTextureMode()
 		} else {
 			rl.BeginTextureMode(earthTexture)
-			w.Render(render)
+			w.Render(earthRender)
 			rl.EndTextureMode()
 		}
 
@@ -116,12 +96,10 @@ func main() {
 			fadeiChannel1Location.SetTexture(earthTexture.Texture)
 			fadebackgroundShaderTransition.SetFloat(1 - game.TeleportTransition)
 		}
-		fadeiChannelPrevLocation.SetTexture(displayTexture.Texture)
 		fadebackgroundShaderTime.SetFloat(float32(t))
 		fadebackgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
 		rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
 		rl.EndShaderMode()
-
 		rl.EndTextureMode()
 
 		rl.BeginTextureMode(hudTexture)
@@ -149,10 +127,7 @@ func main() {
 			0,
 			rl.White,
 		)
-
-		// w.Player.RenderHud(w)
-		// rl.DrawFPS(10, 20)
-
+		rl.DrawFPS(10, 20)
 		rl.EndDrawing()
 
 	}

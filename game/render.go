@@ -64,6 +64,9 @@ type Render struct {
 	BackgroundShaderTime       *ShaderUniform
 	BackgroundShaderFov        *ShaderUniform
 	BackgroundShaderResolution *ShaderUniform
+	AtlasLoc                   *ShaderUniform
+	TileAA                     *ShaderUniform
+	TileBB                     *ShaderUniform
 
 	Models   map[string]rl.Model
 	Textures map[string]rl.Texture2D
@@ -74,9 +77,11 @@ type Render struct {
 
 func NewRender(renderWidth int32, renderHeight int32) *Render {
 
+	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
 	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
 
-	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
+	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
+	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
 
 	render := &Render{
 		Shader:           shader,
@@ -91,23 +96,23 @@ func NewRender(renderWidth int32, renderHeight int32) *Render {
 		BackgroundShaderFov:        GetUniform(backgroundShader, "iFov"),
 		BackgroundShaderResolution: GetUniform(backgroundShader, "iResolution"),
 
+		TileAA: GetUniform(shader, "tileAA"),
+		TileBB: GetUniform(shader, "tileBB"),
+
 		RenderWidth:  renderWidth,
 		RenderHeight: renderHeight,
 	}
 
-	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
-	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
+	render.LoadTexture("organic", "./models/organic.png")
+	render.LoadTexture("earth_elevation", "./models/earth_elevation.png")
+	render.LoadTexture("atlas", "./models/atlas.png")
 
-	render.UpdateValues()
-
+	// render.LoadModel("floor", "./models/floor.glb")
 	render.LoadModel("plane", "./models/plane2.glb")
 	render.LoadModel("wall", "./models/cube.glb")
 	render.LoadModel("door", "./models/door.glb")
 	render.LoadModel("monster_arm_segment", "./models/monster/monster_arm_segment.glb")
 	render.LoadModel("monster_body", "./models/monster/monster_body.glb")
-
-	render.LoadTexture("organic", "./models/organic.png")
-	render.LoadTexture("earth_elevation", "./models/earth_elevation.png")
 
 	for i := range MAX_LIGHTS {
 		render.Lights = append(render.Lights, &Light{
@@ -136,9 +141,16 @@ func NewRender(renderWidth int32, renderHeight int32) *Render {
 func (r *Render) LoadModel(name string, path string) {
 	model := rl.LoadModel(path)
 	model.Materials.Shader = r.Shader
-	for i := range model.GetMaterials() {
-		model.GetMaterials()[i].Shader = r.Shader
+
+	for i := range model.MaterialCount {
+		mat := &model.GetMaterials()[i]
+		mat.Shader = r.Shader
+		rl.SetMaterialTexture(mat, rl.MapDiffuse, r.Textures["atlas"])
+		rl.SetMaterialTexture(mat, rl.MapAlbedo, r.Textures["atlas"])
 	}
+
+	rl.SetMaterialTexture(model.Materials, rl.MapDiffuse, r.Textures["atlas"])
+	rl.SetMaterialTexture(model.Materials, rl.MapAlbedo, r.Textures["atlas"])
 	r.Models[name] = model
 }
 
@@ -157,20 +169,17 @@ func (r *Render) Unload() {
 	}
 	rl.UnloadShader(r.Shader)
 	rl.UnloadShader(r.BackgroundShader)
-
 }
 
-// func (r *Render) Light(lightType LightType, position Vec, target Vec, color rl.Color, strength float32) {
-// 	light := r.Lights[r.LightI]
-// 	light.Enabled = 1
-// 	light.Type = lightType
-// 	light.Position = position.Vector3
-// 	light.Target = target.Vector3
-// 	light.Color = color
-// 	light.Strength = strength
-
-// 	r.LightI++
-// }
+func (r *Render) DrawModel(model rl.Model, tileX float32, tileY float32, pos Vec, scale Vec, rotationAxis Vec, rotationRadians float32) {
+	atlas := r.Textures["atlas"]
+	width, _ := float32(atlas.Width), float32(atlas.Height)
+	s := 64 / width
+	x, y := float32(tileX)*s, float32(tileY)*s
+	r.TileAA.SetVec2(x, y)
+	r.TileBB.SetVec2(x+s, y+s)
+	rl.DrawModelEx(model, pos.Vector3, rotationAxis.Vector3, rotationRadians, scale.Vector3, rl.White)
+}
 
 func (r *Render) LightDirectional(direction Vec, color rl.Color, strength float32) {
 	light := r.Lights[r.LightI]
