@@ -14,7 +14,7 @@ type Game struct {
 	PhysicsDrawer *RaylibDrawer
 	Day           float64
 
-	TeleportTransition float32
+	TeleportTransition float64
 
 	Earth   *World
 	Station *World
@@ -115,12 +115,12 @@ func (g *Game) Update(dt float32) *World {
 	}
 
 	if currentWorld.IsStation && g.TeleportTransition < 1 {
-		g.TeleportTransition = min(1, g.TeleportTransition+dt/5)
+		g.TeleportTransition = min(1, g.TeleportTransition+float64(dt)/5)
 	}
 
 	if !currentWorld.IsStation {
 		if g.TeleportTransition > 0 {
-			g.TeleportTransition = max(0, g.TeleportTransition-dt/5)
+			g.TeleportTransition = max(0, g.TeleportTransition-float64(dt)/5)
 		}
 	}
 

@@ -11,6 +11,7 @@ import (
 const DEBUG = false
 
 func main() {
+
 	screenWidth := int32(1700)
 	screenHeight := int32(1000)
 
@@ -21,6 +22,15 @@ func main() {
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 	defer rl.CloseWindow()
+
+	fadeShader := NewShader[struct {
+		Channel0   UniformTexture `glsl:"iChannel0"`
+		Channel1   UniformTexture `glsl:"iChannel1"`
+		Transition UniformFloat   `glsl:"iTransition"`
+		Resolution UniformVec2    `glsl:"iResolution"`
+	}]("", "./glsl330/fade.fs")
+
+	defer fadeShader.Unload()
 
 	if rl.GetMonitorCount() > 1 {
 		pos := rl.GetMonitorPosition(1)
@@ -44,23 +54,12 @@ func main() {
 	rl.SetTextureFilter(stationTexture.Texture, rl.FilterPoint)
 	rl.SetTextureWrap(stationTexture.Texture, rl.WrapClamp)
 
-	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
-	defer rl.UnloadShader(backgroundShader)
-
 	hudTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(hudTexture)
 
 	displayTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(displayTexture)
 	rl.SetTextureFilter(displayTexture.Texture, rl.FilterPoint)
-	fadeShader := rl.LoadShader("", "./glsl330/fade.fs")
-	defer rl.UnloadShader(fadeShader)
-
-	fadeiChannel0Location := GetUniform(fadeShader, "iChannel0")
-	fadeiChannel1Location := GetUniform(fadeShader, "iChannel1")
-	fadebackgroundShaderTime := GetUniform(fadeShader, "iTime")
-	fadebackgroundShaderTransition := GetUniform(fadeShader, "iTransition")
-	fadebackgroundShaderResolution := GetUniform(fadeShader, "iResolution")
 
 	font := rl.LoadFont("./fonts/setback.png")
 	defer rl.UnloadFont(font)
@@ -76,59 +75,61 @@ func main() {
 		w := game.Update(float32(dt))
 
 		if w.IsStation {
-			rl.BeginTextureMode(stationTexture)
-			w.Render(stationRender)
-			rl.EndTextureMode()
+			BeginTextureMode(stationTexture, func() {
+				w.Render(stationRender)
+			})
 		} else {
-			rl.BeginTextureMode(earthTexture)
-			w.Render(earthRender)
-			rl.EndTextureMode()
+
+			BeginTextureMode(earthTexture, func() {
+				w.Render(earthRender)
+			})
+
 		}
 
-		rl.BeginTextureMode(displayTexture)
-		rl.BeginShaderMode(fadeShader)
-		if w.IsStation {
-			fadeiChannel0Location.SetTexture(earthTexture.Texture)
-			fadeiChannel1Location.SetTexture(stationTexture.Texture)
-			fadebackgroundShaderTransition.SetFloat(game.TeleportTransition)
-		} else {
-			fadeiChannel0Location.SetTexture(stationTexture.Texture)
-			fadeiChannel1Location.SetTexture(earthTexture.Texture)
-			fadebackgroundShaderTransition.SetFloat(1 - game.TeleportTransition)
-		}
-		fadebackgroundShaderTime.SetFloat(float32(t))
-		fadebackgroundShaderResolution.SetVec2(float32(renderWidth), float32(renderHeight))
-		rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
-		rl.EndShaderMode()
-		rl.EndTextureMode()
+		BeginTextureMode(displayTexture, func() {
 
-		rl.BeginTextureMode(hudTexture)
-		rl.ClearBackground(color.RGBA{})
-		w.Player.RenderHud(w, font)
-		rl.EndTextureMode()
+			fadeShader.UseMode(func() {
+				if w.IsStation {
+					fadeShader.Uniform.Channel0.Set(earthTexture.Texture)
+					fadeShader.Uniform.Channel1.Set(stationTexture.Texture)
+					fadeShader.Uniform.Transition.Set(game.TeleportTransition)
+				} else {
+					fadeShader.Uniform.Channel0.Set(stationTexture.Texture)
+					fadeShader.Uniform.Channel1.Set(earthTexture.Texture)
+					fadeShader.Uniform.Transition.Set(1 - game.TeleportTransition)
+				}
+				fadeShader.Uniform.Resolution.Set(float64(renderWidth), float64(renderHeight))
+				rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
+			})
+		})
 
-		rl.BeginDrawing()
-		rl.ClearBackground(rl.Black)
+		BeginTextureMode(hudTexture, func() {
+			rl.ClearBackground(color.RGBA{})
+			w.Player.RenderHud(w, font)
+		})
 
-		rl.DrawTexturePro(
-			displayTexture.Texture,
-			rl.Rectangle{X: 0, Y: 0, Width: float32(renderWidth), Height: -float32(renderHeight)},
-			rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
-			rl.Vector2{X: 0, Y: 0},
-			0,
-			rl.White,
-		)
+		BeginDrawing(func() {
+			rl.ClearBackground(rl.Black)
 
-		rl.DrawTexturePro(
-			hudTexture.Texture,
-			rl.Rectangle{X: 0, Y: 0, Width: float32(hudTexture.Texture.Width), Height: -float32(hudTexture.Texture.Height)},
-			rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
-			rl.Vector2{X: 0, Y: 0},
-			0,
-			rl.White,
-		)
-		rl.DrawFPS(10, 20)
-		rl.EndDrawing()
+			rl.DrawTexturePro(
+				displayTexture.Texture,
+				rl.Rectangle{X: 0, Y: 0, Width: float32(renderWidth), Height: -float32(renderHeight)},
+				rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
+				rl.Vector2{X: 0, Y: 0},
+				0,
+				rl.White,
+			)
+
+			rl.DrawTexturePro(
+				hudTexture.Texture,
+				rl.Rectangle{X: 0, Y: 0, Width: float32(hudTexture.Texture.Width), Height: -float32(hudTexture.Texture.Height)},
+				rl.Rectangle{X: 0, Y: 0, Width: float32(screenWidth), Height: float32(screenHeight)},
+				rl.Vector2{X: 0, Y: 0},
+				0,
+				rl.White,
+			)
+			rl.DrawFPS(10, 20)
+		})
 
 	}
 }

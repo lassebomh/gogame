@@ -1,6 +1,6 @@
 #version 330
 
-uniform float iTime;
+
 uniform float iTransition;
 uniform vec2 iResolution;
 uniform sampler2D iChannel0;
