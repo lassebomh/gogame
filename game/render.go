@@ -53,20 +53,43 @@ func GetUniform(shader rl.Shader, format string, args ...any) *ShaderUniform {
 	return uniform
 }
 
-type Render struct {
-	Shader           rl.Shader
-	BackgroundShader rl.Shader
-	Lights           []*Light
-	LightI           int
+// IChannel0Location:          GetUniform(backgroundShader, "iChannel0"),
+// IChannel1Location:          GetUniform(backgroundShader, "iChannel1"),
+// BackgroundShaderTime:       GetUniform(backgroundShader, "iTime"),
+// BackgroundShaderFov:        GetUniform(backgroundShader, "iFov"),
+// BackgroundShaderResolution: GetUniform(backgroundShader, "iResolution"),
 
-	IChannel0Location          *ShaderUniform
-	IChannel1Location          *ShaderUniform
-	BackgroundShaderTime       *ShaderUniform
-	BackgroundShaderFov        *ShaderUniform
-	BackgroundShaderResolution *ShaderUniform
-	AtlasLoc                   *ShaderUniform
-	TileAA                     *ShaderUniform
-	TileBB                     *ShaderUniform
+// TileAA: GetUniform(shader, "tileAA"),
+// TileBB: GetUniform(shader, "tileBB"),
+
+type PlanetShaderUniforms struct {
+	Channel0   UniformTexture `glsl:"iChannel0"`
+	Channel1   UniformTexture `glsl:"iChannel1"`
+	Time       UniformFloat   `glsl:"iTime"`
+	Fov        UniformFloat   `glsl:"iFov"`
+	Resolution UniformVec2    `glsl:"iResolution"`
+
+	// AtlasLoc                   UniformTexture `glsl:"atlas"`
+	// TileAA                     UniformVec2    `glsl:"tileAA"`
+	// TileBB                     UniformVec2    `glsl:"tileBB"`
+}
+
+type Render struct {
+	Shader rl.Shader
+	// BackgroundShader rl.Shader
+	Lights []*Light
+	LightI int
+
+	PlanetShader *Shader[PlanetShaderUniforms]
+
+	// IChannel0Location          *ShaderUniform
+	// IChannel1Location          *ShaderUniform
+	// BackgroundShaderTime       *ShaderUniform
+	// BackgroundShaderFov        *ShaderUniform
+	// BackgroundShaderResolution *ShaderUniform
+	// AtlasLoc                   *ShaderUniform
+	TileAA *ShaderUniform
+	TileBB *ShaderUniform
 
 	Models   map[string]rl.Model
 	Textures map[string]rl.Texture2D
@@ -77,25 +100,26 @@ type Render struct {
 
 func NewRender(renderWidth int32, renderHeight int32) *Render {
 
-	backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
+	// backgroundShader := rl.LoadShader("", "./glsl330/planet2.fs")
 	shader := rl.LoadShader("./glsl330/lighting.vs", "./glsl330/lighting.fs")
 
 	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
 	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "ambient"), []float32{0.1, 0.1, 0.1, 1.0}, rl.ShaderUniformVec4)
 
 	render := &Render{
-		Shader:           shader,
-		BackgroundShader: backgroundShader,
-		Lights:           make([]*Light, 0, MAX_LIGHTS),
-		Models:           map[string]rl.Model{},
-		Textures:         map[string]rl.Texture2D{},
+		Shader:   shader,
+		Lights:   make([]*Light, 0, MAX_LIGHTS),
+		Models:   map[string]rl.Model{},
+		Textures: map[string]rl.Texture2D{},
 
-		IChannel0Location:          GetUniform(backgroundShader, "iChannel0"),
-		IChannel1Location:          GetUniform(backgroundShader, "iChannel1"),
-		BackgroundShaderTime:       GetUniform(backgroundShader, "iTime"),
-		BackgroundShaderFov:        GetUniform(backgroundShader, "iFov"),
-		BackgroundShaderResolution: GetUniform(backgroundShader, "iResolution"),
+		PlanetShader: NewShader[PlanetShaderUniforms]("", "./glsl330/planet2.fs"),
 
+		// BackgroundShader: backgroundShader,
+		// IChannel0Location:          GetUniform(backgroundShader, "iChannel0"),
+		// IChannel1Location:          GetUniform(backgroundShader, "iChannel1"),
+		// BackgroundShaderTime:       GetUniform(backgroundShader, "iTime"),
+		// BackgroundShaderFov:        GetUniform(backgroundShader, "iFov"),
+		// BackgroundShaderResolution: GetUniform(backgroundShader, "iResolution"),
 		TileAA: GetUniform(shader, "tileAA"),
 		TileBB: GetUniform(shader, "tileBB"),
 
@@ -168,16 +192,19 @@ func (r *Render) Unload() {
 		rl.UnloadTexture(texture)
 	}
 	rl.UnloadShader(r.Shader)
-	rl.UnloadShader(r.BackgroundShader)
+	// rl.UnloadShader(r.BackgroundShader)
+	r.PlanetShader.Unload()
 }
 
-func (r *Render) DrawModel(model rl.Model, tileX float32, tileY float32, pos Vec, scale Vec, rotationAxis Vec, rotationRadians float32) {
+func (r *Render) DrawModel(model rl.Model, tileX float64, tileY float64, pos Vec, scale Vec, rotationAxis Vec, rotationRadians float32) {
 	atlas := r.Textures["atlas"]
-	width, _ := float32(atlas.Width), float32(atlas.Height)
+	width, _ := float64(atlas.Width), float64(atlas.Height)
 	s := 64 / width
-	x, y := float32(tileX)*s, float32(tileY)*s
-	r.TileAA.SetVec2(x, y)
-	r.TileBB.SetVec2(x+s, y+s)
+	x, y := float64(tileX)*s, float64(tileY)*s
+	// r.PlanetShader.Uniform.TileAA.Set(x, y)
+	// r.PlanetShader.Uniform.TileBB.Set(x+s, y+s)
+	r.TileAA.SetVec2(float32(x), float32(y))
+	r.TileBB.SetVec2(float32(x+s), float32(y+s))
 	rl.DrawModelEx(model, pos.Vector3, rotationAxis.Vector3, rotationRadians, scale.Vector3, rl.White)
 }
 

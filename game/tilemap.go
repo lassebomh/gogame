@@ -24,8 +24,8 @@ type Tile struct {
 	X    int
 	Y    int
 
-	TextureBaseX float32
-	TextureBaseY float32
+	TextureBaseX float64
+	TextureBaseY float64
 
 	WorldPosition cp.Vector
 
