@@ -57,7 +57,7 @@ func (u *UniformVec4) Set(x, y, z, w float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z), float32(w)}, rl.ShaderUniformVec4)
 }
 func (u *UniformVec4) SetColor(color color.RGBA) {
-	rl.SetShaderValue(u.shader, u.location, []float32{float32(color.R), float32(color.G), float32(color.B), float32(color.A)}, rl.ShaderUniformVec4)
+	rl.SetShaderValue(u.shader, u.location, []float32{float32(color.R) / 255, float32(color.G) / 255, float32(color.B) / 255, float32(color.A) / 255}, rl.ShaderUniformVec4)
 }
 func (u *UniformTexture) Set(texture rl.Texture2D) {
 	rl.SetShaderValueTexture(u.shader, u.location, texture)

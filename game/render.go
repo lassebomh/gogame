@@ -64,6 +64,8 @@ type MainShaderUniforms struct {
 	TileAA UniformVec2 `glsl:"tileAA"`
 	TileBB UniformVec2 `glsl:"tileBB"`
 
+	Ambient UniformVec4 `glsl:"ambient"`
+
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`
 	LightType        [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].type"`
 	LightPosition    [MAX_LIGHTS]UniformVec3  `glsl:"lights[%d].position"`
@@ -124,15 +126,7 @@ func (m *MainShader) UpdateValues() {
 type Render struct {
 	MainShader *MainShader
 
-	// Shader rl.Shader
-	// BackgroundShader rl.Shader
-	// Lights []*Light
-	// LightI int
-
 	PlanetShader *Shader[PlanetShaderUniforms]
-
-	// TileAA *ShaderUniform
-	// TileBB *ShaderUniform
 
 	Models   map[string]rl.Model
 	Textures map[string]rl.Texture2D

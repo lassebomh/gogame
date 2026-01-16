@@ -292,6 +292,8 @@ func (w *World) Render(r *Render) {
 
 		BeginMode3D(w.Camera, func() {
 
+			r.MainShader.Shader.Uniform.Ambient.SetColor(color.RGBA{255, 255, 255, 5})
+
 			if !w.IsStation {
 
 				hour := math.Mod(w.Day, 1) * 24
@@ -301,10 +303,10 @@ func (w *World) Render(r *Render) {
 
 				sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
 
-				r.MainShader.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.005)
+				r.MainShader.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
 
 			} else {
-				r.MainShader.LightDirectional(NewVec(0, -1, 0).Normalize(), rl.White, 0.0025)
+				r.MainShader.LightDirectional(NewVec(0, -1, 0).Normalize(), rl.White, 0.25)
 
 			}
 
@@ -314,7 +316,7 @@ func (w *World) Render(r *Render) {
 				flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
 				flashlightTarget := flashlightPos.Add(lookDir)
 
-				r.MainShader.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 0.01)
+				r.MainShader.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
 			}
 
 			r.MainShader.UpdateValues()
