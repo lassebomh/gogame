@@ -34,13 +34,12 @@ func main() {
 	renderHeight := int32(250)
 	renderWidth := int32(float32(renderHeight) * (float32(screenWidth) / float32(screenHeight)))
 
-	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused | rl.FlagWindowUnfocused)
+	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused)
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 	defer rl.CloseWindow()
 
-	fadeShader := &FadeShader{}
-	InstantiateShader(fadeShader, "", "./glsl330/fade.fs")
+	fadeShader := NewShader(&FadeShader{}, "", "./glsl330/fade.fs")
 
 	defer rl.UnloadShader(fadeShader.GetRaylibShader())
 

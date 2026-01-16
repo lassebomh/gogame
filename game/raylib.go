@@ -66,7 +66,7 @@ type Shader interface {
 	SetRaylibShader(value rl.Shader)
 }
 
-func InstantiateShader[T Shader](shader T, vs string, fs string) {
+func NewShader[T Shader](shader T, vs string, fs string) T {
 	raylibShader := rl.LoadShader(vs, fs)
 	shader.SetRaylibShader(raylibShader)
 
@@ -99,6 +99,8 @@ func InstantiateShader[T Shader](shader T, vs string, fs string) {
 		}
 
 	}
+
+	return shader
 }
 
 func BeginShaderMode(shader Shader, fn func()) {

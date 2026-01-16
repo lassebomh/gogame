@@ -118,8 +118,8 @@ type Render struct {
 func NewRender(renderWidth int32, renderHeight int32) *Render {
 
 	render := &Render{
-		MainShader:   &MainShader{},
-		PlanetShader: &PlanetShader{},
+		MainShader:   NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
+		PlanetShader: NewShader(&PlanetShader{}, "", "./glsl330/planet2.fs"),
 
 		Models:   map[string]rl.Model{},
 		Textures: map[string]rl.Texture2D{},
@@ -127,9 +127,6 @@ func NewRender(renderWidth int32, renderHeight int32) *Render {
 		RenderWidth:  renderWidth,
 		RenderHeight: renderHeight,
 	}
-
-	InstantiateShader(render.MainShader, "./glsl330/lighting.vs", "./glsl330/lighting.fs")
-	InstantiateShader(render.PlanetShader, "", "./glsl330/planet2.fs")
 
 	render.LoadTexture("organic", "./models/organic.png")
 	render.LoadTexture("earth_elevation", "./models/earth_elevation.png")
