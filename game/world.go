@@ -288,123 +288,125 @@ func (w *World) Render(r *Render) {
 		// rl.EndShaderMode()
 	}
 
-	rl.BeginShaderMode(r.Shader)
-	defer rl.EndShaderMode()
+	r.MainShader.Shader.UseMode(func() {
 
-	rl.BeginMode3D(w.Camera)
-	defer rl.EndMode3D()
+		BeginMode3D(w.Camera, func() {
 
-	if !w.IsStation {
+			if !w.IsStation {
 
-		hour := math.Mod(w.Day, 1) * 24
-		day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
-		transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
-		transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+				hour := math.Mod(w.Day, 1) * 24
+				day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+				transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+				transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
 
-		sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
+				sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, float32(day)), float32(transitionColor))
 
-		r.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.5)
+				r.MainShader.LightDirectional(NewVec(float32(1-transitionAngle), float32(1-day*2), 0).Normalize(), rl.ColorFromHSV(sunColor.X, sunColor.Y, sunColor.Z), 0.005)
 
-	} else {
-		r.LightDirectional(NewVec(0, -1, 0).Normalize(), rl.White, 0.25)
+			} else {
+				r.MainShader.LightDirectional(NewVec(0, -1, 0).Normalize(), rl.White, 0.0025)
 
-	}
-
-	if w.Player != nil {
-		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
-		lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
-		flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
-		flashlightTarget := flashlightPos.Add(lookDir)
-
-		r.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 2)
-	}
-
-	r.UpdateValues()
-
-	for _, col := range w.Tilemap.Cols {
-		for _, tile := range col {
-			scale := float32(w.Tilemap.Scale)
-			pos := VecFrom2D(tile.WorldPosition, 0)
-
-			// floorY := float32(0)
-			// if tile.TextureBaseX == 0 && tile.TextureBaseY == 3 {
-			// 	floorY = -0.1
-			// }
-			r.DrawModel(r.Models["plane"], tile.TextureBaseX, tile.TextureBaseY, pos.Add(XZ.Scale(scale/2)), NewVec(scale/2, scale/2, scale/2), Y, 0)
-
-			scaleV := XYZ.Scale(scale * 0.5)
-			scaleVec := scaleV.Vector3
-
-			if tile.Wall&WALL_L != 0 {
-				rl.DrawModel(r.Models["wall"], pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
 			}
-			if tile.Wall&WALL_T != 0 {
-				rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio)).Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
+
+			if w.Player != nil {
+				playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+				lookDir := NewVec(float32(math.Cos(w.Player.Body.Angle())), 0, float32(math.Sin(w.Player.Body.Angle())))
+				flashlightPos := playerPos.Subtract(lookDir.Scale(float32(w.Player.Radius) * 3))
+				flashlightTarget := flashlightPos.Add(lookDir)
+
+				r.MainShader.LightSpot(flashlightPos, flashlightTarget, 13, 18, rl.NewColor(255, 255, 100, 255), 0.01)
 			}
-			if tile.Wall&WALL_R != 0 {
-				rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(scale, 0, 0)).Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
+
+			r.MainShader.UpdateValues()
+
+			for _, col := range w.Tilemap.Cols {
+				for _, tile := range col {
+					scale := float32(w.Tilemap.Scale)
+					pos := VecFrom2D(tile.WorldPosition, 0)
+
+					// floorY := float32(0)
+					// if tile.TextureBaseX == 0 && tile.TextureBaseY == 3 {
+					// 	floorY = -0.1
+					// }
+					r.DrawModel(r.Models["plane"], tile.TextureBaseX, tile.TextureBaseY, pos.Add(XZ.Scale(scale/2)), NewVec(scale/2, scale/2, scale/2), Y, 0)
+
+					scaleV := XYZ.Scale(scale * 0.5)
+					scaleVec := scaleV.Vector3
+
+					if tile.Wall&WALL_L != 0 {
+						rl.DrawModel(r.Models["wall"], pos.Add(NewVec(0, 0, scale)).Vector3, scale/2, rl.White)
+					}
+					if tile.Wall&WALL_T != 0 {
+						rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(scale, 0, scale*w.Tilemap.WallDepthRatio)).Vector3, Y.Vector3, 90, scaleVec, rl.RayWhite)
+					}
+					if tile.Wall&WALL_R != 0 {
+						rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(scale, 0, 0)).Vector3, Y.Scale(1).Vector3, 180, scaleVec, rl.RayWhite)
+					}
+					if tile.Wall&WALL_B != 0 {
+						rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
+					}
+					if tile.DoorBody != nil {
+						r.DrawModel(r.Models["door"], 3, 0, VecFrom2D(tile.DoorBody.Position(), 0), scaleV, Y.Negate(), float32(tile.DoorBody.Angle()*rl.Rad2deg))
+						rl.DrawModelEx(r.Models["door"], VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Negate().Vector3, float32(tile.DoorBody.Angle()*rl.Rad2deg), scaleVec, rl.RayWhite)
+					}
+				}
 			}
-			if tile.Wall&WALL_B != 0 {
-				rl.DrawModelEx(r.Models["wall"], pos.Add(NewVec(0, 0, scale*(1-w.Tilemap.WallDepthRatio))).Vector3, Y.Vector3, 270, scaleVec, rl.RayWhite)
+
+			if w.Player != nil {
+				playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
+				rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
 			}
-			if tile.DoorBody != nil {
-				r.DrawModel(r.Models["door"], 3, 0, VecFrom2D(tile.DoorBody.Position(), 0), scaleV, Y.Negate(), float32(tile.DoorBody.Angle()*rl.Rad2deg))
-				rl.DrawModelEx(r.Models["door"], VecFrom2D(tile.DoorBody.Position(), 0).Vector3, Y.Negate().Vector3, float32(tile.DoorBody.Angle()*rl.Rad2deg), scaleVec, rl.RayWhite)
+
+			for _, pitem := range w.Items {
+				rl.DrawSphereEx(VecFrom2D(pitem.Body.Position(), pitem.Radius).Vector3, float32(pitem.Radius), 12, 12, rl.Red)
 			}
-		}
-	}
 
-	if w.Player != nil {
-		playerPos := VecFrom2D(w.Player.Body.Position(), w.Player.Radius*1)
-		rl.DrawSphereEx(playerPos.Vector3, float32(w.Player.Radius), 12, 12, rl.Red)
-	}
+			if w.Monster != nil {
 
-	for _, pitem := range w.Items {
-		rl.DrawSphereEx(VecFrom2D(pitem.Body.Position(), pitem.Radius).Vector3, float32(pitem.Radius), 12, 12, rl.Red)
-	}
+				color := color.RGBA{R: 40, G: 40, B: 40, A: 255}
 
-	if w.Monster != nil {
+				monsterRadius := float32(w.Monster.Radius)
 
-		color := color.RGBA{R: 40, G: 40, B: 40, A: 255}
-
-		monsterRadius := float32(w.Monster.Radius)
-		rl.DrawModelEx(
-			r.Models["monster_body"],
-			VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius/2).Vector3,
-			Y.Vector3,
-			float32(-w.Monster.Body.Angle())*rl.Rad2deg,
-			NewVec(monsterRadius*1, monsterRadius, monsterRadius*1).Vector3,
-			color,
-		)
-
-		for _, arm := range w.Monster.Arms {
-			for _, segment := range arm.Segments {
 				rl.DrawModelEx(
-					r.Models["monster_arm_segment"],
-					VecFrom2D(segment.Body.Position(), w.Monster.Radius*2-segment.Width).Vector3,
+					r.Models["monster_body"],
+					VecFrom2D(w.Monster.Body.Position(), w.Monster.Radius/2).Vector3,
 					Y.Vector3,
-					float32(-segment.Body.Angle())*rl.Rad2deg,
-					NewVec(float32(segment.Length)*1.1, float32(segment.Width), float32(segment.Width)).Vector3,
+					float32(-w.Monster.Body.Angle())*rl.Rad2deg,
+					NewVec(monsterRadius*1, monsterRadius, monsterRadius*1).Vector3,
 					color,
 				)
-			}
-		}
-	}
 
-	// if DEBUG {
-	// 	rl.DrawRenderBatchActive()
-	// 	rl.DisableDepthTest()
-	// 	cp.DrawSpace(game.Earth.Space, game.PhysicsDrawer)
-	// 	if game.Earth.Monster != nil {
-	// 		DrawLine(rl.Red, game.Earth.Monster.Path...)
-	// 		if game.Earth.Monster != nil {
-	// 			for _, arm := range game.Earth.Monster.Arms {
-	// 				DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
-	// 			}
-	// 			DrawLine(rl.Green, game.Earth.Monster.Body.Position(), game.Earth.Monster.Target)
-	// 		}
-	// 	}
-	// 	rl.DrawRenderBatchActive()
-	// 	rl.EnableDepthTest()
-	// }
+				for _, arm := range w.Monster.Arms {
+					for _, segment := range arm.Segments {
+						rl.DrawModelEx(
+							r.Models["monster_arm_segment"],
+							VecFrom2D(segment.Body.Position(), w.Monster.Radius*2-segment.Width).Vector3,
+							Y.Vector3,
+							float32(-segment.Body.Angle())*rl.Rad2deg,
+							NewVec(float32(segment.Length)*1.1, float32(segment.Width), float32(segment.Width)).Vector3,
+							color,
+						)
+					}
+				}
+			}
+
+			// if DEBUG {
+			// 	rl.DrawRenderBatchActive()
+			// 	rl.DisableDepthTest()
+			// 	cp.DrawSpace(game.Earth.Space, game.PhysicsDrawer)
+			// 	if game.Earth.Monster != nil {
+			// 		DrawLine(rl.Red, game.Earth.Monster.Path...)
+			// 		if game.Earth.Monster != nil {
+			// 			for _, arm := range game.Earth.Monster.Arms {
+			// 				DrawLine(rl.Blue, arm.Segments[len(arm.Segments)-1].Body.Position(), arm.TipTarget)
+			// 			}
+			// 			DrawLine(rl.Green, game.Earth.Monster.Body.Position(), game.Earth.Monster.Target)
+			// 		}
+			// 	}
+			// 	rl.DrawRenderBatchActive()
+			// 	rl.EnableDepthTest()
+			// }
+		})
+	})
+
 }

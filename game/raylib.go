@@ -1,8 +1,11 @@
 package game
 
 import (
+	"fmt"
+	"image/color"
 	"log"
 	"reflect"
+	"strings"
 	"unsafe"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -47,8 +50,14 @@ func (u *UniformVec2) Set(x, y float64) {
 func (u *UniformVec3) Set(x, y, z float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z)}, rl.ShaderUniformVec3)
 }
+func (u *UniformVec3) SetVec(vec Vec) {
+	rl.SetShaderValue(u.shader, u.location, []float32{float32(vec.X), float32(vec.Y), float32(vec.Z)}, rl.ShaderUniformVec3)
+}
 func (u *UniformVec4) Set(x, y, z, w float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z), float32(w)}, rl.ShaderUniformVec4)
+}
+func (u *UniformVec4) SetColor(color color.RGBA) {
+	rl.SetShaderValue(u.shader, u.location, []float32{float32(color.R), float32(color.G), float32(color.B), float32(color.A)}, rl.ShaderUniformVec4)
 }
 func (u *UniformTexture) Set(texture rl.Texture2D) {
 	rl.SetShaderValueTexture(u.shader, u.location, texture)
@@ -83,8 +92,20 @@ func NewShader[T any](vs string, fs string) *Shader[T] {
 
 		fieldValue := locValue.Field(i)
 
-		embeddedUniform := fieldValue.FieldByName("Uniform")
-		embeddedUniform.Set(reflect.ValueOf(NewUniform(s.shader, uniformName)))
+		if strings.Contains(uniformName, "%d") {
+
+			for i := range fieldValue.Len() {
+
+				uniformName := fmt.Sprintf(uniformName, i)
+				embeddedUniform := fieldValue.Index(i).FieldByName("Uniform")
+				embeddedUniform.Set(reflect.ValueOf(NewUniform(s.shader, uniformName)))
+			}
+		} else {
+			embeddedUniform := fieldValue.FieldByName("Uniform")
+			embeddedUniform.Set(reflect.ValueOf(NewUniform(s.shader, uniformName)))
+
+		}
+
 	}
 
 	return s

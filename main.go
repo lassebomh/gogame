@@ -29,8 +29,17 @@ func main() {
 		Transition UniformFloat   `glsl:"iTransition"`
 		Resolution UniformVec2    `glsl:"iResolution"`
 	}]("", "./glsl330/fade.fs")
-
 	defer fadeShader.Unload()
+
+	// shader := NewShader[struct {
+	// 	Enabled [4]UniformInt `glsl:"lights[%d].enabled"`
+	// }]("./glsl330/lighting.vs", "./glsl330/lighting.fs")
+
+	// shader.Uniform.Enabled[0].Set(1)
+
+	// Debug(shader)
+
+	// return
 
 	if rl.GetMonitorCount() > 1 {
 		pos := rl.GetMonitorPosition(1)
@@ -43,6 +52,8 @@ func main() {
 	defer stationRender.Unload()
 	earthRender := NewRender(renderWidth, renderHeight)
 	defer earthRender.Unload()
+
+	// return
 
 	earthTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(earthTexture)
