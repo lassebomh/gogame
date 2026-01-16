@@ -10,6 +10,22 @@ import (
 
 const DEBUG = false
 
+type FadeShader struct {
+	shader     rl.Shader
+	Channel0   UniformTexture `glsl:"iChannel0"`
+	Channel1   UniformTexture `glsl:"iChannel1"`
+	Transition UniformFloat   `glsl:"iTransition"`
+	Resolution UniformVec2    `glsl:"iResolution"`
+}
+
+func (fs *FadeShader) GetRaylibShader() rl.Shader {
+	return fs.shader
+}
+
+func (fs *FadeShader) SetRaylibShader(shader rl.Shader) {
+	fs.shader = shader
+}
+
 func main() {
 
 	screenWidth := int32(1700)
@@ -23,23 +39,10 @@ func main() {
 	rl.InitWindow(screenWidth, screenHeight, "raylib")
 	defer rl.CloseWindow()
 
-	fadeShader := NewShader[struct {
-		Channel0   UniformTexture `glsl:"iChannel0"`
-		Channel1   UniformTexture `glsl:"iChannel1"`
-		Transition UniformFloat   `glsl:"iTransition"`
-		Resolution UniformVec2    `glsl:"iResolution"`
-	}]("", "./glsl330/fade.fs")
-	defer fadeShader.Unload()
+	fadeShader := &FadeShader{}
+	InstantiateShader(fadeShader, "", "./glsl330/fade.fs")
 
-	// shader := NewShader[struct {
-	// 	Enabled [4]UniformInt `glsl:"lights[%d].enabled"`
-	// }]("./glsl330/lighting.vs", "./glsl330/lighting.fs")
-
-	// shader.Uniform.Enabled[0].Set(1)
-
-	// Debug(shader)
-
-	// return
+	defer rl.UnloadShader(fadeShader.GetRaylibShader())
 
 	if rl.GetMonitorCount() > 1 {
 		pos := rl.GetMonitorPosition(1)
@@ -52,8 +55,6 @@ func main() {
 	defer stationRender.Unload()
 	earthRender := NewRender(renderWidth, renderHeight)
 	defer earthRender.Unload()
-
-	// return
 
 	earthTexture := rl.LoadRenderTexture(renderWidth, renderHeight)
 	defer rl.UnloadRenderTexture(earthTexture)
@@ -99,18 +100,19 @@ func main() {
 
 		BeginTextureMode(displayTexture, func() {
 
-			fadeShader.UseMode(func() {
+			BeginShaderMode(fadeShader, func() {
 				if w.IsStation {
-					fadeShader.Uniform.Channel0.Set(earthTexture.Texture)
-					fadeShader.Uniform.Channel1.Set(stationTexture.Texture)
-					fadeShader.Uniform.Transition.Set(game.TeleportTransition)
+					fadeShader.Channel0.Set(earthTexture.Texture)
+					fadeShader.Channel1.Set(stationTexture.Texture)
+					fadeShader.Transition.Set(game.TeleportTransition)
 				} else {
-					fadeShader.Uniform.Channel0.Set(stationTexture.Texture)
-					fadeShader.Uniform.Channel1.Set(earthTexture.Texture)
-					fadeShader.Uniform.Transition.Set(1 - game.TeleportTransition)
+					fadeShader.Channel0.Set(stationTexture.Texture)
+					fadeShader.Channel1.Set(earthTexture.Texture)
+					fadeShader.Transition.Set(1 - game.TeleportTransition)
 				}
-				fadeShader.Uniform.Resolution.Set(float64(renderWidth), float64(renderHeight))
+				fadeShader.Resolution.Set(float64(renderWidth), float64(renderHeight))
 				rl.DrawRectangle(0, 0, renderWidth, renderHeight, rl.White)
+
 			})
 		})
 

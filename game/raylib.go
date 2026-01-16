@@ -17,8 +17,6 @@ type Uniform struct {
 }
 
 func NewUniform(shader rl.Shader, name string) Uniform {
-	// panic if -1 location
-
 	location := rl.GetShaderLocation(shader, name)
 
 	if location == -1 {
@@ -63,22 +61,16 @@ func (u *UniformTexture) Set(texture rl.Texture2D) {
 	rl.SetShaderValueTexture(u.shader, u.location, texture)
 }
 
-type Shader[T any] struct {
-	shader  rl.Shader
-	Uniform T
+type Shader interface {
+	GetRaylibShader() rl.Shader
+	SetRaylibShader(value rl.Shader)
 }
 
-func (s *Shader[T]) Unload() {
-	rl.UnloadShader(s.shader)
-}
+func InstantiateShader[T Shader](shader T, vs string, fs string) {
+	raylibShader := rl.LoadShader(vs, fs)
+	shader.SetRaylibShader(raylibShader)
 
-func NewShader[T any](vs string, fs string) *Shader[T] {
-
-	s := &Shader[T]{
-		shader: rl.LoadShader(vs, fs),
-	}
-
-	locValue := reflect.ValueOf(&s.Uniform).Elem()
+	locValue := reflect.ValueOf(shader).Elem()
 	locType := locValue.Type()
 
 	for i := 0; i < locType.NumField(); i++ {
@@ -98,21 +90,19 @@ func NewShader[T any](vs string, fs string) *Shader[T] {
 
 				uniformName := fmt.Sprintf(uniformName, i)
 				embeddedUniform := fieldValue.Index(i).FieldByName("Uniform")
-				embeddedUniform.Set(reflect.ValueOf(NewUniform(s.shader, uniformName)))
+				embeddedUniform.Set(reflect.ValueOf(NewUniform(raylibShader, uniformName)))
 			}
 		} else {
 			embeddedUniform := fieldValue.FieldByName("Uniform")
-			embeddedUniform.Set(reflect.ValueOf(NewUniform(s.shader, uniformName)))
+			embeddedUniform.Set(reflect.ValueOf(NewUniform(raylibShader, uniformName)))
 
 		}
 
 	}
-
-	return s
 }
 
-func (s *Shader[T]) UseMode(fn func()) {
-	rl.BeginShaderMode(s.shader)
+func BeginShaderMode(shader Shader, fn func()) {
+	rl.BeginShaderMode(shader.GetRaylibShader())
 	fn()
 	rl.EndShaderMode()
 }

@@ -271,28 +271,23 @@ func (w *World) Render(r *Render) {
 	rl.ClearBackground(rl.Black)
 
 	if w.IsStation {
-		r.PlanetShader.UseMode(func() {
-			r.PlanetShader.Uniform.Time.Set(w.Day)
-			r.PlanetShader.Uniform.Fov.Set(30)
-			r.PlanetShader.Uniform.Channel0.Set(r.Textures["organic"])
-			r.PlanetShader.Uniform.Channel1.Set(r.Textures["earth_elevation"])
-			r.PlanetShader.Uniform.Resolution.Set(float64(r.RenderWidth), float64(r.RenderHeight))
+
+		BeginShaderMode(r.PlanetShader, func() {
+
+			r.PlanetShader.Time.Set(w.Day)
+			r.PlanetShader.Fov.Set(30)
+			r.PlanetShader.Channel0.Set(r.Textures["organic"])
+			r.PlanetShader.Channel1.Set(r.Textures["earth_elevation"])
+			r.PlanetShader.Resolution.Set(float64(r.RenderWidth), float64(r.RenderHeight))
 			rl.DrawRectangle(0, 0, r.RenderWidth, r.RenderHeight, rl.White)
 		})
-		// rl.BeginShaderMode(r.BackgroundShader)
-		// r.BackgroundShaderTime.SetFloat(float32(w.Day))
-		// r.BackgroundShaderFov.SetFloat(30.0)
-		// r.IChannel0Location.SetTexture(r.Textures["organic"])
-		// r.IChannel1Location.SetTexture(r.Textures["earth_elevation"])
-		// r.BackgroundShaderResolution.SetVec2(float32(r.RenderWidth), float32(r.RenderHeight))
-		// rl.EndShaderMode()
 	}
 
-	r.MainShader.Shader.UseMode(func() {
+	BeginShaderMode(r.MainShader, func() {
 
 		BeginMode3D(w.Camera, func() {
 
-			r.MainShader.Shader.Uniform.Ambient.SetColor(color.RGBA{255, 255, 255, 5})
+			r.MainShader.Ambient.SetColor(color.RGBA{255, 255, 255, 5})
 
 			if !w.IsStation {
 
