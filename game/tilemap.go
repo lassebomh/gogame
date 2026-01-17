@@ -35,12 +35,13 @@ type Tile struct {
 }
 
 type Tilemap struct {
-	Cols           [][]Tile
-	Scale          float64
-	Width          int
-	Height         int
-	CenterPosition cp.Vector
-	WallDepthRatio float32
+	Cols              [][]Tile
+	Scale             float64
+	Width             int
+	Height            int
+	CenterPosition    cp.Vector
+	WallDepthRatio    float32
+	TextureWidthTiles int
 }
 
 func (t *Tile) PathNeighbors() []astar.Pather {
@@ -134,11 +135,12 @@ func (t *Tile) PathEstimatedCost(to astar.Pather) float64 {
 }
 func NewTilemap(width int, height int, scale float64) *Tilemap {
 	tilemap := &Tilemap{
-		Cols:           make([][]Tile, width),
-		Scale:          scale,
-		Width:          width,
-		Height:         height,
-		WallDepthRatio: 0.1,
+		Cols:              make([][]Tile, width),
+		Scale:             scale,
+		Width:             width,
+		Height:            height,
+		WallDepthRatio:    0.1,
+		TextureWidthTiles: 5,
 	}
 
 	for x := range width {
@@ -245,7 +247,7 @@ func (t *Tilemap) CreateRoom(x, y, width, height int, doorDirection int) {
 	}
 
 }
-func (t *Tilemap) GenerateBodies(w *World) {
+func (t *Tilemap) PostLoad(w *World) {
 	var shapeFilterGroup uint = 2
 
 	addSegment := func(body *cp.Body, start, end cp.Vector, radius float64) {

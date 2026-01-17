@@ -29,7 +29,7 @@ func (fs *FadeShader) SetRaylibShader(shader rl.Shader) {
 func main() {
 
 	screenWidth := int32(1700)
-	screenHeight := int32(1000)
+	screenHeight := int32(800)
 
 	renderHeight := int32(250)
 	renderWidth := int32(float32(renderHeight) * (float32(screenWidth) / float32(screenHeight)))
@@ -94,7 +94,6 @@ func main() {
 			BeginTextureMode(earthTexture, func() {
 				w.Render(earthRender)
 			})
-
 		}
 
 		BeginTextureMode(displayTexture, func() {
@@ -140,6 +139,13 @@ func main() {
 				0,
 				rl.White,
 			)
+
+			if w.IsStation {
+				w.GodHud(stationRender)
+			} else {
+				w.GodHud(earthRender)
+			}
+
 			rl.DrawFPS(10, 20)
 		})
 

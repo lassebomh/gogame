@@ -90,7 +90,6 @@ func (p *Player) Update(w *World) {
 	mousePositionDiff := w.MouseWorldPosition.Sub(p.Body.Position())
 	angleToMouse := math.Atan2(mousePositionDiff.Y, mousePositionDiff.X)
 	p.Body.SetAngle(angleToMouse)
-
 }
 
 func (p *Player) Teleport(from *World, to *World) {
@@ -105,22 +104,6 @@ func (p *Player) Teleport(from *World, to *World) {
 	to.Player = p
 }
 
-// func (p *Player) RenderHud(w *World) {
-
-// 	cursor := rl.Vector2{X: 20, Y: 20}
-
-// 	rl.DrawText(fmt.Sprintf("HP: %.0f/%.0f", w.Player.Health, w.Player.HealthMax), int32(cursor.X), int32(cursor.Y), 20, rl.Black)
-// 	cursor.Y += 20
-
-// 	for _, item := range p.Items {
-// 		cursor.Y += 20
-// 		if item.RenderHud(&cursor) {
-// 			p.RemoveItem(w, item)
-// 			w.NewPhysicalItem(item, p.Body.Position())
-// 		}
-// 	}
-// }
-
 func (p *Player) RenderHud(w *World, font rl.Font) {
 
 	t := w.Day * 24 * float64(time.Hour)
@@ -130,5 +113,4 @@ func (p *Player) RenderHud(w *World, font rl.Font) {
 
 	clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(t))).Format("15:04")
 	rl.DrawTextEx(font, clock, rl.NewVector2(12, 12), float32(font.BaseSize), 1, rl.Green)
-
 }

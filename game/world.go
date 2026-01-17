@@ -20,12 +20,12 @@ type Game struct {
 	Station *World
 }
 
-const TIME_SCALE float64 = 1
+const TIME_SCALE float64 = 4
 
 func NewGame() *Game {
 
 	game := &Game{
-		Day: 0.35,
+		Day: 0.4,
 
 		TeleportTransition: 1,
 
@@ -73,7 +73,7 @@ func NewGame() *Game {
 
 	game.Station = NewWorld(tilemap, true)
 
-	game.Station.Player = NewPlayer(game.Station, game.Station.Tilemap.CenterPosition)
+	game.Earth.Player = NewPlayer(game.Earth, game.Earth.Tilemap.CenterPosition)
 
 	return game
 
@@ -114,13 +114,15 @@ func (g *Game) Update(dt float32) *World {
 		g.Accumulator -= physicsTickrate
 	}
 
+	transitionFade := float64(1)
+
 	if currentWorld.IsStation && g.TeleportTransition < 1 {
-		g.TeleportTransition = min(1, g.TeleportTransition+float64(dt)/5)
+		g.TeleportTransition = min(1, g.TeleportTransition+float64(dt)/transitionFade)
 	}
 
 	if !currentWorld.IsStation {
 		if g.TeleportTransition > 0 {
-			g.TeleportTransition = max(0, g.TeleportTransition-float64(dt)/5)
+			g.TeleportTransition = max(0, g.TeleportTransition-float64(dt)/transitionFade)
 		}
 	}
 
@@ -143,6 +145,9 @@ type World struct {
 
 	MousePosition      rl.Vector2
 	MouseWorldPosition cp.Vector
+
+	SelectedTileTextureX int
+	SelectedTileTextureY int
 }
 
 func (w *World) NewPhysicalItem(item Item, pos cp.Vector) *PhysicalItem {
@@ -202,7 +207,7 @@ func NewWorld(tilemap *Tilemap, isStation bool) *World {
 	}
 
 	world.Tilemap = tilemap
-	world.Tilemap.GenerateBodies(world)
+	world.Tilemap.PostLoad(world)
 
 	return world
 }
@@ -229,6 +234,15 @@ func (w *World) Update() {
 		w.Monster.Update(w)
 	}
 
+	if rl.IsKeyDown(rl.KeyLeftControl) && rl.IsMouseButtonDown(rl.MouseLeftButton) {
+		clickedTileX := int(w.MouseWorldPosition.X / w.Tilemap.Scale)
+		clickedTileY := int(w.MouseWorldPosition.Y / w.Tilemap.Scale)
+		clickedTile := &w.Tilemap.Cols[clickedTileX][clickedTileY]
+
+		clickedTile.TextureBaseX = float64(w.SelectedTileTextureX)
+		clickedTile.TextureBaseY = float64(w.SelectedTileTextureY)
+	}
+
 	if w.Player != nil && rl.IsMouseButtonReleased(rl.MouseLeftButton) {
 		info := w.Space.PointQueryNearest(w.MouseWorldPosition, 0, cp.ShapeFilter{
 			Group:      cp.NO_GROUP,
@@ -248,12 +262,74 @@ func (w *World) Update() {
 				}
 			}
 		}
-
 	}
 
 	for _, item := range w.Items {
 		item.Update(w)
 	}
+}
+
+type Stack struct {
+	rl.Rectangle
+}
+
+func NewStack(x float32, y float32, width float32) *Stack {
+	return &Stack{rl.NewRectangle(x, y, width, 0)}
+}
+
+func (r *Stack) Next(height float32) rl.Rectangle {
+
+	rect := rl.NewRectangle(
+		r.Rectangle.X,
+		r.Rectangle.Y+r.Rectangle.Height,
+		r.Rectangle.Width,
+		height,
+	)
+
+	r.Rectangle.Y += height
+
+	return rect
+}
+
+func (w *World) GodHud(r *Render) {
+
+	// s := fmt.Sprintf("Tile: %v, %v", w.ClickedTileX, w.ClickedTileY)
+	// stack := NewStack(10, 400, 200)
+	// raygui.TextBox(stack.Next(30), &s, 10, false)
+
+	atlas := r.Textures["atlas"]
+
+	tilesetSourceRect := rl.NewRectangle(0, 0, float32(atlas.Width), float32(atlas.Height))
+	tilesetRect := rl.NewRectangle(10, 100, 200, 200)
+
+	// tile := &w.Tilemap.Cols[w.ClickedTileX][w.ClickedTileY]
+
+	// for tileX := float32(0); tileX < float32(w.Tilemap.TextureWidthTiles); tileX++ {
+	// 	for tileY := float32(0); tileY < float32(w.Tilemap.TextureWidthTiles); tileY++ {
+
+	// 		if raygui.Button(rect, "") {
+	// 			tile.TextureBaseX = float64(tileX)
+	// 			tile.TextureBaseY = float64(tileY)
+	// 		}
+	// 	}
+	// }
+
+	rl.DrawTexturePro(atlas, tilesetSourceRect, tilesetRect, rl.NewVector2(0, 0), 0, rl.White)
+
+	selectedTile := rl.NewRectangle(
+		tilesetRect.X+float32(w.SelectedTileTextureX)*(tilesetRect.Width/float32(w.Tilemap.TextureWidthTiles)),
+		tilesetRect.Y+float32(w.SelectedTileTextureY)*(tilesetRect.Width/float32(w.Tilemap.TextureWidthTiles)),
+		tilesetRect.Width/float32(w.Tilemap.TextureWidthTiles),
+		tilesetRect.Width/float32(w.Tilemap.TextureWidthTiles),
+	)
+	rl.DrawRectangleLinesEx(tilesetRect, 1, rl.White)
+	rl.DrawRectangleLinesEx(selectedTile, 2, rl.Red)
+
+	if rl.IsMouseButtonDown(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(rl.GetMousePosition(), tilesetRect) {
+		w.SelectedTileTextureX = int(((w.MousePosition.X - tilesetRect.X) / tilesetRect.Width) * float32(w.Tilemap.TextureWidthTiles))
+		w.SelectedTileTextureY = int(((w.MousePosition.Y - tilesetRect.Y) / tilesetRect.Height) * float32(w.Tilemap.TextureWidthTiles))
+	}
+
 }
 
 var NIGHT = NewVec(-115, 0.3, .1)
