@@ -143,7 +143,10 @@ func (d *ModeFree) Draw(g *Game) {
 		rl.DrawSphere(rl.NewVector3(0, 1, 0), 0.1, rl.Blue)
 		rl.DrawSphere(rl.NewVector3(0, 0, 1), 0.1, rl.Yellow)
 
-		rl.DrawCubeWires((d.TargetCellPos.Add(NewVec3(0.5, 0.5, 0.5))).Raylib(), 1, 1, 1, rl.White)
+		rl.DrawCubeWires((d.TargetCellPos.Add(NewVec3(0.51, 0.51, 0.51))).Raylib(), 1, 1, 1, rl.Purple)
+		rl.DrawCubeWires((d.TargetCellPos.Add(NewVec3(0.52, 0.52, 0.52))).Raylib(), 1, 1, 1, rl.Purple)
+
+		g.Level.Draw(g)
 	})
 
 	line := NewLineLayout(30, 30, 30)

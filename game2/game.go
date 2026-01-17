@@ -20,6 +20,8 @@ type Game struct {
 	Space  *cp.Space
 	Level  *Level
 
+	Models map[string]rl.Model
+
 	Mode     ModeType
 	ModeFree *ModeFree
 }
@@ -67,7 +69,11 @@ func (save GameSave) Load() *Game {
 		TimePhysicsAccumulator: save.TimePhysicsAccumulator,
 		Mode:                   save.Mode,
 		ModeFree:               &save.ModeFree,
+
+		Models: map[string]rl.Model{},
 	}
+
+	g.Models["wall"] = rl.LoadModel("./models/wallx.glb")
 
 	g.Level = NewLevel()
 	g.Space = cp.NewSpace()
@@ -103,6 +109,7 @@ func (g *Game) Draw() {
 
 	BeginMode3D(camera, func() {
 		g.Player.Draw(g)
+		g.Level.Draw(g)
 	})
 }
 

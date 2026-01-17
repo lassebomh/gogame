@@ -59,11 +59,6 @@ func main() {
 				g.Mode = MODE_FREE
 				log.Println("MODE_FREE")
 			}
-			// if rl.IsKeyReleased(rl.KeyS) {
-			// 	if err := g.ToSave().WriteToFile(filepath.Join(SAVES_PATH, time.Now().Format("20060102_150405")+".json")); err != nil {
-			// 		log.Fatal(err)
-			// 	}
-			// }
 		}
 
 		dt := time.Duration((t1 - t0) * float64(time.Second))
