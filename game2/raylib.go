@@ -20,7 +20,7 @@ func NewUniform(shader rl.Shader, name string) Uniform {
 	location := rl.GetShaderLocation(shader, name)
 
 	if location == -1 {
-		log.Fatalf("invalid uniform \"%v\"", name)
+		log.Printf("WARNING! invalid uniform \"%v\"", name)
 	}
 
 	return Uniform{
@@ -45,6 +45,9 @@ func (u *UniformFloat) Set(value float64) {
 func (u *UniformVec2) Set(x, y float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y)}, rl.ShaderUniformVec2)
 }
+func (u *UniformVec2) SetVec2(vec Vec2) {
+	rl.SetShaderValue(u.shader, u.location, []float32{float32(vec.X), float32(vec.Y)}, rl.ShaderUniformVec2)
+}
 func (u *UniformVec3) Set(x, y, z float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z)}, rl.ShaderUniformVec3)
 }
@@ -53,6 +56,9 @@ func (u *UniformVec3) SetVec3(vec Vec3) {
 }
 func (u *UniformVec4) Set(x, y, z, w float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z), float32(w)}, rl.ShaderUniformVec4)
+}
+func (u *UniformVec4) SetVec4(vec Vec4) {
+	rl.SetShaderValue(u.shader, u.location, []float32{float32(vec.X), float32(vec.Y), float32(vec.Z), float32(vec.W)}, rl.ShaderUniformVec4)
 }
 func (u *UniformVec4) SetColor(color color.RGBA) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(color.R) / 255, float32(color.G) / 255, float32(color.B) / 255, float32(color.A) / 255}, rl.ShaderUniformVec4)
@@ -181,7 +187,8 @@ func (l *LineLayout) Next(width float64) rl.Rectangle {
 	return rect
 }
 
-func (l *LineLayout) Break() {
+func (l *LineLayout) Break(height float64) {
 	l.Width = 0
 	l.Y += l.Height
+	l.Height = height
 }

@@ -38,7 +38,7 @@ func (p *Player) Update(g *Game) {
 }
 
 func (p *Player) Position3D() Vec3 {
-	return Vec3From2D(p.Body.Position(), p.Y)
+	return Vec3From2D(Vec2FromCP(p.Body.Position()), p.Y)
 }
 
 type PlayerSave struct {
@@ -48,23 +48,23 @@ type PlayerSave struct {
 
 func (p *Player) ToSave(g *Game) PlayerSave {
 	return PlayerSave{
-		Position: p.Body.Position(),
+		Position: Vec2FromCP(p.Body.Position()),
 		Y:        p.Y,
 	}
 }
 
 func (save PlayerSave) Load(g *Game) *Player {
 	player := &Player{
-		Radius: 0.5,
+		Radius: 0.25,
 		Y:      save.Y,
 		Body:   nil,
 	}
 
 	mass := player.Radius * player.Radius * 4
-	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, player.Radius, Vec2{2, 2})))
-	body.SetPosition(save.Position)
+	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, player.Radius, Vec2{2, 2}.CP())))
+	body.SetPosition(save.Position.CP())
 
-	shape := g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}))
+	shape := g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}.CP()))
 	shape.SetElasticity(0)
 	shape.SetFriction(0.9)
 	player.Body = body

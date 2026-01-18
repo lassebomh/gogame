@@ -5,6 +5,7 @@ import (
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
 )
 
 type FaceType = uint8
@@ -26,13 +27,14 @@ const (
 )
 
 type Stair struct {
-	Type   StairType
-	BaseUV Vec2
+	Type StairType
+	// UV Vec4
 }
 
 type Face struct {
-	Type   FaceType
-	BaseUV Vec2
+	Type  FaceType
+	TileX int
+	TileY int
 }
 
 type Cell struct {
@@ -46,7 +48,16 @@ type Cell struct {
 	Stair Stair
 }
 
-const CHUNK_WIDTH = int(64)
+type CellRef struct {
+	X     int
+	Y     int
+	Z     int
+	Cell  *Cell
+	Level *Level
+	Body  *cp.Body
+}
+
+const CHUNK_WIDTH = int(8)
 const CHUNK_HEIGHT = int(16)
 
 type Cells = [CHUNK_WIDTH][CHUNK_WIDTH][CHUNK_HEIGHT]Cell
@@ -59,12 +70,37 @@ type Chunk struct {
 
 type Level struct {
 	Chunks []*Chunk
+
+	CellRefs map[Vec3]*CellRef
 }
 
-func NewLevel() *Level {
-	return &Level{
-		Chunks: make([]*Chunk, 0),
+type LevelSave struct {
+	Chunks []Chunk
+}
+
+func (l *Level) ToSave() LevelSave {
+	save := LevelSave{
+		Chunks: make([]Chunk, 0),
 	}
+
+	for _, chunk := range l.Chunks {
+		save.Chunks = append(save.Chunks, *chunk)
+	}
+
+	return save
+}
+
+func (save LevelSave) Load(g *Game) *Level {
+	level := &Level{
+		Chunks:   make([]*Chunk, 0),
+		CellRefs: make(map[Vec3]*CellRef, 0),
+	}
+
+	for _, chunk := range save.Chunks {
+		level.Chunks = append(level.Chunks, &chunk)
+	}
+
+	return level
 }
 
 func (l *Level) GetCell(X float64, Y float64, Z float64) *Cell {
@@ -111,29 +147,33 @@ func (l *Level) Draw(g *Game) {
 				for y := range CHUNK_HEIGHT {
 					cell := &chunk.Cells[x][z][y]
 
+					if !(cell.North.Type == FaceWall ||
+						cell.East.Type == FaceWall ||
+						cell.South.Type == FaceWall ||
+						cell.West.Type == FaceWall ||
+						cell.Top.Type == FaceWall ||
+						cell.Bottom.Type == FaceWall) {
+						continue
+					}
+
 					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.5, float64(z)+0.5))
 
-					if cell.North.Type == FaceWall {
-						rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.White)
-					}
-
-					if cell.East.Type == FaceWall {
-						rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.White)
-					}
-
-					if cell.South.Type == FaceWall {
-						rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.White)
-					}
-
-					if cell.West.Type == FaceWall {
-						rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.White)
-					}
-
-					// cell.Top.Type == FaceWall || cell.Bottom.Type == FaceWall {
-					// 	rl.DrawCube(pos.Add(NewVec3(float64(x), float64(y), float64(z))).Raylib(), 1, 1, 1, rl.White)
-					// }
+					cell.North.Draw(g, cellPos, Y, 0)
+					cell.West.Draw(g, cellPos, Y, 90)
+					cell.South.Draw(g, cellPos, Y, 180)
+					cell.East.Draw(g, cellPos, Y, 270)
+					cell.Top.Draw(g, cellPos, Z, 90)
+					cell.Bottom.Draw(g, cellPos, Z, -90)
 				}
 			}
 		}
+	}
+}
+
+func (f *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees float32) {
+	if f.Type == FaceWall {
+		aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
+		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+		rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
 	}
 }

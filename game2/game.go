@@ -20,16 +20,23 @@ type Game struct {
 	Space  *cp.Space
 	Level  *Level
 
-	Models map[string]rl.Model
-
 	Mode     ModeType
 	ModeFree *ModeFree
+
+	Tileset *Tileset
+
+	MainShader *MainShader
+
+	Textures map[string]rl.Texture2D
+	Models   map[string]rl.Model
 }
 
 type GameSave struct {
 	Time                   time.Duration
 	TimeDelta              time.Duration
 	TimePhysicsAccumulator time.Duration
+
+	Level LevelSave
 
 	Player   PlayerSave
 	Mode     ModeType
@@ -41,6 +48,7 @@ func (g *Game) ToSave() GameSave {
 		Time:                   g.Time,
 		TimeDelta:              g.TimeDelta,
 		TimePhysicsAccumulator: g.TimePhysicsAccumulator,
+		Level:                  g.Level.ToSave(),
 		Player:                 g.Player.ToSave(g),
 		Mode:                   g.Mode,
 		ModeFree:               *g.ModeFree,
@@ -70,13 +78,26 @@ func (save GameSave) Load() *Game {
 		Mode:                   save.Mode,
 		ModeFree:               &save.ModeFree,
 
-		Models: map[string]rl.Model{},
+		Tileset: NewTileset("./models/atlas.png", 5),
+
+		Models:     map[string]rl.Model{},
+		Textures:   map[string]rl.Texture2D{},
+		MainShader: NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
 	}
 
+	g.Space = cp.NewSpace()
+	g.Level = save.Level.Load(g)
+
+	g.Models["wallDebug"] = rl.LoadModel("./models/wallx.glb")
 	g.Models["wall"] = rl.LoadModel("./models/wallx.glb")
 
-	g.Level = NewLevel()
-	g.Space = cp.NewSpace()
+	mats := g.Models["wall"].GetMaterials()
+
+	for i := range mats {
+		mat := &mats[i]
+		mat.Shader = g.MainShader.shader
+		mat.Maps.Texture = g.Tileset.Texture
+	}
 
 	save.Player.Load(g)
 
@@ -100,9 +121,9 @@ func (g *Game) Draw() {
 	rl.ClearBackground(rl.Gray)
 
 	camera := Camera3D{
-		Position:   g.Player.Position3D().Add(NewVec3(-1, 10, 0).Normalize().Scale(10)),
+		Position:   g.Player.Position3D().Add(NewVec3(0, 8, 1).Normalize().Scale(10)),
 		Target:     g.Player.Position3D(),
-		Fovy:       20,
+		Fovy:       10,
 		Up:         Y,
 		Projection: rl.CameraOrthographic,
 	}

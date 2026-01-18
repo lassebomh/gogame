@@ -10,7 +10,7 @@ import (
 
 const Pi = float64(rl.Pi)
 
-type Vec2 = cp.Vector
+type Vec2 cp.Vector
 
 type Vec3 struct {
 	X float64
@@ -33,7 +33,26 @@ func (v Vec3) Raylib() rl.Vector3 {
 }
 
 func NewVec2(x, y float64) Vec2 {
-	return cp.Vector{X: x, Y: y}
+	return Vec2{X: x, Y: y}
+}
+
+func (v Vec2) Raylib() rl.Vector2 {
+	return rl.Vector2{float32(v.X), float32(v.Y)}
+}
+
+func (v Vec2) CP() cp.Vector {
+	return cp.Vector{v.X, v.Y}
+}
+
+func (v Vec2) Floor() Vec2 {
+	return NewVec2(math.Floor(v.X), math.Floor(v.Y))
+}
+func (v Vec3) Floor() Vec3 {
+	return NewVec3(math.Floor(v.X), math.Floor(v.Y), math.Floor(v.Z))
+}
+
+func Vec2FromCP(v cp.Vector) Vec2 {
+	return Vec2{v.X, v.Y}
 }
 
 func NewVec3(x, y, z float64) Vec3 {
@@ -159,213 +178,213 @@ func Vector2One() Vec2 {
 	return NewVec2(1.0, 1.0)
 }
 
-// // Vector2Add - Add two vectors (v1 + v2)
-// func (v1 Vector2) Add(v2 Vector2) Vector2 {
-// 	return NewVector2(v1.X+v2.X, v1.Y+v2.Y)
-// }
+// Vector2Add - Add two vectors (v1 + v2)
+func (v1 Vec2) Add(v2 Vec2) Vec2 {
+	return NewVec2(v1.X+v2.X, v1.Y+v2.Y)
+}
 
-// // Vector2AddValue - Add vector and float value
-// func (v Vector2) AddValue(add float64) Vector2 {
-// 	return NewVector2(v.X+add, v.Y+add)
-// }
+// Vector2AddValue - Add vector and float value
+func (v Vec2) AddValue(add float64) Vec2 {
+	return NewVec2(v.X+add, v.Y+add)
+}
 
-// // Vector2Subtract - Subtract two vectors (v1 - v2)
-// func (v1 Vector2) Subtract(v2 Vector2) Vector2 {
-// 	return NewVector2(v1.X-v2.X, v1.Y-v2.Y)
-// }
+// Vector2Subtract - Subtract two vectors (v1 - v2)
+func (v1 Vec2) Subtract(v2 Vec2) Vec2 {
+	return NewVec2(v1.X-v2.X, v1.Y-v2.Y)
+}
 
-// // Vector2SubtractValue - Subtract vector by float value
-// func (v Vector2) SubtractValue(sub float64) Vector2 {
-// 	return NewVector2(v.X-sub, v.Y-sub)
-// }
+// Vector2SubtractValue - Subtract vector by float value
+func (v Vec2) SubtractValue(sub float64) Vec2 {
+	return NewVec2(v.X-sub, v.Y-sub)
+}
 
-// // Vector2Length - Calculate vector length
-// func (v Vector2) Length() float64 {
-// 	return float64(math.Sqrt(float64((v.X * v.X) + (v.Y * v.Y))))
-// }
+// Vector2Length - Calculate vector length
+func (v Vec2) Length() float64 {
+	return float64(math.Sqrt(float64((v.X * v.X) + (v.Y * v.Y))))
+}
 
-// // Vector2LengthSqr - Calculate vector square length
-// func (v Vector2) LengthSqr() float64 {
-// 	return v.X*v.X + v.Y*v.Y
-// }
+// Vector2LengthSqr - Calculate vector square length
+func (v Vec2) LengthSqr() float64 {
+	return v.X*v.X + v.Y*v.Y
+}
 
-// // Vector2DotProduct - Calculate two vectors dot product
-// func (v1 Vector2) DotProduct(v2 Vector2) float64 {
-// 	return v1.X*v2.X + v1.Y*v2.Y
-// }
+// Vector2DotProduct - Calculate two vectors dot product
+func (v1 Vec2) DotProduct(v2 Vec2) float64 {
+	return v1.X*v2.X + v1.Y*v2.Y
+}
 
-// // Vector2Distance - Calculate distance between two vectors
-// func (v1 Vector2) Distance(v2 Vector2) float64 {
-// 	return float64(math.Sqrt(float64((v1.X-v2.X)*(v1.X-v2.X) + (v1.Y-v2.Y)*(v1.Y-v2.Y))))
-// }
+// Vector2Distance - Calculate distance between two vectors
+func (v1 Vec2) Distance(v2 Vec2) float64 {
+	return float64(math.Sqrt(float64((v1.X-v2.X)*(v1.X-v2.X) + (v1.Y-v2.Y)*(v1.Y-v2.Y))))
+}
 
-// // Vector2DistanceSqr - Calculate square distance between two vectors
-// func (v1 Vector2) DistanceSqr(v2 Vector2) float64 {
-// 	return (v1.X-v2.X)*(v1.X-v2.X) + (v1.Y-v2.Y)*(v1.Y-v2.Y)
-// }
+// Vector2DistanceSqr - Calculate square distance between two vectors
+func (v1 Vec2) DistanceSqr(v2 Vec2) float64 {
+	return (v1.X-v2.X)*(v1.X-v2.X) + (v1.Y-v2.Y)*(v1.Y-v2.Y)
+}
 
-// // Vector2Angle - Calculate angle from two vectors in radians
-// func (v1 Vector2) Angle(v2 Vector2) float64 {
-// 	result := math.Atan2(float64(v2.Y), float64(v2.X)) - math.Atan2(float64(v1.Y), float64(v1.X))
+// Vector2Angle - Calculate angle from two vectors in radians
+func (v1 Vec2) Angle(v2 Vec2) float64 {
+	result := math.Atan2(float64(v2.Y), float64(v2.X)) - math.Atan2(float64(v1.Y), float64(v1.X))
 
-// 	return float64(result)
-// }
+	return float64(result)
+}
 
-// // Vector2LineAngle - Calculate angle defined by a two vectors line
-// // NOTE: Parameters need to be normalized. Current implementation should be aligned with glm::angle
-// func (start Vector2) LineAngle(end Vector2) float64 {
-// 	return float64(-math.Atan2(float64(end.Y-start.Y), float64(end.X-start.X)))
-// }
+// Vector2LineAngle - Calculate angle defined by a two vectors line
+// NOTE: Parameters need to be normalized. Current implementation should be aligned with glm::angle
+func (start Vec2) LineAngle(end Vec2) float64 {
+	return float64(-math.Atan2(float64(end.Y-start.Y), float64(end.X-start.X)))
+}
 
-// // Vector2Scale - Scale vector (multiply by value)
-// func (v Vector2) Scale(scale float64) Vector2 {
-// 	return NewVector2(v.X*scale, v.Y*scale)
-// }
+// Vector2Scale - Scale vector (multiply by value)
+func (v Vec2) Scale(scale float64) Vec2 {
+	return NewVec2(v.X*scale, v.Y*scale)
+}
 
-// // Vector2Multiply - Multiply vector by vector
-// func (v1 Vector2) Multiply(v2 Vector2) Vector2 {
-// 	return NewVector2(v1.X*v2.X, v1.Y*v2.Y)
-// }
+// Vector2Multiply - Multiply vector by vector
+func (v1 Vec2) Multiply(v2 Vec2) Vec2 {
+	return NewVec2(v1.X*v2.X, v1.Y*v2.Y)
+}
 
-// // Vector2Negate - Negate vector
-// func (v Vector2) Negate() Vector2 {
-// 	return NewVector2(-v.X, -v.Y)
-// }
+// Vector2Negate - Negate vector
+func (v Vec2) Negate() Vec2 {
+	return NewVec2(-v.X, -v.Y)
+}
 
-// // Vector2Divide - Divide vector by vector
-// func (v1 Vector2) Divide(v2 Vector2) Vector2 {
-// 	return NewVector2(v1.X/v2.X, v1.Y/v2.Y)
-// }
+// Vector2Divide - Divide vector by vector
+func (v1 Vec2) Divide(v2 Vec2) Vec2 {
+	return NewVec2(v1.X/v2.X, v1.Y/v2.Y)
+}
 
-// // Vector2Normalize - Normalize provided vector
-// func (v Vector2) Normalize() Vector2 {
-// 	if l := (v.Length()); l > 0 {
-// 		return v.Scale(1 / l)
-// 	}
-// 	return v
-// }
+// Vector2Normalize - Normalize provided vector
+func (v Vec2) Normalize() Vec2 {
+	if l := (v.Length()); l > 0 {
+		return v.Scale(1 / l)
+	}
+	return v
+}
 
-// // Vector2Transform - Transforms a Vector2 by a given Matrix
-// func (v Vector2) Transform(mat Matrix) Vector2 {
-// 	var result = Vector2{}
+// Vector2Transform - Transforms a Vec2 by a given Matrix
+func (v Vec2) Transform(mat Matrix) Vec2 {
+	var result = Vec2{}
 
-// 	var x = v.X
-// 	var y = v.Y
-// 	var z float64
+	var x = v.X
+	var y = v.Y
+	var z float64
 
-// 	result.X = mat.M0*x + mat.M4*y + mat.M8*z + mat.M12
-// 	result.Y = mat.M1*x + mat.M5*y + mat.M9*z + mat.M13
+	result.X = mat.M0*x + mat.M4*y + mat.M8*z + mat.M12
+	result.Y = mat.M1*x + mat.M5*y + mat.M9*z + mat.M13
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2Lerp - Calculate linear interpolation between two vectors
-// func (v1 Vector2) Lerp(v2 Vector2, amount float64) Vector2 {
-// 	return NewVector2(v1.X+amount*(v2.X-v1.X), v1.Y+amount*(v2.Y-v1.Y))
-// }
+// Vector2Lerp - Calculate linear interpolation between two vectors
+func (v1 Vec2) Lerp(v2 Vec2, amount float64) Vec2 {
+	return NewVec2(v1.X+amount*(v2.X-v1.X), v1.Y+amount*(v2.Y-v1.Y))
+}
 
-// // Vector2Reflect - Calculate reflected vector to normal
-// func (v Vector2) Reflect(normal Vector2) Vector2 {
-// 	var result = Vector2{}
+// Vector2Reflect - Calculate reflected vector to normal
+func (v Vec2) Reflect(normal Vec2) Vec2 {
+	var result = Vec2{}
 
-// 	dotProduct := v.X*normal.X + v.Y*normal.Y // Dot product
+	dotProduct := v.X*normal.X + v.Y*normal.Y // Dot product
 
-// 	result.X = v.X - 2.0*normal.X*dotProduct
-// 	result.Y = v.Y - 2.0*normal.Y*dotProduct
+	result.X = v.X - 2.0*normal.X*dotProduct
+	result.Y = v.Y - 2.0*normal.Y*dotProduct
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2Rotate - Rotate vector by angle
-// func (v Vector2) Rotate(angle float64) Vector2 {
-// 	var result = Vector2{}
+// Vector2Rotate - Rotate vector by angle
+func (v Vec2) Rotate(angle float64) Vec2 {
+	var result = Vec2{}
 
-// 	cosres := float64(math.Cos(float64(angle)))
-// 	sinres := float64(math.Sin(float64(angle)))
+	cosres := float64(math.Cos(float64(angle)))
+	sinres := float64(math.Sin(float64(angle)))
 
-// 	result.X = v.X*cosres - v.Y*sinres
-// 	result.Y = v.X*sinres + v.Y*cosres
+	result.X = v.X*cosres - v.Y*sinres
+	result.Y = v.X*sinres + v.Y*cosres
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2MoveTowards - Move Vector towards target
-// func (v Vector2) MoveTowards(target Vector2, maxDistance float64) Vector2 {
-// 	var result = Vector2{}
+// Vector2MoveTowards - Move Vector towards target
+func (v Vec2) MoveTowards(target Vec2, maxDistance float64) Vec2 {
+	var result = Vec2{}
 
-// 	dx := target.X - v.X
-// 	dy := target.Y - v.Y
-// 	value := dx*dx + dy*dy
+	dx := target.X - v.X
+	dy := target.Y - v.Y
+	value := dx*dx + dy*dy
 
-// 	if value == 0 || maxDistance >= 0 && value <= maxDistance*maxDistance {
-// 		return target
-// 	}
+	if value == 0 || maxDistance >= 0 && value <= maxDistance*maxDistance {
+		return target
+	}
 
-// 	dist := float64(math.Sqrt(float64(value)))
+	dist := float64(math.Sqrt(float64(value)))
 
-// 	result.X = v.X + dx/dist*maxDistance
-// 	result.Y = v.Y + dy/dist*maxDistance
+	result.X = v.X + dx/dist*maxDistance
+	result.Y = v.Y + dy/dist*maxDistance
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2Invert - Invert the given vector
-// func (v Vector2) Invert() Vector2 {
-// 	return NewVector2(1.0/v.X, 1.0/v.Y)
-// }
+// Vector2Invert - Invert the given vector
+func (v Vec2) Invert() Vec2 {
+	return NewVec2(1.0/v.X, 1.0/v.Y)
+}
 
-// // Vector2Clamp - Clamp the components of the vector between min and max values specified by the given vectors
-// func (v Vector2) Clamp(min Vector2, max Vector2) Vector2 {
-// 	var result = Vector2{}
+// Vector2Clamp - Clamp the components of the vector between min and max values specified by the given vectors
+func (v Vec2) Clamp(min Vec2, max Vec2) Vec2 {
+	var result = Vec2{}
 
-// 	result.X = float64(math.Min(float64(max.X), math.Max(float64(min.X), float64(v.X))))
-// 	result.Y = float64(math.Min(float64(max.Y), math.Max(float64(min.Y), float64(v.Y))))
+	result.X = float64(math.Min(float64(max.X), math.Max(float64(min.X), float64(v.X))))
+	result.Y = float64(math.Min(float64(max.Y), math.Max(float64(min.Y), float64(v.Y))))
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2ClampValue - Clamp the magnitude of the vector between two min and max values
-// func (v Vector2) ClampValue(min float64, max float64) Vector2 {
-// 	var result = v
+// Vector2ClampValue - Clamp the magnitude of the vector between two min and max values
+func (v Vec2) ClampValue(min float64, max float64) Vec2 {
+	var result = v
 
-// 	length := v.X*v.X + v.Y*v.Y
-// 	if length > 0.0 {
-// 		length = float64(math.Sqrt(float64(length)))
+	length := v.X*v.X + v.Y*v.Y
+	if length > 0.0 {
+		length = float64(math.Sqrt(float64(length)))
 
-// 		if length < min {
-// 			scale := min / length
-// 			result.X = v.X * scale
-// 			result.Y = v.Y * scale
-// 		} else if length > max {
-// 			scale := max / length
-// 			result.X = v.X * scale
-// 			result.Y = v.Y * scale
-// 		}
-// 	}
+		if length < min {
+			scale := min / length
+			result.X = v.X * scale
+			result.Y = v.Y * scale
+		} else if length > max {
+			scale := max / length
+			result.X = v.X * scale
+			result.Y = v.Y * scale
+		}
+	}
 
-// 	return result
-// }
+	return result
+}
 
-// // Vector2Equals - Check whether two given vectors are almost equal
-// func (p Vector2) Equals(q Vector2) bool {
-// 	return (math.Abs(float64(p.X-q.X)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.X)), math.Abs(float64(q.X)))) &&
-// 		math.Abs(float64(p.Y-q.Y)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.Y)), math.Abs(float64(q.Y)))))
-// }
+// Vector2Equals - Check whether two given vectors are almost equal
+func (p Vec2) Equals(q Vec2) bool {
+	return (math.Abs(float64(p.X-q.X)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.X)), math.Abs(float64(q.X)))) &&
+		math.Abs(float64(p.Y-q.Y)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.Y)), math.Abs(float64(q.Y)))))
+}
 
-// // Vector2CrossProduct - Calculate two vectors cross product
-// func (v1 Vector2) CrossProduct(v2 Vector2) float64 {
-// 	return v1.X*v2.Y - v1.Y*v2.X
-// }
+// Vector2CrossProduct - Calculate two vectors cross product
+func (v1 Vec2) CrossProduct(v2 Vec2) float64 {
+	return v1.X*v2.Y - v1.Y*v2.X
+}
 
-// // Vector2Cross - Calculate the cross product of a vector and a value
-// func Cross(value float64, vector Vector2) Vector2 {
-// 	return NewVector2(-value*vector.Y, value*vector.X)
-// }
+// Vector2Cross - Calculate the cross product of a vector and a value
+func Cross(value float64, vector Vec2) Vec2 {
+	return NewVec2(-value*vector.Y, value*vector.X)
+}
 
-// // Vector2LenSqr - Returns the len square root of a vector
-// func (vector Vector2) LenSqr() float64 {
-// 	return vector.X*vector.X + vector.Y*vector.Y
-// }
+// Vector2LenSqr - Returns the len square root of a vector
+func (vector Vec2) LenSqr() float64 {
+	return vector.X*vector.X + vector.Y*vector.Y
+}
 
 // Vector3Zero - Vector with components value 0.0
 func Vector3Zero() Vec3 {

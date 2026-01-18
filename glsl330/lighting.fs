@@ -7,8 +7,7 @@ in vec2 fragTexCoord;
 in vec3 fragNormal;
 
 // Input uniform values
-uniform vec2 tileAA;
-uniform vec2 tileBB;
+uniform vec4 uvClamp;
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 
@@ -50,7 +49,7 @@ void main()
 {
     // Texel color fetching from texture sampler
     
-    vec2 uv = tileAA + fragTexCoord * (tileBB - tileAA);
+    vec2 uv = uvClamp.xy + fragTexCoord * (uvClamp.zw - uvClamp.xy);
     vec4 texelColor = texture(texture0, uv);
     vec3 lightDot = vec3(0.0);
     vec3 normal = normalize(fragNormal);
