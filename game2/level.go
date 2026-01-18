@@ -16,6 +16,21 @@ const (
 	FaceWall
 )
 
+type GroundType = uint8
+
+const (
+	GroundNone = GroundType(iota)
+	GroundSolid
+	GroundStair
+)
+
+type Ground struct {
+	Rotation float64
+	TileX    int
+	TileY    int
+	Type     GroundType
+}
+
 type Face struct {
 	Type  FaceType
 	TileX int
@@ -29,8 +44,7 @@ type Cell struct {
 	South  Face
 	East   Face
 	West   Face
-	Top    Face
-	Bottom Face
+	Ground Ground
 
 	Level    *Level
 	Position Vec3
@@ -122,11 +136,7 @@ func (l *Level) GetCell(pos Vec3) *Cell {
 func (l *Level) Draw(g *Game) {
 	for pos, chunk := range l.Chunks {
 
-		pos := NewVec3(
-			float64(pos.X)*float64(CHUNK_WIDTH),
-			0,
-			float64(pos.Y)*float64(CHUNK_WIDTH),
-		)
+		pos := NewVec3(float64(pos.X)*float64(CHUNK_WIDTH), 0, float64(pos.Y)*float64(CHUNK_WIDTH))
 
 		for x := range CHUNK_WIDTH {
 			for z := range CHUNK_WIDTH {
@@ -137,19 +147,17 @@ func (l *Level) Draw(g *Game) {
 						cell.East.Type == FaceWall ||
 						cell.South.Type == FaceWall ||
 						cell.West.Type == FaceWall ||
-						cell.Top.Type == FaceWall ||
-						cell.Bottom.Type == FaceWall) {
+						cell.Ground.Type != GroundNone) {
 						continue
 					}
 
-					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.5, float64(z)+0.5))
+					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.4, float64(z)+0.5))
 
 					cell.North.Draw(g, cellPos, Y, 270)
 					cell.East.Draw(g, cellPos, Y, 180)
 					cell.South.Draw(g, cellPos, Y, 90)
 					cell.West.Draw(g, cellPos, Y, 0)
-					cell.Top.Draw(g, cellPos, Z, 90)
-					cell.Bottom.Draw(g, cellPos, Z, -90)
+					cell.Ground.Draw(g, cellPos)
 				}
 			}
 		}
@@ -161,5 +169,17 @@ func (f *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees fl
 		aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
 		rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
+	}
+}
+
+func (gr *Ground) Draw(g *Game, cellPos Vec3) {
+	if gr.Type == GroundSolid {
+		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
+		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+		rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Z.Raylib(), float32(-90), XYZ.Raylib(), rl.White)
+	} else if gr.Type == GroundStair {
+		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
+		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+		rl.DrawModelEx(g.Models["stair"], (cellPos.Subtract(NewVec3(0, 0.5, 0))).Raylib(), Y.Raylib(), float32(gr.Rotation), XYZ.Raylib(), rl.White)
 	}
 }

@@ -131,6 +131,7 @@ func (save GameSave) Load() *Game {
 
 	g.Models["wallDebug"] = rl.LoadModel("./models/wallx.glb")
 	g.Models["wall"] = rl.LoadModel("./models/wallx.glb")
+	g.Models["stair"] = rl.LoadModel("./models/stair.glb")
 
 	mats := g.Models["wall"].GetMaterials()
 
