@@ -62,16 +62,16 @@ func (p *Player) Update(w *World) {
 	force := cp.Vector{}
 
 	if rl.IsKeyDown(rl.KeyA) {
-		force = force.Add(cp.Vector{X: -1})
-	}
-	if rl.IsKeyDown(rl.KeyD) {
 		force = force.Add(cp.Vector{X: 1})
 	}
+	if rl.IsKeyDown(rl.KeyD) {
+		force = force.Add(cp.Vector{X: -1})
+	}
 	if rl.IsKeyDown(rl.KeyS) {
-		force = force.Add(cp.Vector{Y: 1})
+		force = force.Add(cp.Vector{Y: -1})
 	}
 	if rl.IsKeyDown(rl.KeyW) {
-		force = force.Add(cp.Vector{Y: -1})
+		force = force.Add(cp.Vector{Y: 1})
 	}
 
 	forceMag := force.Length()

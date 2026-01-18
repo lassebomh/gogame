@@ -2,6 +2,8 @@ package game2
 
 import (
 	"encoding/gob"
+	"image/color"
+	"math"
 	"os"
 	"time"
 
@@ -14,6 +16,7 @@ type RenderFlags = int32
 const (
 	RENDER_FLAG_NO_ENTITIES = RenderFlags(1 << iota)
 	RENDER_FLAG_NO_LEVEL
+	RENDER_FLAG_EFFECTS
 	RENDER_FLAG_CP_SHAPES
 	RENDER_FLAG_CP_CONSTRAINTS
 	RENDER_FLAG_CP_COLLISIONS
@@ -26,10 +29,13 @@ type Game struct {
 	TimeDelta              time.Duration
 	TimePhysicsAccumulator time.Duration
 
+	Day float64
+
 	Player *Player
 	Space  *cp.Space
 	Level  *Level
 
+	IsStation   bool
 	RenderFlags RenderFlags
 
 	Mode     ModeType
@@ -75,6 +81,8 @@ func (g *Game) Update(dt time.Duration) {
 	g.Time += dt
 	g.TimePhysicsAccumulator += dt
 
+	g.Day += dt.Seconds() / 10
+
 	for g.TimePhysicsAccumulator >= PHYSICS_TICKRATE {
 		g.Space.Step(PHYSICS_TICKRATE.Seconds())
 		g.TimePhysicsAccumulator -= PHYSICS_TICKRATE
@@ -82,7 +90,23 @@ func (g *Game) Update(dt time.Duration) {
 
 	g.Player.Update(g)
 
-	// g.Level.GetCell(g.Player.Body.Position().X, g.Player.Y, g.Player.Body.Position().Y)
+	cellWakeX := 3
+	cellWakeZ := 3
+	playerPos := g.Player.Position3D()
+
+	for ix := range cellWakeX {
+		for iz := range cellWakeZ {
+			cellPos := playerPos.Add(NewVec3(
+				float64(ix)-float64(cellWakeX-1)/2,
+				0,
+				float64(iz)-float64(cellWakeZ-1)/2,
+			))
+
+			cell := g.Level.GetCell(cellPos)
+			cell.Wake(g)
+		}
+	}
+
 }
 
 func (save GameSave) Load() *Game {
@@ -141,7 +165,7 @@ func (g *Game) Draw() {
 	rl.ClearBackground(rl.DarkGray)
 
 	camera := Camera3D{
-		Position:   g.Player.Position3D().Add(NewVec3(0, 8, 1).Normalize().Scale(10)),
+		Position:   g.Player.Position3D().Add(NewVec3(0, 8, -1).Normalize().Scale(10)),
 		Target:     g.Player.Position3D(),
 		Fovy:       10,
 		Up:         Y,
@@ -153,10 +177,43 @@ func (g *Game) Draw() {
 	})
 }
 
+var NIGHT = Vec3{-115, 0.3, .1}
+var DAWN = Vec3{5, 0.5, 1}
+var DAY = Vec3{55, 0.1, 1}
+var HOUR_MORNING float64 = 9
+var HOUR_NIGHT float64 = 21
+var HOURS_TRANSITION float64 = 1
+
+func c(x float64) float64 {
+	return (1 + math.Tanh(x)) / 2
+}
+
 func (g *Game) Draw3D() {
 
-	g.MainShader.LightDirectional(Vec3{1, -1, 1}, rl.White, 1)
+	if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
+		g.MainShader.Ambient.SetColor(color.RGBA{255, 255, 255, 255})
+	} else {
+		g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
+
+		if !g.IsStation {
+
+			hour := math.Mod(g.Day, 1) * 24
+			day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+			transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+			transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+
+			sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
+
+			g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
+
+		} else {
+			g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
+
+		}
+	}
+
 	g.MainShader.UpdateValues()
+
 	if g.RenderFlags&RENDER_FLAG_NO_ENTITIES == 0 {
 		g.Player.Draw(g)
 	}
@@ -165,6 +222,8 @@ func (g *Game) Draw3D() {
 		g.Level.Draw(g)
 	}
 
+	rl.DrawRenderBatchActive()
+	rl.DisableDepthTest()
 	if g.RenderFlags&(RENDER_FLAG_CP_SHAPES|RENDER_FLAG_CP_CONSTRAINTS|RENDER_FLAG_CP_COLLISIONS) != 0 {
 		drawer := NewPhysicsDrawer(
 			g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0,
@@ -174,6 +233,14 @@ func (g *Game) Draw3D() {
 
 		cp.DrawSpace(g.Space, &drawer)
 	}
+
+	rl.DrawCube(NewVec3(0, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.White)
+	rl.DrawCube(NewVec3(0, 0, 1).Raylib(), 0.05, 0.05, 0.05, rl.SkyBlue)
+	rl.DrawCube(NewVec3(0, 1, 0).Raylib(), 0.05, 0.05, 0.05, rl.Yellow)
+	rl.DrawCube(NewVec3(1, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+
+	rl.DrawRenderBatchActive()
+	rl.EnableDepthTest()
 
 }
 

@@ -43,6 +43,7 @@ func (m *MainShader) SetRaylibShader(shader rl.Shader) {
 }
 
 func (m *MainShader) LightDirectional(direction Vec3, color rl.Color, strength float64) {
+	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_DIRECTIONAL))
 	m.LightPosition[m.LightI].SetVec3(NewVec3(0, 0, 0))
@@ -50,10 +51,10 @@ func (m *MainShader) LightDirectional(direction Vec3, color rl.Color, strength f
 	m.LightColor[m.LightI].SetColor(color)
 	m.LightStrength[m.LightI].Set(strength)
 
-	m.LightI++
 }
 
 func (m *MainShader) LightSpot(position Vec3, target Vec3, cutoff float64, outerCutOff float64, color rl.Color, strength float64) {
+	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_SPOT))
 	m.LightPosition[m.LightI].SetVec3(position)
@@ -63,23 +64,22 @@ func (m *MainShader) LightSpot(position Vec3, target Vec3, cutoff float64, outer
 	m.LightColor[m.LightI].SetColor(color)
 	m.LightStrength[m.LightI].Set(strength)
 
-	m.LightI++
 }
 
 func (m *MainShader) LightPoint(position Vec3, color rl.Color, strength float64) {
+	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_POINT))
 	m.LightPosition[m.LightI].SetVec3(position)
 	m.LightColor[m.LightI].SetColor(color)
 	m.LightStrength[m.LightI].Set(strength)
 
-	m.LightI++
 }
 
 func (m *MainShader) UpdateValues() {
 
 	for i := m.LightI + 1; i < MAX_LIGHTS; i++ {
-		m.LightEnabled[m.LightI].Set(0)
+		m.LightEnabled[i].Set(0)
 	}
-	m.LightI = 0
+	m.LightI = -1
 }

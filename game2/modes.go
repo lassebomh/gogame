@@ -1,7 +1,6 @@
 package game2
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -159,16 +158,16 @@ func (d *ModeFree) Update(g *Game) {
 
 			d.ToolWallsDirections = 0
 			if fz > 0.75 {
-				d.ToolWallsDirections |= TOOL_WALLS_E
-			}
-			if fz < 0.25 {
-				d.ToolWallsDirections |= TOOL_WALLS_W
-			}
-			if fx > 0.75 {
 				d.ToolWallsDirections |= TOOL_WALLS_N
 			}
-			if fx < 0.25 {
+			if fz < 0.25 {
 				d.ToolWallsDirections |= TOOL_WALLS_S
+			}
+			if fx > 0.75 {
+				d.ToolWallsDirections |= TOOL_WALLS_W
+			}
+			if fx < 0.25 {
+				d.ToolWallsDirections |= TOOL_WALLS_E
 			}
 		}
 	}
@@ -217,16 +216,16 @@ func (d *ModeFree) Draw(g *Game) {
 		cellPos := (d.CurrentCellPos.Add(NewVec3(0.50, 0.50, 0.50)))
 
 		if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
-		}
-		if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
 			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.Red)
 		}
 		if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
+			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
+		}
+		if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
 			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.Red)
 		}
 		if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
+			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
 		}
 		if d.ToolWallsTop.Type != FaceEmpty {
 			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Z.Raylib(), 90, XYZ.Raylib(), rl.Red)
@@ -239,6 +238,11 @@ func (d *ModeFree) Draw(g *Game) {
 	size := float64(30)
 	line := NewLineLayout(100, 100, size)
 
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CAMERA, ""), g.RenderFlags&RENDER_FLAG_EFFECTS != 0) {
+		g.RenderFlags |= RENDER_FLAG_EFFECTS
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_EFFECTS
+	}
 	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), g.RenderFlags&RENDER_FLAG_NO_ENTITIES != 0) {
 		g.RenderFlags |= RENDER_FLAG_NO_ENTITIES
 	} else {
@@ -264,8 +268,6 @@ func (d *ModeFree) Draw(g *Game) {
 	} else {
 		g.RenderFlags &^= RENDER_FLAG_CP_COLLISIONS
 	}
-
-	fmt.Printf("%b\n", g.RenderFlags)
 
 	size = float64(30)
 

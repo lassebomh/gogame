@@ -15,16 +15,16 @@ func (p *Player) Update(g *Game) {
 	force := cp.Vector{}
 
 	if rl.IsKeyDown(rl.KeyA) {
-		force = force.Add(cp.Vector{X: -1})
-	}
-	if rl.IsKeyDown(rl.KeyD) {
 		force = force.Add(cp.Vector{X: 1})
 	}
+	if rl.IsKeyDown(rl.KeyD) {
+		force = force.Add(cp.Vector{X: -1})
+	}
 	if rl.IsKeyDown(rl.KeyS) {
-		force = force.Add(cp.Vector{Y: 1})
+		force = force.Add(cp.Vector{Y: -1})
 	}
 	if rl.IsKeyDown(rl.KeyW) {
-		force = force.Add(cp.Vector{Y: -1})
+		force = force.Add(cp.Vector{Y: 1})
 	}
 
 	forceMag := force.Length()
@@ -66,7 +66,7 @@ func (save PlayerSave) Load(g *Game) *Player {
 
 	shape := g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}.CP()))
 	shape.SetElasticity(0)
-	shape.SetFriction(0.9)
+	shape.SetFriction(0)
 	player.Body = body
 	g.Player = player
 
