@@ -183,25 +183,25 @@ func (d *ModeFree) Update(g *Game) {
 		}
 
 		if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-			cell := g.Level.GetCell(d.CurrentCellPos.X, d.CurrentCellPos.Y, d.CurrentCellPos.Z)
+			cellRef := g.Level.GetCell(d.CurrentCellPos)
 
 			if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
-				cell.North = d.ToolWallsSide
+				cellRef.Cell.North = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
-				cell.East = d.ToolWallsSide
+				cellRef.Cell.East = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
-				cell.South = d.ToolWallsSide
+				cellRef.Cell.South = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
-				cell.West = d.ToolWallsSide
+				cellRef.Cell.West = d.ToolWallsSide
 			}
 			// if d.ToolWallsDirections&TOOL_WALLS_T != 0 {
-			cell.Top = d.ToolWallsTop
+			cellRef.Cell.Top = d.ToolWallsTop
 			// }
 			// if d.ToolWallsDirections&TOOL_WALLS_B != 0 {
-			cell.Bottom = d.ToolWallsBottom
+			cellRef.Cell.Bottom = d.ToolWallsBottom
 			// }
 		}
 	}

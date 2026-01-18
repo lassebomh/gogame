@@ -29,17 +29,19 @@ func main() {
 
 	var g *Game
 
+	saveFileName := filepath.Join(SAVES_PATH, time.Now().Format("20060102_150405")+".gob")
+
 	saveDir, _ := os.ReadDir(SAVES_PATH)
 	if len(saveDir) > 0 {
 		save := GameSave{}
 
-		filename := saveDir[len(saveDir)-1].Name()
-		err := LoadSaveFromFile(filepath.Join(SAVES_PATH, filename), &save)
+		saveFileName = filepath.Join(SAVES_PATH, saveDir[len(saveDir)-1].Name())
+		err := LoadSaveFromFile(saveFileName, &save)
 		if err != nil {
 			log.Fatal(err)
 		}
 		g = save.Load()
-		log.Printf("loaded \"%v\"", filename)
+		log.Printf("loaded \"%v\"", saveFileName)
 	} else {
 		log.Println("no saves exist. using default.")
 		g = NewGameSave().Load()
@@ -72,7 +74,7 @@ func main() {
 		t0 = t1
 	}
 
-	if err := g.ToSave().WriteToFile(filepath.Join(SAVES_PATH, time.Now().Format("20060102_150405")+".json")); err != nil {
+	if err := g.ToSave().WriteToFile(saveFileName); err != nil {
 		log.Fatal(err)
 	}
 }

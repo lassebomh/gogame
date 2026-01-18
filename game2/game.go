@@ -1,7 +1,7 @@
 package game2
 
 import (
-	"encoding/json"
+	"encoding/gob"
 	"os"
 	"time"
 
@@ -67,7 +67,7 @@ func (g *Game) Update(dt time.Duration) {
 
 	g.Player.Update(g)
 
-	g.Level.GetCell(g.Player.Body.Position().X, g.Player.Y, g.Player.Body.Position().Y)
+	// g.Level.GetCell(g.Player.Body.Position().X, g.Player.Y, g.Player.Body.Position().Y)
 }
 
 func (save GameSave) Load() *Game {
@@ -153,13 +153,14 @@ func (g *Game) ModeDraw(mode ModeType) {
 }
 
 func LoadSaveFromFile(path string, save *GameSave) error {
-	data, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	err = json.Unmarshal(data, save)
-	if err != nil {
+	decoder := gob.NewDecoder(file)
+	if err := decoder.Decode(save); err != nil {
 		return err
 	}
 
@@ -167,13 +168,14 @@ func LoadSaveFromFile(path string, save *GameSave) error {
 }
 
 func (save GameSave) WriteToFile(path string) error {
-	data, err := json.MarshalIndent(save, "", "  ")
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	err = os.WriteFile(path, data, 0644)
-	if err != nil {
+	encoder := gob.NewEncoder(file)
+	if err := encoder.Encode(save); err != nil {
 		return err
 	}
 

@@ -49,12 +49,10 @@ type Cell struct {
 }
 
 type CellRef struct {
-	X     int
-	Y     int
-	Z     int
-	Cell  *Cell
-	Level *Level
-	Body  *cp.Body
+	Position Vec3
+	Cell     *Cell
+	Level    *Level
+	Body     *cp.Body
 }
 
 const CHUNK_WIDTH = int(8)
@@ -71,7 +69,8 @@ type Chunk struct {
 type Level struct {
 	Chunks []*Chunk
 
-	CellRefs map[Vec3]*CellRef
+	CellRefs      map[Vec3]*CellRef
+	CellRefsArray []*CellRef
 }
 
 type LevelSave struct {
@@ -92,8 +91,9 @@ func (l *Level) ToSave() LevelSave {
 
 func (save LevelSave) Load(g *Game) *Level {
 	level := &Level{
-		Chunks:   make([]*Chunk, 0),
-		CellRefs: make(map[Vec3]*CellRef, 0),
+		Chunks:        make([]*Chunk, 0),
+		CellRefs:      make(map[Vec3]*CellRef, 0),
+		CellRefsArray: make([]*CellRef, 0),
 	}
 
 	for _, chunk := range save.Chunks {
@@ -103,12 +103,18 @@ func (save LevelSave) Load(g *Game) *Level {
 	return level
 }
 
-func (l *Level) GetCell(X float64, Y float64, Z float64) *Cell {
+func (l *Level) GetCell(pos Vec3) *CellRef {
+
+	ref := l.CellRefs[pos]
+
+	if ref != nil {
+		return ref
+	}
 
 	var chunk *Chunk
 
-	x := int(math.Floor(X / float64(CHUNK_WIDTH)))
-	z := int(math.Floor(Z / float64(CHUNK_WIDTH)))
+	x := int(math.Floor(pos.X / float64(CHUNK_WIDTH)))
+	z := int(math.Floor(pos.Z / float64(CHUNK_WIDTH)))
 
 	for _, c := range l.Chunks {
 		if x == c.X && z == c.Z {
@@ -126,11 +132,21 @@ func (l *Level) GetCell(X float64, Y float64, Z float64) *Cell {
 		fmt.Printf("New chunk %v %v\n", chunk.X, chunk.Z)
 	}
 
-	cellx := ((int(X)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
-	cellz := ((int(Z)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
-	celly := int(math.Floor(Y))
+	cellx := ((int(pos.X)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
+	cellz := ((int(pos.Z)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
+	celly := int(math.Floor(pos.Y))
 
-	return &chunk.Cells[cellx][cellz][celly]
+	ref = &CellRef{
+		Position: pos,
+		Cell:     &chunk.Cells[cellx][cellz][celly],
+		Level:    l,
+		Body:     nil,
+	}
+
+	l.CellRefs[pos] = ref
+	l.CellRefsArray = append(l.CellRefsArray, ref)
+
+	return ref
 }
 
 func (l *Level) Draw(g *Game) {
