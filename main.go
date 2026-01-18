@@ -74,7 +74,11 @@ func main() {
 		t0 = t1
 	}
 
+	t0 = rl.GetTime()
+	log.Println("saving...")
+
 	if err := g.ToSave().WriteToFile(saveFileName); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("saved to %v. took %.2f seconds", saveFileName, rl.GetTime()-t0)
 }

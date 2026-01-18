@@ -16,25 +16,12 @@ const (
 	FaceWall
 )
 
-type StairType = uint8
-
-const (
-	StairNone = StairType(iota)
-	StairNorth
-	StairSouth
-	StairEast
-	StairWest
-)
-
-type Stair struct {
-	Type StairType
-	// UV Vec4
-}
-
 type Face struct {
 	Type  FaceType
 	TileX int
 	TileY int
+
+	body *cp.Body
 }
 
 type Cell struct {
@@ -45,123 +32,81 @@ type Cell struct {
 	Top    Face
 	Bottom Face
 
-	Stair Stair
+	Level    *Level
+	Position Vec3
 }
 
-type CellRef struct {
-	Position Vec3
-	Cell     *Cell
-	Level    *Level
-	Body     *cp.Body
-}
+// func (c *Cell) Wake(g *Game) {
+
+// 	if c.North.body == nil {
+
+// 	}
+// }
 
 const CHUNK_WIDTH = int(8)
 const CHUNK_HEIGHT = int(16)
 
-type Cells = [CHUNK_WIDTH][CHUNK_WIDTH][CHUNK_HEIGHT]Cell
-
-type Chunk struct {
-	X     int
-	Z     int
-	Cells Cells
-}
+type Chunk = [CHUNK_WIDTH][CHUNK_WIDTH][CHUNK_HEIGHT]Cell
 
 type Level struct {
-	Chunks []*Chunk
+	Chunks map[Vec2]*Chunk
 
-	CellRefs      map[Vec3]*CellRef
-	CellRefsArray []*CellRef
+	refs map[Vec3]*Cell
 }
 
-type LevelSave struct {
-	Chunks []Chunk
+func (l *Level) Init() *Level {
+	if l.refs == nil {
+		l.refs = make(map[Vec3]*Cell, 0)
+	}
+	if l.Chunks == nil {
+		l.Chunks = make(map[Vec2]*Chunk, 0)
+	}
+	return l
 }
 
-func (l *Level) ToSave() LevelSave {
-	save := LevelSave{
-		Chunks: make([]Chunk, 0),
-	}
+func (l *Level) GetCell(pos Vec3) *Cell {
 
-	for _, chunk := range l.Chunks {
-		save.Chunks = append(save.Chunks, *chunk)
-	}
-
-	return save
-}
-
-func (save LevelSave) Load(g *Game) *Level {
-	level := &Level{
-		Chunks:        make([]*Chunk, 0),
-		CellRefs:      make(map[Vec3]*CellRef, 0),
-		CellRefsArray: make([]*CellRef, 0),
-	}
-
-	for _, chunk := range save.Chunks {
-		level.Chunks = append(level.Chunks, &chunk)
-	}
-
-	return level
-}
-
-func (l *Level) GetCell(pos Vec3) *CellRef {
-
-	ref := l.CellRefs[pos]
+	ref := l.refs[pos]
 
 	if ref != nil {
 		return ref
 	}
 
-	var chunk *Chunk
-
-	x := int(math.Floor(pos.X / float64(CHUNK_WIDTH)))
-	z := int(math.Floor(pos.Z / float64(CHUNK_WIDTH)))
-
-	for _, c := range l.Chunks {
-		if x == c.X && z == c.Z {
-			chunk = c
-		}
-	}
+	chunkPos := NewVec2(pos.X/float64(CHUNK_WIDTH), pos.Z/float64(CHUNK_WIDTH)).Floor()
+	chunk := l.Chunks[chunkPos]
 
 	if chunk == nil {
-		chunk = &Chunk{
-			X: x,
-			Z: z,
-		}
-		l.Chunks = append(l.Chunks, chunk)
+		chunk = &[CHUNK_WIDTH][CHUNK_WIDTH][CHUNK_HEIGHT]Cell{}
 
-		fmt.Printf("New chunk %v %v\n", chunk.X, chunk.Z)
+		l.Chunks[chunkPos] = chunk
+
+		fmt.Printf("New chunk %+v\n", chunkPos)
 	}
 
 	cellx := ((int(pos.X)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
 	cellz := ((int(pos.Z)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
 	celly := int(math.Floor(pos.Y))
 
-	ref = &CellRef{
-		Position: pos,
-		Cell:     &chunk.Cells[cellx][cellz][celly],
-		Level:    l,
-		Body:     nil,
-	}
+	ref = &chunk[cellx][cellz][celly]
 
-	l.CellRefs[pos] = ref
-	l.CellRefsArray = append(l.CellRefsArray, ref)
+	l.refs[pos] = ref
 
 	return ref
 }
 
 func (l *Level) Draw(g *Game) {
-	for _, chunk := range l.Chunks {
+	for pos, chunk := range l.Chunks {
 
 		pos := NewVec3(
-			float64(chunk.X)*float64(CHUNK_WIDTH),
+			float64(pos.X)*float64(CHUNK_WIDTH),
 			0,
-			float64(chunk.Z)*float64(CHUNK_WIDTH),
+			float64(pos.Y)*float64(CHUNK_WIDTH),
 		)
 
 		for x := range CHUNK_WIDTH {
 			for z := range CHUNK_WIDTH {
 				for y := range CHUNK_HEIGHT {
-					cell := &chunk.Cells[x][z][y]
+					cell := &chunk[x][z][y]
 
 					if !(cell.North.Type == FaceWall ||
 						cell.East.Type == FaceWall ||

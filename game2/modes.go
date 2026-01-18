@@ -1,6 +1,7 @@
 package game2
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -54,8 +55,8 @@ type ModeFree struct {
 	ToolWallsBottom Face
 }
 
-func NewModeFree() ModeFree {
-	return ModeFree{
+func NewModeFree() *ModeFree {
+	return (&ModeFree{
 		CurrentY: 0,
 		Camera: Camera3D{
 			Projection: rl.CameraPerspective,
@@ -64,15 +65,14 @@ func NewModeFree() ModeFree {
 			Up:         Y,
 			Fovy:       90,
 		},
-		Pitch: 0,
-		Yaw:   0,
-
+		Pitch:               0,
+		Yaw:                 0,
 		Tool:                MODE_FREE_TOOL_WALLS,
 		ToolWallsDirections: TOOL_WALLS_N,
 		ToolWallsTop:        Face{Type: FaceEmpty},
 		ToolWallsSide:       Face{Type: FaceWall},
 		ToolWallsBottom:     Face{Type: FaceWall},
-	}
+	})
 }
 
 func (d *ModeFree) Update(g *Game) {
@@ -186,22 +186,22 @@ func (d *ModeFree) Update(g *Game) {
 			cellRef := g.Level.GetCell(d.CurrentCellPos)
 
 			if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
-				cellRef.Cell.North = d.ToolWallsSide
+				cellRef.North = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
-				cellRef.Cell.East = d.ToolWallsSide
+				cellRef.East = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
-				cellRef.Cell.South = d.ToolWallsSide
+				cellRef.South = d.ToolWallsSide
 			}
 			if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
-				cellRef.Cell.West = d.ToolWallsSide
+				cellRef.West = d.ToolWallsSide
 			}
 			// if d.ToolWallsDirections&TOOL_WALLS_T != 0 {
-			cellRef.Cell.Top = d.ToolWallsTop
+			cellRef.Top = d.ToolWallsTop
 			// }
 			// if d.ToolWallsDirections&TOOL_WALLS_B != 0 {
-			cellRef.Cell.Bottom = d.ToolWallsBottom
+			cellRef.Bottom = d.ToolWallsBottom
 			// }
 		}
 	}
@@ -212,18 +212,9 @@ func (d *ModeFree) Draw(g *Game) {
 
 	BeginMode3D(d.Camera, func() {
 
-		g.MainShader.LightDirectional(Vec3{1, -1, 1}, rl.White, 1)
-		g.MainShader.UpdateValues()
-		g.Player.Draw(g)
-
-		rl.DrawSphere(rl.NewVector3(0, 0, 0), 0.1, rl.Red)
-		rl.DrawSphere(rl.NewVector3(1, 0, 0), 0.1, rl.Green)
-		rl.DrawSphere(rl.NewVector3(0, 1, 0), 0.1, rl.Blue)
-		rl.DrawSphere(rl.NewVector3(0, 0, 1), 0.1, rl.Yellow)
+		g.Draw3D()
 
 		cellPos := (d.CurrentCellPos.Add(NewVec3(0.50, 0.50, 0.50)))
-
-		// rl.DrawCubeWires(cellPos.Raylib(), 1, 1, 1, color.RGBA{255, 255, 255, 50})
 
 		if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
 			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
@@ -243,12 +234,42 @@ func (d *ModeFree) Draw(g *Game) {
 
 		rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Z.Raylib(), -90, XYZ.Raylib(), rl.Red)
 
-		g.Level.Draw(g)
 	})
 
 	size := float64(30)
+	line := NewLineLayout(100, 100, size)
 
-	line := NewLineLayout(5, 20, size)
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), g.RenderFlags&RENDER_FLAG_NO_ENTITIES != 0) {
+		g.RenderFlags |= RENDER_FLAG_NO_ENTITIES
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_NO_ENTITIES
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), g.RenderFlags&RENDER_FLAG_NO_LEVEL != 0) {
+		g.RenderFlags |= RENDER_FLAG_NO_LEVEL
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_NO_LEVEL
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_BOX, ""), g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0) {
+		g.RenderFlags |= RENDER_FLAG_CP_SHAPES
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_CP_SHAPES
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LINK, ""), g.RenderFlags&RENDER_FLAG_CP_CONSTRAINTS != 0) {
+		g.RenderFlags |= RENDER_FLAG_CP_CONSTRAINTS
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_CP_CONSTRAINTS
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LASER, ""), g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0) {
+		g.RenderFlags |= RENDER_FLAG_CP_COLLISIONS
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_CP_COLLISIONS
+	}
+
+	fmt.Printf("%b\n", g.RenderFlags)
+
+	size = float64(30)
+
+	line = NewLineLayout(5, 20, size)
 
 	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), d.ToolWallsSide.Type == FaceEmpty) {
 		d.ToolWallsSide.Type = FaceEmpty
