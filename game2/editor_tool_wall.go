@@ -1,0 +1,160 @@
+package game2
+
+import (
+	"math"
+
+	"github.com/gen2brain/raylib-go/raygui"
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
+
+type Direction = int32
+
+const (
+	TOOL_WALLS_N = Direction(1 << iota)
+	TOOL_WALLS_E
+	TOOL_WALLS_S
+	TOOL_WALLS_W
+	TOOL_WALLS_T
+	TOOL_WALLS_B
+)
+
+type ToolWall struct {
+	CellPos   Vec3
+	Paste     Face
+	Direction Direction
+}
+
+func (t *ToolWall) Update(g *Game, e *Editor) {
+
+	ix := math.Floor(e.HitPos.X)
+	iz := math.Floor(e.HitPos.Z)
+	fx := e.HitPos.X - ix - 0.5
+	fz := e.HitPos.Z - iz - 0.5
+
+	t.CellPos = NewVec3(ix, e.HitPos.Y, iz)
+
+	if !rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		t.Direction = 0
+		if math.Abs(fx) > math.Abs(fz) {
+			fz = 0
+		} else {
+			fx = 0
+		}
+
+		if fx != 0 {
+			if fx < 0 {
+				t.Direction |= TOOL_WALLS_E
+			}
+			if fx > 0 {
+				t.Direction |= TOOL_WALLS_W
+			}
+		} else if fz != 0 {
+			if fz < 0 {
+				t.Direction |= TOOL_WALLS_S
+			}
+			if fz > 0 {
+				t.Direction |= TOOL_WALLS_N
+			}
+		}
+	}
+
+	if rl.IsMouseButtonDown(rl.MouseButtonMiddle) {
+		cellRef := g.Level.GetCell(t.CellPos)
+
+		if t.Direction&TOOL_WALLS_N != 0 {
+			t.Paste = cellRef.North
+		}
+		if t.Direction&TOOL_WALLS_S != 0 {
+			t.Paste = cellRef.South
+		}
+		if t.Direction&TOOL_WALLS_E != 0 {
+			t.Paste = cellRef.East
+		}
+		if t.Direction&TOOL_WALLS_W != 0 {
+			t.Paste = cellRef.West
+		}
+	}
+
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		cellRef := g.Level.GetCell(t.CellPos)
+
+		if t.Direction&TOOL_WALLS_N != 0 {
+			cellRef.North = t.Paste
+		}
+		if t.Direction&TOOL_WALLS_S != 0 {
+			cellRef.South = t.Paste
+		}
+		if t.Direction&TOOL_WALLS_E != 0 {
+			cellRef.East = t.Paste
+		}
+		if t.Direction&TOOL_WALLS_W != 0 {
+			cellRef.West = t.Paste
+		}
+	}
+}
+
+func (t *ToolWall) Draw3D(g *Game, e *Editor) {
+	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.4, 0.5)))
+
+	if t.Direction&TOOL_WALLS_N != 0 {
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.Red)
+	}
+	if t.Direction&TOOL_WALLS_S != 0 {
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
+	}
+	if t.Direction&TOOL_WALLS_E != 0 {
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.Red)
+	}
+	if t.Direction&TOOL_WALLS_W != 0 {
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
+	}
+}
+
+func (t *ToolWall) DrawHUD(g *Game, e *Editor) {
+
+	size := float64(30)
+	line := NewLineLayout(0, 50, size)
+
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), t.Paste.Type == FaceEmpty) {
+		t.Paste.Type = FaceEmpty
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), t.Paste.Type == FaceWall) {
+		t.Paste.Type = FaceWall
+	}
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_DOOR, ""), t.Paste.Type == FaceDoor) {
+		t.Paste.Type = FaceDoor
+	}
+
+	line.Break(size)
+
+	for y := range g.Tileset.Tiles {
+		for x := range g.Tileset.Tiles {
+
+			rect := line.Next(size)
+			aa, bb := g.Tileset.GetAABB(x, y)
+			bb = bb.Subtract(aa)
+
+			source := rl.NewRectangle(
+				float32(aa.X)*float32(g.Tileset.Texture.Width),
+				float32(aa.Y)*float32(g.Tileset.Texture.Height),
+				float32(bb.X)*float32(g.Tileset.Texture.Width),
+				float32(bb.Y)*float32(g.Tileset.Texture.Height),
+			)
+
+			rl.DrawTexturePro(g.Tileset.Texture, source, rect, rl.NewVector2(0, 0), 0, rl.White)
+
+			if t.Paste.TileX == x && t.Paste.TileY == y {
+				rl.DrawRectangleLinesEx(rect, 1, rl.White)
+			}
+			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.Editor.MousePosition.Raylib(), rect) {
+				t.Paste.TileX = x
+				t.Paste.TileY = y
+			}
+		}
+
+		line.Break(size)
+	}
+
+	line.Break(size)
+
+}

@@ -41,7 +41,7 @@ type Game struct {
 	RenderFlags RenderFlags
 
 	EditorEnabled bool
-	Editor        *ModeFree
+	Editor        *Editor
 
 	Tileset *Tileset
 
@@ -54,8 +54,7 @@ type Game struct {
 
 	Textures map[string]rl.Texture2D
 
-	Models      map[string]rl.Model
-	ModelsSolid map[string]rl.Model
+	Models map[string]rl.Model
 }
 
 type GameSave struct {
@@ -69,7 +68,7 @@ type GameSave struct {
 	RenderFlags RenderFlags
 
 	EditorEnabled bool
-	Editor        *ModeFree
+	Editor        *Editor
 }
 
 func (g *Game) ToSave() GameSave {
@@ -141,22 +140,11 @@ func (g *Game) LoadModel(name string, path string, shader Shader, texture *rl.Te
 		}
 	}
 
-	modelSolid := rl.LoadModel(path)
-	g.ModelsSolid[name] = modelSolid
-	matsSolid := modelSolid.GetMaterials()
-	for i := range matsSolid {
-		mat := &matsSolid[i]
-		mat.Shader = shader.GetRaylibShader()
-	}
 }
 
 func (g *Game) GetModel(name string) rl.Model {
 
-	if g.RenderFlags&RENDER_FLAG_SHADOW != 0 {
-		return g.ModelsSolid[name]
-	} else {
-		return g.Models[name]
-	}
+	return g.Models[name]
 }
 
 func (save GameSave) Load() *Game {
@@ -182,8 +170,7 @@ func (save GameSave) Load() *Game {
 
 		MainTexture: rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
 
-		Models:      map[string]rl.Model{},
-		ModelsSolid: map[string]rl.Model{},
+		Models: map[string]rl.Model{},
 
 		Textures:   map[string]rl.Texture2D{},
 		MainShader: NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
@@ -212,7 +199,7 @@ func NewGameSave() GameSave {
 			Position: NewVec2(0, 0),
 		},
 		EditorEnabled: false,
-		Editor:        NewModeFree(),
+		Editor:        NewEditor(),
 		Level:         Level{},
 	}
 
