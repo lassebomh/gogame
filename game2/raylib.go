@@ -35,6 +35,7 @@ type UniformTexture struct{ Uniform }
 type UniformVec2 struct{ Uniform }
 type UniformVec3 struct{ Uniform }
 type UniformVec4 struct{ Uniform }
+type UniformMat4 struct{ Uniform }
 
 func (u *UniformInt) Set(value int32) {
 	rl.SetShaderValue(u.shader, u.location, unsafe.Slice((*float32)(unsafe.Pointer(&value)), 4), rl.ShaderUniformInt)
@@ -65,6 +66,9 @@ func (u *UniformVec4) SetColor(color color.RGBA) {
 }
 func (u *UniformTexture) Set(texture rl.Texture2D) {
 	rl.SetShaderValueTexture(u.shader, u.location, texture)
+}
+func (u *UniformMat4) Set(mat rl.Matrix) {
+	rl.SetShaderValueMatrix(u.shader, u.location, mat)
 }
 
 type Shader interface {
@@ -137,6 +141,16 @@ func BeginMode2D(camera rl.Camera2D, fn func()) {
 	rl.BeginMode2D(camera)
 	fn()
 	rl.EndMode2D()
+}
+
+func BeginOverlayMode(fn func()) {
+	rl.DrawRenderBatchActive()
+	rl.DisableDepthTest()
+
+	fn()
+	rl.DrawRenderBatchActive()
+	rl.EnableDepthTest()
+
 }
 
 // Camera3D type, defines a camera position/orientation in 3d space

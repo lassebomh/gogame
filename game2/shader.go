@@ -22,8 +22,11 @@ type MainShader struct {
 
 	UVClamp UniformVec4 `glsl:"uvClamp"`
 
-	Ambient UniformVec4 `glsl:"ambient"`
+	ShadowMap UniformTexture `glsl:"shadowMap"`
+	PlayerMvp UniformMat4    `glsl:"playerMvp"`
 
+	FullBright       UniformInt               `glsl:"fullBright"`
+	Ambient          UniformVec4              `glsl:"ambient"`
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`
 	LightType        [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].type"`
 	LightPosition    [MAX_LIGHTS]UniformVec3  `glsl:"lights[%d].position"`

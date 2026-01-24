@@ -52,23 +52,28 @@ func main() {
 	for !rl.WindowShouldClose() {
 		t1 := rl.GetTime()
 
-		if rl.IsKeyDown(rl.KeyLeftControl) {
-			if rl.IsKeyReleased(rl.KeyOne) {
-				g.Mode = MODE_DEFAULT
-				log.Println("MODE_DEFAULT")
-			}
-			if rl.IsKeyReleased(rl.KeyTwo) {
-				g.Mode = MODE_FREE
-				log.Println("MODE_FREE")
-			}
+		if rl.IsKeyReleased(rl.KeyTab) {
+
+			g.EditorEnabled = !g.EditorEnabled
+
 		}
 
 		dt := time.Duration((t1 - t0) * float64(time.Second))
 
-		g.ModeUpdate(g.Mode, dt)
+		if g.EditorEnabled {
+			g.Editor.Update(g)
+		} else {
+			g.Update(dt)
+		}
 
 		BeginDrawing(func() {
-			g.ModeDraw(g.Mode)
+
+			if g.EditorEnabled {
+				g.Editor.Draw(g)
+			} else {
+				g.Draw()
+			}
+
 		})
 
 		t0 = t1

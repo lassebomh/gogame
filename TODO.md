@@ -1,1 +1,7 @@
-Remove top face. Don't need it when there is the bottom face. Shift the entire level rendering down
+- layers
+
+* base layer
+* top layer
+* top layer mask
+* detail layer
+* detail mask

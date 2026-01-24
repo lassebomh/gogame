@@ -1,14 +1,20 @@
 package game2
 
 import (
+	"math"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
 
 type Player struct {
-	Y      float64
-	Radius float64
-	Body   *cp.Body
+	Y         float64
+	YVelocity float64
+	Radius    float64
+	Body      *cp.Body
+	Shape     *cp.Shape
+
+	LookPosition Vec3
 }
 
 func (p *Player) Update(g *Game) {
@@ -35,6 +41,68 @@ func (p *Player) Update(g *Game) {
 
 	newVelocity := p.Body.Velocity().Lerp(force, 0.1)
 	p.Body.SetVelocity(newVelocity.X, newVelocity.Y)
+
+	playerPos := p.Position3D()
+	cell := g.Level.GetCell(playerPos)
+
+	var groundY float64
+
+	switch cell.Ground.Type {
+	case GroundStair:
+		x := playerPos.X - math.Floor(playerPos.X)
+		z := playerPos.Z - math.Floor(playerPos.Z)
+
+		switch cell.Ground.Rotation {
+		case 0:
+			groundY = cell.Position.Y + z
+		case 90:
+			groundY = cell.Position.Y + x
+		case 180:
+			groundY = cell.Position.Y + 1 - z
+		case 270:
+			groundY = cell.Position.Y + 1 - x
+		}
+		groundY += 0
+	case GroundSolid:
+		groundY = cell.Position.Y
+	case GroundNone:
+		groundY = 0
+	}
+
+	if p.Y > groundY {
+		p.YVelocity -= g.TimeDelta.Seconds() / 6
+	}
+
+	if p.Y+p.YVelocity < groundY {
+		p.Y = groundY
+		p.YVelocity = 0
+	}
+
+	p.Y += p.YVelocity
+
+	nextCell := g.Level.GetCell(playerPos.Add(Y.Scale(0.1)))
+
+	if nextCell.Position.Y > p.Y && nextCell.Ground.Type == GroundSolid {
+		p.Y = math.Ceil(p.Y)
+	}
+
+	p.Shape.Filter.Mask = (1 << uint(math.Floor(p.Y))) | (1 << uint(math.Floor(p.Y+0.25)))
+
+	if math.Abs(g.MouseRayDirection.Y) >= 1e-6 {
+		t := (p.Y - g.MouseRayOrigin.Y) / g.MouseRayDirection.Y
+
+		if t >= 0 {
+			p.LookPosition = g.MouseRayOrigin.Add(g.MouseRayDirection.Scale(t))
+			p.LookPosition.Y = p.Y
+		}
+	}
+
+	playerAngle := math.Atan2(
+		playerPos.Z-p.LookPosition.Z,
+		playerPos.X-p.LookPosition.X,
+	)
+
+	p.Body.SetAngle(playerAngle)
 }
 
 func (p *Player) Position3D() Vec3 {
@@ -64,9 +132,9 @@ func (save PlayerSave) Load(g *Game) *Player {
 	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, player.Radius, Vec2{2, 2}.CP())))
 	body.SetPosition(save.Position.CP())
 
-	shape := g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}.CP()))
-	shape.SetElasticity(0)
-	shape.SetFriction(0)
+	player.Shape = g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}.CP()))
+	player.Shape.SetElasticity(0)
+	player.Shape.SetFriction(0)
 	player.Body = body
 	g.Player = player
 

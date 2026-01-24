@@ -20,6 +20,7 @@ const (
 	RENDER_FLAG_CP_SHAPES
 	RENDER_FLAG_CP_CONSTRAINTS
 	RENDER_FLAG_CP_COLLISIONS
+	RENDER_FLAG_SHADOW
 )
 
 const PHYSICS_TICKRATE = time.Second / 60
@@ -34,19 +35,27 @@ type Game struct {
 	Player *Player
 	Space  *cp.Space
 	Level  *Level
+	Camera Camera3D
 
 	IsStation   bool
 	RenderFlags RenderFlags
 
-	Mode     ModeType
-	ModeFree *ModeFree
+	EditorEnabled bool
+	Editor        *ModeFree
 
 	Tileset *Tileset
 
-	MainShader *MainShader
+	MousePosition     Vec2
+	MouseRayOrigin    Vec3
+	MouseRayDirection Vec3
+
+	MainTexture rl.RenderTexture2D
+	MainShader  *MainShader
 
 	Textures map[string]rl.Texture2D
-	Models   map[string]rl.Model
+
+	Models      map[string]rl.Model
+	ModelsSolid map[string]rl.Model
 }
 
 type GameSave struct {
@@ -59,8 +68,8 @@ type GameSave struct {
 	Level       Level
 	RenderFlags RenderFlags
 
-	Mode     ModeType
-	ModeFree *ModeFree
+	EditorEnabled bool
+	Editor        *ModeFree
 }
 
 func (g *Game) ToSave() GameSave {
@@ -71,8 +80,8 @@ func (g *Game) ToSave() GameSave {
 		Level:                  *g.Level,
 		Player:                 g.Player.ToSave(g),
 		RenderFlags:            g.RenderFlags,
-		Mode:                   g.Mode,
-		ModeFree:               g.ModeFree,
+		EditorEnabled:          g.EditorEnabled,
+		Editor:                 g.Editor,
 	}
 }
 func (g *Game) Update(dt time.Duration) {
@@ -87,6 +96,17 @@ func (g *Game) Update(dt time.Duration) {
 		g.Space.Step(PHYSICS_TICKRATE.Seconds())
 		g.TimePhysicsAccumulator -= PHYSICS_TICKRATE
 	}
+
+	g.Camera.Position = g.Player.Position3D().Add(NewVec3(0, 8, -3).Normalize().Scale(10))
+	g.Camera.Target = g.Player.Position3D()
+
+	mousePos := rl.GetMousePosition()
+	g.MousePosition = Vec2FromRaylib(mousePos)
+
+	mouseRay := rl.GetScreenToWorldRay(mousePos, g.Camera.Raylib())
+
+	g.MouseRayOrigin = Vec3FromRaylib(mouseRay.Position)
+	g.MouseRayDirection = Vec3FromRaylib(mouseRay.Direction)
 
 	g.Player.Update(g)
 
@@ -109,37 +129,74 @@ func (g *Game) Update(dt time.Duration) {
 
 }
 
+func (g *Game) LoadModel(name string, path string, shader Shader, texture *rl.Texture2D) {
+	model := rl.LoadModel(path)
+	g.Models[name] = model
+	mats := model.GetMaterials()
+	for i := range mats {
+		mat := &mats[i]
+		mat.Shader = shader.GetRaylibShader()
+		if texture != nil {
+			mat.Maps.Texture = *texture
+		}
+	}
+
+	modelSolid := rl.LoadModel(path)
+	g.ModelsSolid[name] = modelSolid
+	matsSolid := modelSolid.GetMaterials()
+	for i := range matsSolid {
+		mat := &matsSolid[i]
+		mat.Shader = shader.GetRaylibShader()
+	}
+}
+
+func (g *Game) GetModel(name string) rl.Model {
+
+	if g.RenderFlags&RENDER_FLAG_SHADOW != 0 {
+		return g.ModelsSolid[name]
+	} else {
+		return g.Models[name]
+	}
+}
+
 func (save GameSave) Load() *Game {
+	downscale := int32(4)
+	screenWidth, screenHeight := int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight())
+
 	g := &Game{
 		Time:                   save.Time,
 		TimeDelta:              save.TimeDelta,
 		TimePhysicsAccumulator: save.TimePhysicsAccumulator,
 
-		RenderFlags: save.RenderFlags,
-		Mode:        save.Mode,
-		ModeFree:    save.ModeFree,
+		RenderFlags:   save.RenderFlags,
+		EditorEnabled: save.EditorEnabled,
+		Editor:        save.Editor,
+
+		Camera: Camera3D{
+			Fovy:       6,
+			Up:         Y,
+			Projection: rl.CameraOrthographic,
+		},
 
 		Tileset: NewTileset("./models/atlas.png", 5),
 
-		Models:     map[string]rl.Model{},
+		MainTexture: rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
+
+		Models:      map[string]rl.Model{},
+		ModelsSolid: map[string]rl.Model{},
+
 		Textures:   map[string]rl.Texture2D{},
 		MainShader: NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
 	}
 
+	rl.SetTextureFilter(g.MainTexture.Texture, rl.FilterPoint)
+
 	g.Space = cp.NewSpace()
 	g.Level = save.Level.Init()
 
-	g.Models["wallDebug"] = rl.LoadModel("./models/wallx.glb")
-	g.Models["wall"] = rl.LoadModel("./models/wallx.glb")
-	g.Models["stair"] = rl.LoadModel("./models/stair.glb")
-
-	mats := g.Models["wall"].GetMaterials()
-
-	for i := range mats {
-		mat := &mats[i]
-		mat.Shader = g.MainShader.shader
-		mat.Maps.Texture = g.Tileset.Texture
-	}
+	g.LoadModel("wallDebug", "./models/wallx.glb", g.MainShader, nil)
+	g.LoadModel("wall", "./models/wallx.glb", g.MainShader, &g.Tileset.Texture)
+	g.LoadModel("stair", "./models/stair.glb", g.MainShader, &g.Tileset.Texture)
 
 	save.Player.Load(g)
 
@@ -154,28 +211,64 @@ func NewGameSave() GameSave {
 		Player: PlayerSave{
 			Position: NewVec2(0, 0),
 		},
-		Mode:     MODE_DEFAULT,
-		ModeFree: NewModeFree(),
-		Level:    Level{},
+		EditorEnabled: false,
+		Editor:        NewModeFree(),
+		Level:         Level{},
 	}
 
 	return gameSave
 }
 
 func (g *Game) Draw() {
-	rl.ClearBackground(rl.DarkGray)
 
-	camera := Camera3D{
-		Position:   g.Player.Position3D().Add(NewVec3(0, 8, -1).Normalize().Scale(10)),
-		Target:     g.Player.Position3D(),
-		Fovy:       10,
-		Up:         Y,
-		Projection: rl.CameraOrthographic,
-	}
+	BeginTextureMode(g.MainTexture, func() {
+		rl.ClearBackground(rl.Black)
 
-	BeginMode3D(camera, func() {
-		g.Draw3D()
+		BeginMode3D(g.Camera, func() {
+
+			if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
+				g.MainShader.FullBright.Set(1)
+			} else {
+				g.MainShader.FullBright.Set(0)
+				g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
+
+				if !g.IsStation {
+
+					hour := math.Mod(g.Day, 1) * 24
+					day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+					transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+					transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+
+					sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
+
+					g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
+
+				} else {
+					g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
+				}
+
+				g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 35, rl.White, 1)
+			}
+
+			g.MainShader.UpdateValues()
+
+			g.Draw3D(int(g.Player.Y))
+		})
+
 	})
+
+	// downscale := int32(8)
+	screenWidth := int32(rl.GetScreenWidth())
+	screenHeight := int32(rl.GetScreenHeight())
+
+	rl.DrawTexturePro(
+		g.MainTexture.Texture,
+		rl.NewRectangle(0, 0, float32(g.MainTexture.Texture.Width), -float32(g.MainTexture.Texture.Height)),
+		rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight)),
+		rl.Vector2{0, 0},
+		0,
+		rl.White,
+	)
 }
 
 var NIGHT = Vec3{-115, 0.3, .1}
@@ -189,78 +282,39 @@ func c(x float64) float64 {
 	return (1 + math.Tanh(x)) / 2
 }
 
-func (g *Game) Draw3D() {
-
-	if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
-		g.MainShader.Ambient.SetColor(color.RGBA{255, 255, 255, 255})
-	} else {
-		g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
-
-		if !g.IsStation {
-
-			hour := math.Mod(g.Day, 1) * 24
-			day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
-			transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
-			transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
-
-			sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
-
-			g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
-
-		} else {
-			g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
-
-		}
-	}
-
-	g.MainShader.UpdateValues()
-
+func (g *Game) Draw3D(maxY int) {
 	if g.RenderFlags&RENDER_FLAG_NO_ENTITIES == 0 {
 		g.Player.Draw(g)
 	}
 
 	if g.RenderFlags&RENDER_FLAG_NO_LEVEL == 0 {
-		g.Level.Draw(g)
+		g.Level.Draw(g, maxY)
 	}
 
-	rl.DrawRenderBatchActive()
-	rl.DisableDepthTest()
-	if g.RenderFlags&(RENDER_FLAG_CP_SHAPES|RENDER_FLAG_CP_CONSTRAINTS|RENDER_FLAG_CP_COLLISIONS) != 0 {
-		drawer := NewPhysicsDrawer(
-			g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0,
-			g.RenderFlags&RENDER_FLAG_CP_CONSTRAINTS != 0,
-			g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0,
-		)
+	BeginOverlayMode(func() {
 
-		cp.DrawSpace(g.Space, &drawer)
-	}
+		if g.RenderFlags&(RENDER_FLAG_CP_SHAPES|RENDER_FLAG_CP_CONSTRAINTS|RENDER_FLAG_CP_COLLISIONS) != 0 {
+			drawer := NewPhysicsDrawer(
+				g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0,
+				g.RenderFlags&RENDER_FLAG_CP_CONSTRAINTS != 0,
+				g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0,
+			)
 
-	rl.DrawCube(NewVec3(0, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.White)
-	rl.DrawCube(NewVec3(0, 0, 1).Raylib(), 0.05, 0.05, 0.05, rl.SkyBlue)
-	rl.DrawCube(NewVec3(0, 1, 0).Raylib(), 0.05, 0.05, 0.05, rl.Yellow)
-	rl.DrawCube(NewVec3(1, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+			cp.DrawSpace(g.Space, &drawer)
+		}
 
-	rl.DrawRenderBatchActive()
-	rl.EnableDepthTest()
+		if g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0 {
+			cell := g.Level.GetCell(g.Player.Position3D())
+			rl.DrawCubeWires(cell.Position.Add(NewVec3(0.5, 0.5, 0.5)).Raylib(), 1, 1, 1, rl.Green)
 
-}
+		}
 
-func (g *Game) ModeUpdate(mode ModeType, dt time.Duration) {
-	switch g.Mode {
-	case MODE_DEFAULT:
-		g.Update(dt)
-	case MODE_FREE:
-		g.ModeFree.Update(g)
-	}
-}
+		// rl.DrawCube(NewVec3(0, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.White)
+		// rl.DrawCube(NewVec3(0, 0, 1).Raylib(), 0.05, 0.05, 0.05, rl.SkyBlue)
+		// rl.DrawCube(NewVec3(0, 1, 0).Raylib(), 0.05, 0.05, 0.05, rl.Yellow)
+		// rl.DrawCube(NewVec3(1, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+	})
 
-func (g *Game) ModeDraw(mode ModeType) {
-	switch mode {
-	case MODE_DEFAULT:
-		g.Draw()
-	case MODE_FREE:
-		g.ModeFree.Draw(g)
-	}
 }
 
 func LoadSaveFromFile(path string, save *GameSave) error {

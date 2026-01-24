@@ -1,19 +1,14 @@
 #version 330
 
+in float vDepth;
 out vec4 fragColor;
 
-#define nearPlane 0.01
-#define farPlane 1000.0
+#define near 0.0
+#define far 100.0
 
-float linearizeDepth(float d)
-{
-    float z = d * 2.0 - 1.0;
-    return (2.0 * nearPlane * farPlane) /
-           (farPlane + nearPlane - z * (farPlane - nearPlane));
-}
 
 void main()
 {
-    float depth = linearizeDepth(gl_FragCoord.z) / farPlane;
-    fragColor = vec4(vec3(depth), 1.0);
+    float depth01 = vDepth; // clamp((vDepth - near) / (far - near), 0.0, 1.0);
+    fragColor = vec4(depth01, depth01, depth01, 1.0);
 }

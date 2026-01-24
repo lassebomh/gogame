@@ -55,24 +55,28 @@ func (c *Cell) Wake(g *Game) {
 		c.West.body = cp.NewStaticBody()
 		c.West.body.SetPosition(cp.Vector{c.Position.X + 0.95, c.Position.Z + 0.5})
 		shape := cp.NewBox(c.West.body, 0.1, 1, 0)
+		shape.Filter.Categories = 1 << uint(c.Position.Y)
 		g.Space.AddShape(shape)
 	}
 	if c.East.Type == FaceWall && c.East.body == nil {
 		c.East.body = cp.NewStaticBody()
 		c.East.body.SetPosition(cp.Vector{c.Position.X + 0.05, c.Position.Z + 0.5})
 		shape := cp.NewBox(c.East.body, 0.1, 1, 0)
+		shape.Filter.Categories = 1 << uint(c.Position.Y)
 		g.Space.AddShape(shape)
 	}
 	if c.North.Type == FaceWall && c.North.body == nil {
 		c.North.body = cp.NewStaticBody()
 		c.North.body.SetPosition(cp.Vector{c.Position.X + 0.5, c.Position.Z + 0.95})
 		shape := cp.NewBox(c.North.body, 1, .1, 0)
+		shape.Filter.Categories = 1 << uint(c.Position.Y)
 		g.Space.AddShape(shape)
 	}
 	if c.South.Type == FaceWall && c.South.body == nil {
 		c.South.body = cp.NewStaticBody()
 		c.South.body.SetPosition(cp.Vector{c.Position.X + 0.5, c.Position.Z + 0.05})
 		shape := cp.NewBox(c.South.body, 1, .1, 0)
+		shape.Filter.Categories = 1 << uint(c.Position.Y)
 		g.Space.AddShape(shape)
 	}
 }
@@ -117,8 +121,8 @@ func (l *Level) GetCell(pos Vec3) *Cell {
 		fmt.Printf("New chunk %+v\n", chunkPos)
 	}
 
-	cellx := ((int(pos.X)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
-	cellz := ((int(pos.Z)%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
+	cellx := ((int(math.Floor(pos.X))%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
+	cellz := ((int(math.Floor(pos.Z))%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
 	celly := int(math.Floor(pos.Y))
 
 	ref = &chunk[cellx][cellz][celly]
@@ -133,7 +137,7 @@ func (l *Level) GetCell(pos Vec3) *Cell {
 	return ref
 }
 
-func (l *Level) Draw(g *Game) {
+func (l *Level) Draw(g *Game, maxY int) {
 	for pos, chunk := range l.Chunks {
 
 		pos := NewVec3(float64(pos.X)*float64(CHUNK_WIDTH), 0, float64(pos.Y)*float64(CHUNK_WIDTH))
@@ -142,6 +146,10 @@ func (l *Level) Draw(g *Game) {
 			for z := range CHUNK_WIDTH {
 				for y := range CHUNK_HEIGHT {
 					cell := &chunk[x][z][y]
+
+					if y > maxY {
+						continue
+					}
 
 					if !(cell.North.Type == FaceWall ||
 						cell.East.Type == FaceWall ||
@@ -168,7 +176,7 @@ func (f *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees fl
 	if f.Type == FaceWall {
 		aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
+		rl.DrawModelEx(g.GetModel("wall"), cellPos.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
 	}
 }
 
@@ -176,10 +184,10 @@ func (gr *Ground) Draw(g *Game, cellPos Vec3) {
 	if gr.Type == GroundSolid {
 		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		rl.DrawModelEx(g.Models["wall"], cellPos.Raylib(), Z.Raylib(), float32(-90), XYZ.Raylib(), rl.White)
+		rl.DrawModelEx(g.GetModel("wall"), cellPos.Raylib(), Z.Raylib(), float32(-90), XYZ.Raylib(), rl.White)
 	} else if gr.Type == GroundStair {
 		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		rl.DrawModelEx(g.Models["stair"], (cellPos.Subtract(NewVec3(0, 0.5, 0))).Raylib(), Y.Raylib(), float32(gr.Rotation), XYZ.Raylib(), rl.White)
+		rl.DrawModelEx(g.GetModel("stair"), (cellPos.Subtract(NewVec3(0, 0.5, 0))).Raylib(), Y.Raylib(), float32(gr.Rotation), XYZ.Scale(0.99).Raylib(), rl.White)
 	}
 }

@@ -1,7 +1,6 @@
 package game2
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -19,7 +18,7 @@ type ModeFreeTool = int32
 
 const (
 	MODE_FREE_TOOL_WALLS = ModeFreeTool(iota)
-	MODE_FREE_TOOL_TEXTURE
+	MODE_FREE_TOOL_FLOOR
 )
 
 type ModeFreeToolWallsDirection = int32
@@ -177,22 +176,26 @@ func (d *ModeFree) Update(g *Game) {
 
 		if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
 			cellRef := g.Level.GetCell(d.CurrentCellPos)
+
+			if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
+				d.ToolWallsGround.Rotation = 0
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
+				d.ToolWallsGround.Rotation = 270
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
+				d.ToolWallsGround.Rotation = 180
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
+				d.ToolWallsGround.Rotation = 90
+			}
+
+			cellRef.Ground = d.ToolWallsGround
 			if d.ToolWallsGround.Type == GroundStair {
 				cellRef.Ground = d.ToolWallsGround
-				if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
-					cellRef.Ground.Rotation = 0
-				}
-				if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
-					cellRef.Ground.Rotation = 90
-				}
-				if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
-					cellRef.Ground.Rotation = 180
-				}
-				if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
-					cellRef.Ground.Rotation = 270
-				}
-				fmt.Println(cellRef.Ground.Rotation)
+
 			} else {
+
 				if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
 					cellRef.North = d.ToolWallsSide
 				}
@@ -206,7 +209,6 @@ func (d *ModeFree) Update(g *Game) {
 					cellRef.West = d.ToolWallsSide
 				}
 			}
-			cellRef.Ground = d.ToolWallsGround
 		}
 
 		scroll := float64(rl.GetMouseWheelMove())
@@ -229,24 +231,31 @@ func (d *ModeFree) Draw(g *Game) {
 
 	BeginMode3D(d.Camera, func() {
 
-		g.Draw3D()
+		if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
+			g.MainShader.FullBright.Set(1)
+		} else {
+			g.MainShader.FullBright.Set(0)
+		}
+		g.Draw3D(int(d.CurrentY))
 
-		cellPos := (d.CurrentCellPos.Add(NewVec3(0.5, 0.4, 0.5)))
+		BeginOverlayMode(func() {
+			cellPos := (d.CurrentCellPos.Add(NewVec3(0.5, 0.4, 0.5)))
 
-		if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.Red)
-		}
-		if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
-		}
-		if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.Red)
-		}
-		if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
-			rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
-		}
+			if d.ToolWallsDirections&TOOL_WALLS_N != 0 {
+				rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.Red)
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_S != 0 {
+				rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_E != 0 {
+				rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.Red)
+			}
+			if d.ToolWallsDirections&TOOL_WALLS_W != 0 {
+				rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
+			}
 
-		rl.DrawModelWiresEx(g.Models["wallDebug"], cellPos.Raylib(), Z.Raylib(), -90, XYZ.Raylib(), rl.Red)
+			rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Z.Raylib(), -90, XYZ.Raylib(), rl.Red)
+		})
 
 	})
 
@@ -317,7 +326,7 @@ func (d *ModeFree) Draw(g *Game) {
 			if d.ToolWallsSide.TileX == x && d.ToolWallsSide.TileY == y {
 				rl.DrawRectangleLinesEx(rect, 1, rl.White)
 			}
-			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.ModeFree.MousePosition.Raylib(), rect) {
+			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.Editor.MousePosition.Raylib(), rect) {
 				d.ToolWallsSide.TileX = x
 				d.ToolWallsSide.TileY = y
 			}
@@ -354,7 +363,7 @@ func (d *ModeFree) Draw(g *Game) {
 			if d.ToolWallsGround.TileX == x && d.ToolWallsGround.TileY == y {
 				rl.DrawRectangleLinesEx(rect, 1, rl.White)
 			}
-			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.ModeFree.MousePosition.Raylib(), rect) {
+			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.Editor.MousePosition.Raylib(), rect) {
 				d.ToolWallsGround.TileX = x
 				d.ToolWallsGround.TileY = y
 			}
