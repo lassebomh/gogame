@@ -14,11 +14,7 @@ import (
 type RenderFlags = int32
 
 const (
-	RENDER_FLAG_NO_ENTITIES = RenderFlags(1 << iota)
-	RENDER_FLAG_NO_LEVEL
-	RENDER_FLAG_EFFECTS
-	RENDER_FLAG_PHYSICS
-	RENDER_FLAG_SHADOW
+	RENDER_FLAG_PHYSICS = RenderFlags(1 << iota)
 )
 
 const PHYSICS_TICKRATE = time.Second / 60
@@ -211,29 +207,25 @@ func (g *Game) Draw() {
 
 		BeginMode3D(g.Camera, func() {
 
-			if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
-				g.MainShader.FullBright.Set(1)
+			g.MainShader.FullBright.Set(0)
+			g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
+
+			if !g.IsStation {
+
+				hour := math.Mod(g.Day, 1) * 24
+				day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+				transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+				transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+
+				sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
+
+				g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
+
 			} else {
-				g.MainShader.FullBright.Set(0)
-				g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
-
-				if !g.IsStation {
-
-					hour := math.Mod(g.Day, 1) * 24
-					day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
-					transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
-					transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
-
-					sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
-
-					g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
-
-				} else {
-					g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
-				}
-
-				g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 35, rl.White, 1)
+				g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
 			}
+
+			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 35, rl.White, 1)
 
 			g.MainShader.UpdateValues()
 
@@ -268,40 +260,8 @@ func c(x float64) float64 {
 }
 
 func (g *Game) Draw3D(maxY int) {
-	if g.RenderFlags&RENDER_FLAG_NO_ENTITIES == 0 {
-		g.Player.Draw(g)
-	}
-
-	if g.RenderFlags&RENDER_FLAG_NO_LEVEL == 0 {
-		g.Level.Draw(g, maxY)
-	}
-
-	BeginOverlayMode(func() {
-
-		if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
-			drawer := NewPhysicsDrawer(g.Player.Y, true, true, true)
-
-			eachBody := func(body *cp.Body) {
-
-				body.EachConstraint(func(c *cp.Constraint) {
-					cp.DrawConstraint(c, &drawer)
-				})
-
-				body.EachShape(func(s *cp.Shape) {
-					if s.Filter.Categories&(1<<uint(math.Floor(g.Player.Y))) != 0 {
-						cp.DrawShape(s, &drawer)
-					}
-				})
-			}
-
-			g.Space.EachBody(eachBody)
-			eachBody(g.Space.StaticBody)
-
-			cell := g.Level.GetCell(g.Player.Position3D())
-			rl.DrawCubeWires(cell.Position.Add(NewVec3(0.5, 0, 0.5)).Raylib(), 1, 0, 1, rl.Green)
-		}
-	})
-
+	g.Player.Draw(g)
+	g.Level.Draw(g, maxY)
 }
 
 func LoadSaveFromFile(path string, save *GameSave) error {

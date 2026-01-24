@@ -29,6 +29,8 @@ func main() {
 
 	var g *Game
 
+	os.MkdirAll(SAVES_PATH, 0755)
+
 	saveFileName := filepath.Join(SAVES_PATH, time.Now().Format("20060102_150405")+".gob")
 
 	saveDir, _ := os.ReadDir(SAVES_PATH)

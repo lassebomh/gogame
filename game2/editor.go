@@ -6,6 +6,7 @@ import (
 
 	"github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
 )
 
 type EditorTool = int32
@@ -152,15 +153,28 @@ func (e *Editor) Draw(g *Game) {
 	rl.ClearBackground(rl.Black)
 
 	BeginMode3D(e.Camera, func() {
-
-		if g.RenderFlags&RENDER_FLAG_EFFECTS != 0 {
-			g.MainShader.FullBright.Set(1)
-		} else {
-			g.MainShader.FullBright.Set(0)
-		}
+		g.MainShader.FullBright.Set(1)
 		g.Draw3D(int(e.Y))
 
 		BeginOverlayMode(func() {
+
+			if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
+				drawer := NewPhysicsDrawer(e.Y, true, true, true)
+
+				renderBody := func(body *cp.Body) {
+					body.EachConstraint(func(c *cp.Constraint) {
+						cp.DrawConstraint(c, &drawer)
+					})
+					body.EachShape(func(s *cp.Shape) {
+						if s.Filter.Categories&(1<<uint(math.Floor(e.Y))) != 0 {
+							cp.DrawShape(s, &drawer)
+						}
+					})
+				}
+
+				renderBody(g.Space.StaticBody)
+				g.Space.EachBody(renderBody)
+			}
 
 			center := e.HitPos.Floor().Add(NewVec3(0.5, 0, 0.5))
 			size := float64(1)
@@ -186,21 +200,6 @@ func (e *Editor) Draw(g *Game) {
 	size := float64(30)
 	line := NewLineLayout(90, 0, size)
 
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CAMERA, ""), g.RenderFlags&RENDER_FLAG_EFFECTS != 0) {
-		g.RenderFlags |= RENDER_FLAG_EFFECTS
-	} else {
-		g.RenderFlags &^= RENDER_FLAG_EFFECTS
-	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), g.RenderFlags&RENDER_FLAG_NO_ENTITIES != 0) {
-		g.RenderFlags |= RENDER_FLAG_NO_ENTITIES
-	} else {
-		g.RenderFlags &^= RENDER_FLAG_NO_ENTITIES
-	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), g.RenderFlags&RENDER_FLAG_NO_LEVEL != 0) {
-		g.RenderFlags |= RENDER_FLAG_NO_LEVEL
-	} else {
-		g.RenderFlags &^= RENDER_FLAG_NO_LEVEL
-	}
 	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LASER, ""), g.RenderFlags&RENDER_FLAG_PHYSICS != 0) {
 		g.RenderFlags |= RENDER_FLAG_PHYSICS
 	} else {

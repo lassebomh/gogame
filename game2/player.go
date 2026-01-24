@@ -86,7 +86,9 @@ func (p *Player) Update(g *Game) {
 		p.Y = math.Ceil(p.Y)
 	}
 
-	p.Shape.Filter.Mask = (1 << uint(math.Floor(p.Y))) | (1 << uint(math.Floor(p.Y+0.25)))
+	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
+	p.Shape.Filter.Categories = yLevelCategory
+	p.Shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
 
 	if math.Abs(g.MouseRayDirection.Y) >= 1e-6 {
 		t := (p.Y - g.MouseRayOrigin.Y) / g.MouseRayDirection.Y
@@ -122,23 +124,27 @@ func (p *Player) ToSave(g *Game) PlayerSave {
 }
 
 func (save PlayerSave) Load(g *Game) *Player {
-	player := &Player{
+	p := &Player{
 		Radius: 0.25,
 		Y:      save.Y,
 		Body:   nil,
 	}
 
-	mass := player.Radius * player.Radius * 4
-	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, player.Radius, Vec2{2, 2}.CP())))
+	mass := p.Radius * p.Radius * 4
+	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, Vec2{2, 2}.CP())))
 	body.SetPosition(save.Position.CP())
 
-	player.Shape = g.Space.AddShape(cp.NewCircle(body, player.Radius, Vec2{}.CP()))
-	player.Shape.SetElasticity(0)
-	player.Shape.SetFriction(0)
-	player.Body = body
-	g.Player = player
+	p.Shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
+	p.Shape.SetElasticity(0)
+	p.Shape.SetFriction(0)
+	p.Body = body
+	g.Player = p
 
-	return player
+	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
+	p.Shape.Filter.Categories = yLevelCategory
+	p.Shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
+
+	return p
 }
 
 func (p *Player) Draw(g *Game) {
