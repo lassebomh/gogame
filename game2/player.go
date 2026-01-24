@@ -49,23 +49,22 @@ func (p *Player) Update(g *Game) {
 
 	switch cell.Ground.Type {
 	case GroundStair:
-		x := playerPos.X - math.Floor(playerPos.X)
+		x := math.Ceil(playerPos.X) - playerPos.X
 		z := playerPos.Z - math.Floor(playerPos.Z)
 
-		switch cell.Ground.Rotation {
-		case 0:
-			groundY = cell.Position.Y + z
-		case 90:
+		switch cell.Ground.StairDirection {
+		case FACE_EAST:
 			groundY = cell.Position.Y + x
-		case 180:
-			groundY = cell.Position.Y + 1 - z
-		case 270:
+		case FACE_NORTH:
+			groundY = cell.Position.Y + z
+		case FACE_WEST:
 			groundY = cell.Position.Y + 1 - x
+		case FACE_SOUTH:
+			groundY = cell.Position.Y + 1 - z
 		}
-		groundY += 0
-	case GroundSolid:
+	case GroundFloor:
 		groundY = cell.Position.Y
-	case GroundNone:
+	case GroundEmpty:
 		groundY = 0
 	}
 
@@ -82,7 +81,7 @@ func (p *Player) Update(g *Game) {
 
 	nextCell := g.Level.GetCell(playerPos.Add(Y.Scale(0.1)))
 
-	if nextCell.Position.Y > p.Y && nextCell.Ground.Type == GroundSolid {
+	if nextCell.Position.Y > p.Y && nextCell.Ground.Type == GroundFloor {
 		p.Y = math.Ceil(p.Y)
 	}
 

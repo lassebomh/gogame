@@ -157,6 +157,7 @@ func (e *Editor) Draw(g *Game) {
 		g.Draw3D(int(e.Y))
 
 		BeginOverlayMode(func() {
+			g.Monster.PathFinder.Draw3D(g)
 
 			if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
 				drawer := NewPhysicsDrawer(e.Y, true, true, true)

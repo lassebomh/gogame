@@ -26,10 +26,11 @@ type Game struct {
 
 	Day float64
 
-	Player *Player
-	Space  *cp.Space
-	Level  *Level
-	Camera Camera3D
+	Player  *Player
+	Monster *Monster
+	Space   *cp.Space
+	Level   *Level
+	Camera  Camera3D
 
 	IsStation   bool
 	RenderFlags RenderFlags
@@ -56,7 +57,8 @@ type GameSave struct {
 	TimeDelta              time.Duration
 	TimePhysicsAccumulator time.Duration
 
-	Player PlayerSave
+	Player  PlayerSave
+	Monster *Monster
 
 	Level       Level
 	RenderFlags RenderFlags
@@ -72,6 +74,7 @@ func (g *Game) ToSave() GameSave {
 		TimePhysicsAccumulator: g.TimePhysicsAccumulator,
 		Level:                  *g.Level,
 		Player:                 g.Player.ToSave(g),
+		Monster:                g.Monster.ToSave(g),
 		RenderFlags:            g.RenderFlags,
 		EditorEnabled:          g.EditorEnabled,
 		Editor:                 g.Editor,
@@ -102,6 +105,7 @@ func (g *Game) Update(dt time.Duration) {
 	g.MouseRayDirection = Vec3FromRaylib(mouseRay.Direction)
 
 	g.Player.Update(g)
+	g.Monster.Update(g)
 
 	cellWakeX := 3
 	cellWakeZ := 3
@@ -180,6 +184,7 @@ func (save GameSave) Load() *Game {
 	g.LoadModel("stair", "./models/stair.glb", g.MainShader, &g.Tileset.Texture)
 
 	save.Player.Load(g)
+	save.Monster.Load(g)
 
 	return g
 }
@@ -191,6 +196,9 @@ func NewGameSave() GameSave {
 		TimePhysicsAccumulator: 0,
 		Player: PlayerSave{
 			Position: NewVec2(0, 0),
+		},
+		Monster: &Monster{
+			SavePosition: NewVec2(0, 0),
 		},
 		EditorEnabled: false,
 		Editor:        NewEditor(),
@@ -261,6 +269,7 @@ func c(x float64) float64 {
 
 func (g *Game) Draw3D(maxY int) {
 	g.Player.Draw(g)
+	g.Monster.Draw(g)
 	g.Level.Draw(g, maxY)
 }
 

@@ -32,17 +32,17 @@ func (t *ToolFloor) Update(g *Game, e *Editor) {
 
 		if math.Abs(fx) > math.Abs(fz) {
 			if fx < 0 {
-				t.Paste.Rotation = 270
+				t.Paste.StairDirection = FACE_EAST
 			}
 			if fx >= 0 {
-				t.Paste.Rotation = 90
+				t.Paste.StairDirection = FACE_WEST
 			}
 		} else {
 			if fz > 0 {
-				t.Paste.Rotation = 0
+				t.Paste.StairDirection = FACE_NORTH
 			}
 			if fz <= 0 {
-				t.Paste.Rotation = 180
+				t.Paste.StairDirection = FACE_SOUTH
 			}
 		}
 
@@ -67,11 +67,11 @@ func (t *ToolFloor) DrawHUD(g *Game, e *Editor) {
 	size := float64(30)
 	line := NewLineLayout(0, 50, size)
 
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), t.Paste.Type == GroundNone) {
-		t.Paste.Type = GroundNone
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), t.Paste.Type == GroundEmpty) {
+		t.Paste.Type = GroundEmpty
 	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), t.Paste.Type == GroundSolid) {
-		t.Paste.Type = GroundSolid
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), t.Paste.Type == GroundFloor) {
+		t.Paste.Type = GroundFloor
 	}
 	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), t.Paste.Type == GroundStair) {
 		t.Paste.Type = GroundStair

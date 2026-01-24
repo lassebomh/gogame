@@ -8,21 +8,10 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-type Direction = int32
-
-const (
-	TOOL_WALLS_N = Direction(1 << iota)
-	TOOL_WALLS_E
-	TOOL_WALLS_S
-	TOOL_WALLS_W
-	TOOL_WALLS_T
-	TOOL_WALLS_B
-)
-
 type ToolWall struct {
 	CellPos   Vec3
 	Paste     Face
-	Direction Direction
+	FaceIndex FaceIndex
 }
 
 func (t *ToolWall) Update(g *Game, e *Editor) {
@@ -35,62 +24,40 @@ func (t *ToolWall) Update(g *Game, e *Editor) {
 	t.CellPos = NewVec3(ix, e.HitPos.Y, iz)
 
 	if !rl.IsMouseButtonDown(rl.MouseButtonRight) {
-		t.Direction = 0
+		t.FaceIndex = 0
 		if math.Abs(fx) > math.Abs(fz) {
 			fz = 0
 		} else {
 			fx = 0
 		}
 
-		if fx != 0 {
+		if math.Abs(fx) > math.Abs(fz) {
 			if fx < 0 {
-				t.Direction |= TOOL_WALLS_E
+				t.FaceIndex = FACE_EAST
 			}
-			if fx > 0 {
-				t.Direction |= TOOL_WALLS_W
+			if fx >= 0 {
+				t.FaceIndex = FACE_WEST
 			}
-		} else if fz != 0 {
-			if fz < 0 {
-				t.Direction |= TOOL_WALLS_S
-			}
+		} else {
 			if fz > 0 {
-				t.Direction |= TOOL_WALLS_N
+				t.FaceIndex = FACE_NORTH
+			}
+			if fz <= 0 {
+				t.FaceIndex = FACE_SOUTH
 			}
 		}
+
 	}
 
 	if rl.IsMouseButtonDown(rl.MouseButtonMiddle) {
 		cellRef := g.Level.GetCell(t.CellPos)
 
-		if t.Direction&TOOL_WALLS_N != 0 {
-			t.Paste = cellRef.North
-		}
-		if t.Direction&TOOL_WALLS_S != 0 {
-			t.Paste = cellRef.South
-		}
-		if t.Direction&TOOL_WALLS_E != 0 {
-			t.Paste = cellRef.East
-		}
-		if t.Direction&TOOL_WALLS_W != 0 {
-			t.Paste = cellRef.West
-		}
+		t.Paste = cellRef.Faces[t.FaceIndex]
 	}
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		cellRef := g.Level.GetCell(t.CellPos)
-
-		if t.Direction&TOOL_WALLS_N != 0 {
-			cellRef.North = t.Paste
-		}
-		if t.Direction&TOOL_WALLS_S != 0 {
-			cellRef.South = t.Paste
-		}
-		if t.Direction&TOOL_WALLS_E != 0 {
-			cellRef.East = t.Paste
-		}
-		if t.Direction&TOOL_WALLS_W != 0 {
-			cellRef.West = t.Paste
-		}
+		cellRef.Faces[t.FaceIndex] = t.Paste
 	}
 }
 
@@ -104,18 +71,8 @@ func (t *ToolWall) Draw3D(g *Game, e *Editor) {
 	}
 	rl.SetLineWidth(3)
 
-	if t.Direction&TOOL_WALLS_N != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), col)
-	}
-	if t.Direction&TOOL_WALLS_S != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), col)
-	}
-	if t.Direction&TOOL_WALLS_E != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), col)
-	}
-	if t.Direction&TOOL_WALLS_W != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), col)
-	}
+	rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Negate().Raylib(), float32(FACE_DEGREE[t.FaceIndex]), XYZ.Raylib(), col)
+
 	rl.SetLineWidth(1)
 
 }
