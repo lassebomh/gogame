@@ -1,6 +1,7 @@
 package game2
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -52,7 +53,13 @@ func (t *ToolFloor) Update(g *Game, e *Editor) {
 func (t *ToolFloor) Draw3D(g *Game, e *Editor) {
 	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.4, 0.5)))
 
-	rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Z.Raylib(), -90, XYZ.Raylib(), rl.Red)
+	col := rl.White
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		col = color.RGBA{255, 0, 0, 255}
+	}
+	rl.SetLineWidth(3)
+	rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Z.Raylib(), -90, XYZ.Raylib(), col)
+	rl.SetLineWidth(1)
 }
 
 func (t *ToolFloor) DrawHUD(g *Game, e *Editor) {

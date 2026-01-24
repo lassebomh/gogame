@@ -26,13 +26,6 @@ type Editor struct {
 	Tool      EditorTool
 	ToolFloor ToolFloor
 	ToolWall  ToolWall
-
-	// Tool walls
-	ToolWallsFace       Face
-	ToolWallsDirections Direction
-
-	ToolWallsSide   Face
-	ToolWallsGround Ground
 }
 
 func NewEditor() *Editor {
@@ -47,11 +40,7 @@ func NewEditor() *Editor {
 		},
 		Pitch: 0,
 		Yaw:   0,
-
-		Tool:                TOOL_WALLS,
-		ToolWallsDirections: TOOL_WALLS_N,
-		ToolWallsSide:       Face{Type: FaceWall},
-		ToolWallsGround:     Ground{Type: GroundSolid},
+		Tool:  TOOL_WALLS,
 	})
 }
 
@@ -223,85 +212,6 @@ func (e *Editor) Draw(g *Game) {
 	case TOOL_FLOOR:
 		e.ToolFloor.DrawHUD(g, e)
 	}
-
-	// size = float64(30)
-
-	// line = NewLineLayout(5, 20, size)
-
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), e.ToolWallsSide.Type == FaceEmpty) {
-	// 	e.ToolWallsSide.Type = FaceEmpty
-	// }
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), e.ToolWallsSide.Type == FaceWall) {
-	// 	e.ToolWallsSide.Type = FaceWall
-	// }
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_DOOR, ""), e.ToolWallsSide.Type == FaceDoor) {
-	// 	e.ToolWallsSide.Type = FaceDoor
-	// }
-
-	// for x := range g.Tileset.Tiles {
-	// 	for y := range g.Tileset.Tiles {
-
-	// 		rect := line.Next(size)
-	// 		aa, bb := g.Tileset.GetAABB(x, y)
-	// 		bb = bb.Subtract(aa)
-
-	// 		source := rl.NewRectangle(
-	// 			float32(aa.X)*float32(g.Tileset.Texture.Width),
-	// 			float32(aa.Y)*float32(g.Tileset.Texture.Height),
-	// 			float32(bb.X)*float32(g.Tileset.Texture.Width),
-	// 			float32(bb.Y)*float32(g.Tileset.Texture.Height),
-	// 		)
-
-	// 		rl.DrawTexturePro(g.Tileset.Texture, source, rect, rl.NewVector2(0, 0), 0, rl.White)
-
-	// 		if e.ToolWallsSide.TileX == x && e.ToolWallsSide.TileY == y {
-	// 			rl.DrawRectangleLinesEx(rect, 1, rl.White)
-	// 		}
-	// 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.Editor.MousePosition.Raylib(), rect) {
-	// 			e.ToolWallsSide.TileX = x
-	// 			e.ToolWallsSide.TileY = y
-	// 		}
-	// 	}
-	// }
-	// line.Break(size)
-
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE, ""), e.ToolWallsGround.Type == GroundNone) {
-	// 	e.ToolWallsGround.Type = GroundNone
-	// }
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), e.ToolWallsGround.Type == GroundSolid) {
-	// 	e.ToolWallsGround.Type = GroundSolid
-	// }
-	// if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), e.ToolWallsGround.Type == GroundStair) {
-	// 	e.ToolWallsGround.Type = GroundStair
-	// }
-
-	// for x := range g.Tileset.Tiles {
-	// 	for y := range g.Tileset.Tiles {
-
-	// 		rect := line.Next(size)
-	// 		aa, bb := g.Tileset.GetAABB(x, y)
-	// 		bb = bb.Subtract(aa)
-
-	// 		source := rl.NewRectangle(
-	// 			float32(aa.X)*float32(g.Tileset.Texture.Width),
-	// 			float32(aa.Y)*float32(g.Tileset.Texture.Height),
-	// 			float32(bb.X)*float32(g.Tileset.Texture.Width),
-	// 			float32(bb.Y)*float32(g.Tileset.Texture.Height),
-	// 		)
-
-	// 		rl.DrawTexturePro(g.Tileset.Texture, source, rect, rl.NewVector2(0, 0), 0, rl.White)
-
-	// 		if e.ToolWallsGround.TileX == x && e.ToolWallsGround.TileY == y {
-	// 			rl.DrawRectangleLinesEx(rect, 1, rl.White)
-	// 		}
-	// 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(g.Editor.MousePosition.Raylib(), rect) {
-	// 			e.ToolWallsGround.TileX = x
-	// 			e.ToolWallsGround.TileY = y
-	// 		}
-	// 	}
-	// }
-
-	// line.Break(size)
 
 	rl.DrawFPS(5, 5)
 }

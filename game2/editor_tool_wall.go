@@ -1,6 +1,7 @@
 package game2
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -96,18 +97,27 @@ func (t *ToolWall) Update(g *Game, e *Editor) {
 func (t *ToolWall) Draw3D(g *Game, e *Editor) {
 	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.4, 0.5)))
 
+	col := rl.White
+
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		col = color.RGBA{255, 0, 0, 255}
+	}
+	rl.SetLineWidth(3)
+
 	if t.Direction&TOOL_WALLS_N != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), rl.Red)
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 270, XYZ.Raylib(), col)
 	}
 	if t.Direction&TOOL_WALLS_S != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), rl.Red)
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 90, XYZ.Raylib(), col)
 	}
 	if t.Direction&TOOL_WALLS_E != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), rl.Red)
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 180, XYZ.Raylib(), col)
 	}
 	if t.Direction&TOOL_WALLS_W != 0 {
-		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), rl.Red)
+		rl.DrawModelWiresEx(g.GetModel("wallDebug"), cellPos.Raylib(), Y.Raylib(), 0, XYZ.Raylib(), col)
 	}
+	rl.SetLineWidth(1)
+
 }
 
 func (t *ToolWall) DrawHUD(g *Game, e *Editor) {

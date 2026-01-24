@@ -66,7 +66,7 @@ void main()
     vec4 texelColor = texture(texture0, uv);
     
     if (fullBright) {
-      finalColor = texelColor;
+      finalColor = texelColor * colDiffuse;
       return;
     }
     
