@@ -25,6 +25,13 @@ var WALL_VERTS = [4][]cp.Vector{
 	[]cp.Vector{{1, 0}, {0, 0}, {0, WALL_WIDTH}, {1, WALL_WIDTH}},
 }
 
+var DOOR_VERTS = []cp.Vector{
+	{0.5, -WALL_WIDTH / 2},
+	{-0.5, -WALL_WIDTH / 2},
+	{-0.5, WALL_WIDTH / 2},
+	{0.5, WALL_WIDTH / 2},
+}
+
 var FACE_DIRECTION = [4]Vec3{
 	NewVec3(1, 0, 0),
 	NewVec3(0, 0, 1),
@@ -74,6 +81,7 @@ type Face struct {
 	TileX int
 	TileY int
 
+	body  *cp.Body
 	shape *cp.Shape
 }
 
@@ -91,19 +99,46 @@ func (c *Cell) Wake(g *Game) {
 	for FACE := range FACES {
 		face := &c.Faces[FACE]
 
-		if face.Type == FaceWall && face.shape == nil {
-			shape := cp.NewPolyShape(g.Space.StaticBody, 4, WALL_VERTS[FACE], transform, 0)
-			shape.Filter.Categories = 1 << uint(c.Position.Y)
-			face.shape = g.Space.AddShape(shape)
+		if face.Type != FaceEmpty && face.body == nil {
+
+			switch face.Type {
+			case FaceWall:
+				face.body = g.Space.StaticBody
+				shape := cp.NewPolyShape(face.body, 4, WALL_VERTS[FACE], transform, 0)
+				shape.Filter.Categories = 1 << uint(c.Position.Y)
+				face.shape = g.Space.AddShape(shape)
+			case FaceDoor:
+				face.body = g.Space.AddBody(cp.NewBody(10, 10))
+				offset := FACE_DIRECTION[FACE_OPPOSITE[FACE]].Scale(1 - WALL_WIDTH)
+
+				face.body.SetPosition(cp.Vector{c.Position.X - offset.X/2 + 0.5, c.Position.Z - offset.Z/2 + 0.5})
+				face.body.SetAngle((FACE_DEGREE[FACE] + 90) * rl.Deg2rad)
+				shape := cp.NewPolyShape(face.body, 4, DOOR_VERTS, cp.NewTransformIdentity(), 0)
+				shape.Filter.Categories = 1 << uint(c.Position.Y)
+				face.shape = g.Space.AddShape(shape)
+			}
 		}
+
 	}
 }
 
 func (f *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees float32) {
-	if f.Type == FaceWall {
+	switch f.Type {
+	case FaceWall:
 		aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		rl.DrawModelEx(g.GetModel("wall"), cellPos.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
+		center := cellPos
+		rl.DrawModelEx(g.GetModel("wall"), center.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
+	case FaceDoor:
+		if f.body != nil {
+			aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
+			g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+			pos := f.body.Position()
+			origin := NewVec3(pos.X, cellPos.Y-0.5, pos.Y)
+			angle := f.body.Angle() * rl.Rad2deg
+			rl.DrawModelEx(g.GetModel("door"), origin.Raylib(), Y.Negate().Raylib(), float32(angle), XYZ.Raylib(), rl.White)
+		}
+
 	}
 }
 

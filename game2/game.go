@@ -86,7 +86,7 @@ func (g *Game) Update(dt time.Duration) {
 	g.Time += dt
 	g.TimePhysicsAccumulator += dt
 
-	g.Day += dt.Seconds() / 10
+	g.Day += dt.Seconds() / 100
 
 	for g.TimePhysicsAccumulator >= PHYSICS_TICKRATE {
 		g.Space.Step(PHYSICS_TICKRATE.Seconds())
@@ -107,8 +107,8 @@ func (g *Game) Update(dt time.Duration) {
 	g.Player.Update(g)
 	g.Monster.Update(g)
 
-	cellWakeX := 3
-	cellWakeZ := 3
+	cellWakeX := 8
+	cellWakeZ := 8
 	playerPos := g.Player.Position3D()
 
 	for ix := range cellWakeX {
@@ -182,6 +182,7 @@ func (save GameSave) Load() *Game {
 	g.LoadModel("wallDebug", "./models/wallx.glb", g.MainShader, nil)
 	g.LoadModel("wall", "./models/wallx.glb", g.MainShader, &g.Tileset.Texture)
 	g.LoadModel("stair", "./models/stair.glb", g.MainShader, &g.Tileset.Texture)
+	g.LoadModel("door", "./models/door.glb", g.MainShader, &g.Tileset.Texture)
 
 	save.Player.Load(g)
 	save.Monster.Load(g)

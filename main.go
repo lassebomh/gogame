@@ -49,6 +49,7 @@ func main() {
 		g = NewGameSave().Load()
 	}
 
+	g.Update(0)
 	t0 := rl.GetTime()
 
 	for !rl.WindowShouldClose() {

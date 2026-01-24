@@ -79,14 +79,6 @@ func (l *Level) Draw(g *Game, maxY int) {
 						continue
 					}
 
-					if !(cell.Faces[FACE_NORTH].Type == FaceWall ||
-						cell.Faces[FACE_EAST].Type == FaceWall ||
-						cell.Faces[FACE_SOUTH].Type == FaceWall ||
-						cell.Faces[FACE_WEST].Type == FaceWall ||
-						cell.Ground.Type != GroundEmpty) {
-						continue
-					}
-
 					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.5-WALL_WIDTH, float64(z)+0.5))
 
 					cell.Ground.Draw(g, cellPos)
