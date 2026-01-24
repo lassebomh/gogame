@@ -17,9 +17,7 @@ const (
 	RENDER_FLAG_NO_ENTITIES = RenderFlags(1 << iota)
 	RENDER_FLAG_NO_LEVEL
 	RENDER_FLAG_EFFECTS
-	RENDER_FLAG_CP_SHAPES
-	RENDER_FLAG_CP_CONSTRAINTS
-	RENDER_FLAG_CP_COLLISIONS
+	RENDER_FLAG_PHYSICS
 	RENDER_FLAG_SHADOW
 )
 
@@ -280,26 +278,28 @@ func (g *Game) Draw3D(maxY int) {
 
 	BeginOverlayMode(func() {
 
-		if g.RenderFlags&(RENDER_FLAG_CP_SHAPES|RENDER_FLAG_CP_CONSTRAINTS|RENDER_FLAG_CP_COLLISIONS) != 0 {
-			drawer := NewPhysicsDrawer(
-				g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0,
-				g.RenderFlags&RENDER_FLAG_CP_CONSTRAINTS != 0,
-				g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0,
-			)
+		if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
+			drawer := NewPhysicsDrawer(g.Player.Y, true, true, true)
 
-			cp.DrawSpace(g.Space, &drawer)
-		}
+			eachBody := func(body *cp.Body) {
 
-		if g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0 {
+				body.EachConstraint(func(c *cp.Constraint) {
+					cp.DrawConstraint(c, &drawer)
+				})
+
+				body.EachShape(func(s *cp.Shape) {
+					if s.Filter.Categories&(1<<uint(math.Floor(g.Player.Y))) != 0 {
+						cp.DrawShape(s, &drawer)
+					}
+				})
+			}
+
+			g.Space.EachBody(eachBody)
+			eachBody(g.Space.StaticBody)
+
 			cell := g.Level.GetCell(g.Player.Position3D())
-			rl.DrawCubeWires(cell.Position.Add(NewVec3(0.5, 0.5, 0.5)).Raylib(), 1, 1, 1, rl.Green)
-
+			rl.DrawCubeWires(cell.Position.Add(NewVec3(0.5, 0, 0.5)).Raylib(), 1, 0, 1, rl.Green)
 		}
-
-		// rl.DrawCube(NewVec3(0, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.White)
-		// rl.DrawCube(NewVec3(0, 0, 1).Raylib(), 0.05, 0.05, 0.05, rl.SkyBlue)
-		// rl.DrawCube(NewVec3(0, 1, 0).Raylib(), 0.05, 0.05, 0.05, rl.Yellow)
-		// rl.DrawCube(NewVec3(1, 0, 0).Raylib(), 0.05, 0.05, 0.05, rl.Red)
 	})
 
 }

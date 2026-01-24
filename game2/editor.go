@@ -1,6 +1,7 @@
 package game2
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -157,9 +158,19 @@ func (e *Editor) Draw(g *Game) {
 		} else {
 			g.MainShader.FullBright.Set(0)
 		}
-		g.Draw3D(int(e.Camera.Position.Y))
+		g.Draw3D(int(e.Y))
 
 		BeginOverlayMode(func() {
+
+			center := e.HitPos.Floor().Add(NewVec3(0.5, 0, 0.5))
+			size := float64(1)
+
+			for x := -size; x <= size; x++ {
+				for z := -size; z <= size; z++ {
+					pos := center.Add(NewVec3(x, 0, z))
+					rl.DrawCubeWiresV(pos.Raylib(), XZ.Raylib(), color.RGBA{255, 255, 255, 50})
+				}
+			}
 
 			switch e.Tool {
 			case TOOL_WALLS:
@@ -190,20 +201,10 @@ func (e *Editor) Draw(g *Game) {
 	} else {
 		g.RenderFlags &^= RENDER_FLAG_NO_LEVEL
 	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_BOX, ""), g.RenderFlags&RENDER_FLAG_CP_SHAPES != 0) {
-		g.RenderFlags |= RENDER_FLAG_CP_SHAPES
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LASER, ""), g.RenderFlags&RENDER_FLAG_PHYSICS != 0) {
+		g.RenderFlags |= RENDER_FLAG_PHYSICS
 	} else {
-		g.RenderFlags &^= RENDER_FLAG_CP_SHAPES
-	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LINK, ""), g.RenderFlags&RENDER_FLAG_CP_CONSTRAINTS != 0) {
-		g.RenderFlags |= RENDER_FLAG_CP_CONSTRAINTS
-	} else {
-		g.RenderFlags &^= RENDER_FLAG_CP_CONSTRAINTS
-	}
-	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LASER, ""), g.RenderFlags&RENDER_FLAG_CP_COLLISIONS != 0) {
-		g.RenderFlags |= RENDER_FLAG_CP_COLLISIONS
-	} else {
-		g.RenderFlags &^= RENDER_FLAG_CP_COLLISIONS
+		g.RenderFlags &^= RENDER_FLAG_PHYSICS
 	}
 
 	switch e.Tool {

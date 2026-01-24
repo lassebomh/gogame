@@ -8,6 +8,36 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
+const WALL_WIDTH = float64(0.1)
+
+var WALL_NORTH_VERTS = []cp.Vector{
+	{1, 1},
+	{0, 1},
+	{0, 1 - WALL_WIDTH},
+	{1, 1 - WALL_WIDTH},
+}
+
+var WALL_SOUTH_VERTS = []cp.Vector{
+	{1, 0},
+	{0, 0},
+	{0, WALL_WIDTH},
+	{1, WALL_WIDTH},
+}
+
+var WALL_EAST_VERTS = []cp.Vector{
+	{0, 1},
+	{0, 0},
+	{WALL_WIDTH, 0},
+	{WALL_WIDTH, 1},
+}
+
+var WALL_WEST_VERTS = []cp.Vector{
+	{1, 1},
+	{1, 0},
+	{1 - WALL_WIDTH, 0},
+	{1 - WALL_WIDTH, 1},
+}
+
 type FaceType = uint8
 
 const (
@@ -36,7 +66,7 @@ type Face struct {
 	TileX int
 	TileY int
 
-	body *cp.Body
+	shape *cp.Shape
 }
 
 type Cell struct {
@@ -51,33 +81,26 @@ type Cell struct {
 }
 
 func (c *Cell) Wake(g *Game) {
-	if c.West.Type == FaceWall && c.West.body == nil {
-		c.West.body = cp.NewStaticBody()
-		c.West.body.SetPosition(cp.Vector{c.Position.X + 0.95, c.Position.Z + 0.5})
-		shape := cp.NewBox(c.West.body, 0.1, 1, 0)
+	transform := cp.NewTransformTranslate(cp.Vector{c.Position.X, c.Position.Z})
+	if c.West.Type == FaceWall && c.West.shape == nil {
+		shape := cp.NewPolyShape(g.Space.StaticBody, 4, WALL_WEST_VERTS, transform, 0)
 		shape.Filter.Categories = 1 << uint(c.Position.Y)
-		g.Space.AddShape(shape)
+		c.West.shape = g.Space.AddShape(shape)
 	}
-	if c.East.Type == FaceWall && c.East.body == nil {
-		c.East.body = cp.NewStaticBody()
-		c.East.body.SetPosition(cp.Vector{c.Position.X + 0.05, c.Position.Z + 0.5})
-		shape := cp.NewBox(c.East.body, 0.1, 1, 0)
+	if c.East.Type == FaceWall && c.East.shape == nil {
+		shape := cp.NewPolyShape(g.Space.StaticBody, 4, WALL_EAST_VERTS, transform, 0)
 		shape.Filter.Categories = 1 << uint(c.Position.Y)
-		g.Space.AddShape(shape)
+		c.East.shape = g.Space.AddShape(shape)
 	}
-	if c.North.Type == FaceWall && c.North.body == nil {
-		c.North.body = cp.NewStaticBody()
-		c.North.body.SetPosition(cp.Vector{c.Position.X + 0.5, c.Position.Z + 0.95})
-		shape := cp.NewBox(c.North.body, 1, .1, 0)
+	if c.North.Type == FaceWall && c.North.shape == nil {
+		shape := cp.NewPolyShape(g.Space.StaticBody, 4, WALL_NORTH_VERTS, transform, 0)
 		shape.Filter.Categories = 1 << uint(c.Position.Y)
-		g.Space.AddShape(shape)
+		c.North.shape = g.Space.AddShape(shape)
 	}
-	if c.South.Type == FaceWall && c.South.body == nil {
-		c.South.body = cp.NewStaticBody()
-		c.South.body.SetPosition(cp.Vector{c.Position.X + 0.5, c.Position.Z + 0.05})
-		shape := cp.NewBox(c.South.body, 1, .1, 0)
+	if c.South.Type == FaceWall && c.South.shape == nil {
+		shape := cp.NewPolyShape(g.Space.StaticBody, 4, WALL_SOUTH_VERTS, transform, 0)
 		shape.Filter.Categories = 1 << uint(c.Position.Y)
-		g.Space.AddShape(shape)
+		c.South.shape = g.Space.AddShape(shape)
 	}
 }
 
@@ -159,7 +182,7 @@ func (l *Level) Draw(g *Game, maxY int) {
 						continue
 					}
 
-					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.4, float64(z)+0.5))
+					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.5-WALL_WIDTH, float64(z)+0.5))
 
 					cell.North.Draw(g, cellPos, Y, 270)
 					cell.East.Draw(g, cellPos, Y, 180)

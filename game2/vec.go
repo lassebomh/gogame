@@ -23,6 +23,9 @@ var Y = NewVec3(0, 1, 0)
 var Z = NewVec3(0, 0, 1)
 
 var XYZ = NewVec3(1, 1, 1)
+var XZ = NewVec3(1, 0, 1)
+var XY = NewVec3(1, 1, 0)
+var ZY = NewVec3(0, 1, 1)
 
 func (v Vec3) Raylib() rl.Vector3 {
 	return rl.Vector3{

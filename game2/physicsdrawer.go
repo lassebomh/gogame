@@ -1,20 +1,22 @@
 package game2
 
 import (
+	"math"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
 
 const (
-	WorldLevel  float32 = 0 // The base Z-height
-	ShapeHeight float32 = 1 // The vertical thickness of the wireframes
+	ShapeHeight float32 = 0.01 // The vertical thickness of the wireframes
 )
 
 type PhysicsDrawer struct {
 	flags uint
+	y     float32
 }
 
-func NewPhysicsDrawer(shapes, constraints, collisionPoints bool) PhysicsDrawer {
+func NewPhysicsDrawer(y float64, shapes, constraints, collisionPoints bool) PhysicsDrawer {
 	var flags uint
 	if shapes {
 		flags |= cp.DRAW_SHAPES
@@ -25,49 +27,54 @@ func NewPhysicsDrawer(shapes, constraints, collisionPoints bool) PhysicsDrawer {
 	if collisionPoints {
 		flags |= cp.DRAW_COLLISION_POINTS
 	}
-	return PhysicsDrawer{flags: flags}
+	return PhysicsDrawer{
+		flags: flags,
+		y:     float32(math.Floor(y)),
+	}
 }
 
 // cv3 converts 2D physics vectors to 3D positions
-func cv3(v cp.Vector, offset float32) rl.Vector3 {
-	return rl.Vector3{X: float32(v.X), Y: WorldLevel + offset, Z: float32(v.Y)}
+func (d *PhysicsDrawer) cv3(v cp.Vector, offset float32) rl.Vector3 {
+	return rl.Vector3{X: float32(v.X), Y: d.y + offset, Z: float32(v.Y)}
 }
 
 func (d *PhysicsDrawer) DrawCircle(pos cp.Vector, angle, radius float64, outline, fill cp.FColor, data interface{}) {
 	color := fColorToRaylib(fill)
 	// Draw a wireframe cylinder to represent the volume
-	rl.DrawCylinderWiresEx(cv3(pos, 0), cv3(pos, ShapeHeight), float32(radius), float32(radius), 16, color)
+	rl.DrawCylinderEx(d.cv3(pos, 0), d.cv3(pos, ShapeHeight), float32(radius), float32(radius), 16, color)
 }
 
 func (d *PhysicsDrawer) DrawSegment(a, b cp.Vector, fill cp.FColor, data interface{}) {
 	color := fColorToRaylib(fill)
-	rl.DrawLine3D(cv3(a, 0), cv3(b, 0), color)
-	rl.DrawLine3D(cv3(a, ShapeHeight), cv3(b, ShapeHeight), color)
-	rl.DrawLine3D(cv3(a, 0), cv3(a, ShapeHeight), color) // Vertical connector
+	rl.DrawLine3D(d.cv3(a, 0), d.cv3(b, 0), color)
+	rl.DrawLine3D(d.cv3(a, ShapeHeight), d.cv3(b, ShapeHeight), color)
+	rl.DrawLine3D(d.cv3(a, 0), d.cv3(a, ShapeHeight), color) // Vertical connector
 }
 
 func (d *PhysicsDrawer) DrawFatSegment(a, b cp.Vector, radius float64, outline, fill cp.FColor, data interface{}) {
 	// Draw wireframe capsule
-	rl.DrawCapsuleWires(cv3(a, 0), cv3(b, 0), float32(radius), 8, 8, fColorToRaylib(fill))
+	rl.DrawCapsule(d.cv3(a, 0), d.cv3(b, 0), float32(radius), 8, 8, fColorToRaylib(fill))
 }
 
 func (d *PhysicsDrawer) DrawPolygon(count int, verts []cp.Vector, radius float64, outline, fill cp.FColor, data interface{}) {
 	color := fColorToRaylib(fill)
-	for i := 0; i < count; i++ {
-		nextIdx := (i + 1) % count
-		currBottom := cv3(verts[i], 0)
-		nextBottom := cv3(verts[nextIdx], 0)
-		currTop := cv3(verts[i], ShapeHeight)
-		nextTop := cv3(verts[nextIdx], ShapeHeight)
 
-		rl.DrawLine3D(currBottom, nextBottom, color) // Bottom ring
-		rl.DrawLine3D(currTop, nextTop, color)       // Top ring
-		rl.DrawLine3D(currBottom, currTop, color)    // Vertical ribs
+	if count < 3 {
+		return // need at least 3 vertices for a polygon
+	}
+
+	// Triangulate using a fan from the first vertex
+	for i := 1; i < count-1; i++ {
+		v0 := d.cv3(verts[0], 0)
+		v1 := d.cv3(verts[i], 0)
+		v2 := d.cv3(verts[i+1], 0)
+
+		rl.DrawTriangle3D(v2, v1, v0, color)
 	}
 }
 
 func (d *PhysicsDrawer) DrawDot(size float64, pos cp.Vector, fill cp.FColor, data interface{}) {
-	rl.DrawSphereWires(cv3(pos, 0), float32(size)/100, 8, 8, fColorToRaylib(fill))
+	rl.DrawSphere(d.cv3(pos, 0), float32(size)/100, fColorToRaylib(fill))
 }
 
 func (d *PhysicsDrawer) Flags() uint {
