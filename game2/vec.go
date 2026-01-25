@@ -62,6 +62,13 @@ func NewVec3(x, y, z float64) Vec3 {
 	return Vec3{X: x, Y: y, Z: z}
 }
 
+func (v2 Vec2) To3D(y float64) Vec3 {
+	return NewVec3(v2.X, y, v2.Y)
+}
+func (v2 Vec2) AddXY(x float64, y float64) Vec2 {
+	return NewVec2(v2.X+x, v2.Y+y)
+}
+
 func Vec3From2D(vec2 Vec2, y float64) Vec3 {
 	return NewVec3(vec2.X, y, vec2.Y)
 }
@@ -194,6 +201,11 @@ func (v Vec2) AddValue(add float64) Vec2 {
 // Vector2Subtract - Subtract two vectors (v1 - v2)
 func (v1 Vec2) Subtract(v2 Vec2) Vec2 {
 	return NewVec2(v1.X-v2.X, v1.Y-v2.Y)
+}
+
+// Vector2Subtract - Subtract two vectors (v1 - v2)
+func (v1 Vec2) SubtractXY(x, y float64) Vec2 {
+	return NewVec2(v1.X-x, v1.Y-y)
 }
 
 // Vector2SubtractValue - Subtract vector by float value
@@ -402,6 +414,26 @@ func Vector3One() Vec3 {
 // Vector3Add - Add two vectors
 func (v1 Vec3) Add(v2 Vec3) Vec3 {
 	return NewVec3(v1.X+v2.X, v1.Y+v2.Y, v1.Z+v2.Z)
+}
+
+// Vector3Add - Add two vectors
+func (v1 Vec3) AddXYZ(x, y, z float64) Vec3 {
+	return NewVec3(v1.X+x, v1.Y+y, v1.Z+z)
+}
+
+// Vector3Add - Add two vectors
+func (v1 Vec3) SubtractXYZ(x, y, z float64) Vec3 {
+	return NewVec3(v1.X-x, v1.Y-y, v1.Z-z)
+}
+
+// Vector3Add - Add two vectors
+func (v1 Vec3) To2D() Vec2 {
+	return NewVec2(v1.X, v1.Z)
+}
+
+// Vector3Add - Add two vectors
+func (v1 Vec3) Chipmunk() cp.Vector {
+	return cp.Vector{v1.X, v1.Z}
 }
 
 // Vector3AddValue - Add vector and float value

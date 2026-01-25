@@ -11,8 +11,9 @@ type PathFinder struct {
 	TargetCurrent Vec3
 	Target        Vec3
 
-	Path  []Vec3
-	level *Level
+	PathLength float64
+	Path       []Vec3
+	level      *Level
 }
 
 func NewPathFinder(level *Level) *PathFinder {
@@ -31,17 +32,19 @@ func (p *PathFinder) SetPosition(position Vec3) {
 }
 
 func (p *PathFinder) SetTarget(position Vec3) {
-	p.Target = position.Floor()
+	p.Target = position
 
 	start := p.level.GetCell(p.Position)
-	end := p.level.GetCell(p.Target)
+	end := p.level.GetCell(p.Target.Floor())
 
-	pathers, _, found := astar.Path(end, start)
+	pathers, length, found := astar.Path(end, start)
 	p.Idle = !found
 
 	if !found {
+		p.PathLength = 0
 		return
 	}
+	p.PathLength = length
 
 	cells := make([]*Cell, len(pathers))
 
@@ -56,7 +59,6 @@ func (p *PathFinder) SetTarget(position Vec3) {
 		path[i] = cell.Position.Add(NewVec3(0.5, 0, 0.5))
 	}
 
-	p.Path = path
 }
 
 func (p *PathFinder) Draw3D(g *Game) {

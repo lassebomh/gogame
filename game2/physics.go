@@ -113,3 +113,56 @@ func fColorToRaylib(c cp.FColor) rl.Color {
 		A: uint8(c.A * 255),
 	}
 }
+
+func UpdatePhysicsY(g *Game, shape *cp.Shape, y float64, yVelocity float64) (float64, float64) {
+	bodyPosition := shape.Body().Position()
+	pos := NewVec3(bodyPosition.X, y, bodyPosition.Y)
+
+	cell := g.Level.GetCell(pos)
+
+	var groundY float64
+
+	switch cell.Ground.Type {
+	case GroundStair:
+		x := math.Ceil(pos.X) - pos.X
+		z := pos.Z - math.Floor(pos.Z)
+
+		switch cell.Ground.StairDirection {
+		case FACE_EAST:
+			groundY = cell.Position.Y + x
+		case FACE_NORTH:
+			groundY = cell.Position.Y + z
+		case FACE_WEST:
+			groundY = cell.Position.Y + 1 - x
+		case FACE_SOUTH:
+			groundY = cell.Position.Y + 1 - z
+		}
+	case GroundFloor:
+		groundY = cell.Position.Y
+	case GroundEmpty:
+		groundY = 0
+	}
+
+	if y > groundY {
+		yVelocity -= g.TimeDelta.Seconds() / 5
+	}
+
+	if y+yVelocity < groundY {
+		y = groundY
+		yVelocity = 0
+	}
+
+	y += yVelocity
+
+	nextCell := g.Level.GetCell(pos.Add(Y.Scale(0.1)))
+
+	if nextCell.Position.Y > y && nextCell.Ground.Type == GroundFloor {
+		y = math.Ceil(y)
+	}
+
+	yLevelCategory := uint(1 << uint(math.Floor(y)))
+	shape.Filter.Categories = yLevelCategory
+	shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(y+0.25)))
+
+	return y, yVelocity
+}

@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	// "net/http"
+	// _ "net/http/pprof"
+
 	. "game/game2"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -16,6 +19,10 @@ const DEBUG = false
 var SAVES_PATH, _ = filepath.Abs("./saves/")
 
 func main() {
+
+	// go func() {
+	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
+	// }()
 
 	screenWidth := int32(1700)
 	screenHeight := int32(800)
@@ -64,7 +71,7 @@ func main() {
 		dt := time.Duration((t1 - t0) * float64(time.Second))
 
 		if g.EditorEnabled {
-			g.Editor.Update(g)
+			g.Editor.Update(g, dt)
 		} else {
 			g.Update(dt)
 		}
@@ -76,6 +83,7 @@ func main() {
 			} else {
 				g.Draw()
 			}
+			rl.DrawFPS(5, 5)
 
 		})
 
@@ -89,4 +97,5 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("saved to %v. took %.2f seconds", saveFileName, rl.GetTime()-t0)
+
 }

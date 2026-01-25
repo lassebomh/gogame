@@ -11,8 +11,8 @@ type Player struct {
 	Y         float64
 	YVelocity float64
 	Radius    float64
-	Body      *cp.Body
-	Shape     *cp.Shape
+	body      *cp.Body
+	shape     *cp.Shape
 
 	LookPosition Vec3
 }
@@ -39,55 +39,10 @@ func (p *Player) Update(g *Game) {
 		force = force.Normalize().Mult(4)
 	}
 
-	newVelocity := p.Body.Velocity().Lerp(force, 0.1)
-	p.Body.SetVelocity(newVelocity.X, newVelocity.Y)
+	newVelocity := p.body.Velocity().Lerp(force, 0.1)
+	p.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
-	playerPos := p.Position3D()
-	cell := g.Level.GetCell(playerPos)
-
-	var groundY float64
-
-	switch cell.Ground.Type {
-	case GroundStair:
-		x := math.Ceil(playerPos.X) - playerPos.X
-		z := playerPos.Z - math.Floor(playerPos.Z)
-
-		switch cell.Ground.StairDirection {
-		case FACE_EAST:
-			groundY = cell.Position.Y + x
-		case FACE_NORTH:
-			groundY = cell.Position.Y + z
-		case FACE_WEST:
-			groundY = cell.Position.Y + 1 - x
-		case FACE_SOUTH:
-			groundY = cell.Position.Y + 1 - z
-		}
-	case GroundFloor:
-		groundY = cell.Position.Y
-	case GroundEmpty:
-		groundY = 0
-	}
-
-	if p.Y > groundY {
-		p.YVelocity -= g.TimeDelta.Seconds() / 6
-	}
-
-	if p.Y+p.YVelocity < groundY {
-		p.Y = groundY
-		p.YVelocity = 0
-	}
-
-	p.Y += p.YVelocity
-
-	nextCell := g.Level.GetCell(playerPos.Add(Y.Scale(0.1)))
-
-	if nextCell.Position.Y > p.Y && nextCell.Ground.Type == GroundFloor {
-		p.Y = math.Ceil(p.Y)
-	}
-
-	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
-	p.Shape.Filter.Categories = yLevelCategory
-	p.Shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
+	p.Y, p.YVelocity = UpdatePhysicsY(g, p.shape, p.Y, p.YVelocity)
 
 	if math.Abs(g.MouseRayDirection.Y) >= 1e-6 {
 		t := (p.Y - g.MouseRayOrigin.Y) / g.MouseRayDirection.Y
@@ -98,16 +53,18 @@ func (p *Player) Update(g *Game) {
 		}
 	}
 
+	playerPos := p.Position3D()
+
 	playerAngle := math.Atan2(
 		playerPos.Z-p.LookPosition.Z,
 		playerPos.X-p.LookPosition.X,
 	)
 
-	p.Body.SetAngle(playerAngle)
+	p.body.SetAngle(playerAngle)
 }
 
 func (p *Player) Position3D() Vec3 {
-	return Vec3From2D(Vec2FromCP(p.Body.Position()), p.Y)
+	return Vec3From2D(Vec2FromCP(p.body.Position()), p.Y)
 }
 
 type PlayerSave struct {
@@ -117,7 +74,7 @@ type PlayerSave struct {
 
 func (p *Player) ToSave(g *Game) PlayerSave {
 	return PlayerSave{
-		Position: Vec2FromCP(p.Body.Position()),
+		Position: Vec2FromCP(p.body.Position()),
 		Y:        p.Y,
 	}
 }
@@ -126,22 +83,22 @@ func (save PlayerSave) Load(g *Game) *Player {
 	p := &Player{
 		Radius: 0.25,
 		Y:      save.Y,
-		Body:   nil,
+		body:   nil,
 	}
 
 	mass := p.Radius * p.Radius * 4
 	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, Vec2{2, 2}.CP())))
 	body.SetPosition(save.Position.CP())
 
-	p.Shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
-	p.Shape.SetElasticity(0)
-	p.Shape.SetFriction(0)
-	p.Body = body
+	p.shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
+	p.shape.SetElasticity(0)
+	p.shape.SetFriction(0)
+	p.body = body
 	g.Player = p
 
 	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
-	p.Shape.Filter.Categories = yLevelCategory
-	p.Shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
+	p.shape.Filter.Categories = yLevelCategory
+	p.shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
 
 	return p
 }

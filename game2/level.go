@@ -3,6 +3,9 @@ package game2
 import (
 	"fmt"
 	"math"
+
+	"github.com/beefsack/go-astar"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const CHUNK_WIDTH = int(8)
@@ -79,12 +82,35 @@ func (l *Level) Draw(g *Game, maxY int) {
 						continue
 					}
 
-					cellPos := pos.Add(NewVec3(float64(x)+0.5, float64(y)+0.5-WALL_WIDTH, float64(z)+0.5))
+					cellPos := pos.AddXYZ(float64(x), float64(y), float64(z))
 
 					cell.Ground.Draw(g, cellPos)
+
+					if cell.Ground.Type == GroundStair {
+						offset := FACE_DIRECTION[cell.Ground.StairDirection].Add(Y)
+						forwardUp := l.GetCell(cell.Position.Add(offset))
+						forwardUp.Ground.Draw(g, cellPos.Add(offset))
+					}
+
 					for FACE := range FACES {
 						face := &cell.Faces[FACE]
-						face.Draw(g, cellPos, Y.Negate(), float32(FACE_DEGREE[FACE]))
+
+						aa, bb := g.Tileset.GetAABB(face.TileX, face.TileY)
+						g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+						center := cellPos.AddXYZ(0.5, 0.5, 0.5)
+
+						switch face.Type {
+						case FaceWall:
+							rl.DrawModelEx(g.GetModel("wall"), center.Raylib(), Y.Negate().Raylib(), float32(FACE_DEGREE[FACE]), XYZ.Raylib(), rl.White)
+						case FaceDoor:
+							if face.body != nil {
+								pos := face.body.Position()
+								origin := NewVec3(pos.X, cellPos.Y, pos.Y)
+								angle := face.body.Angle() * rl.Rad2deg
+								rl.DrawModelEx(g.GetModel("door"), origin.Raylib(), Y.Negate().Raylib(), float32(angle), XYZ.Raylib(), rl.White)
+							}
+
+						}
 					}
 				}
 			}
@@ -102,4 +128,21 @@ func (l *Level) ChunkInit(c *Chunk) {
 			}
 		}
 	}
+}
+
+func (l *Level) FindPath(from Vec3, to Vec3) ([]*Cell, float64, bool) {
+
+	start := l.GetCell(from)
+	end := l.GetCell(to.Floor())
+
+	pathers, length, found := astar.Path(end, start)
+
+	cells := make([]*Cell, len(pathers))
+
+	for i, p := range pathers {
+		cell := p.(*Cell)
+		cells[i] = cell
+	}
+
+	return cells, length, found
 }

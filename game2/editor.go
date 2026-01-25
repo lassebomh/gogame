@@ -3,6 +3,7 @@ package game2
 import (
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -14,6 +15,7 @@ type EditorTool = int32
 const (
 	TOOL_WALLS = EditorTool(iota)
 	TOOL_FLOOR
+	TOOL_PLAY
 )
 
 type Editor struct {
@@ -46,7 +48,7 @@ func NewEditor() *Editor {
 	})
 }
 
-func (e *Editor) Update(g *Game) {
+func (e *Editor) Update(g *Game, dt time.Duration) {
 	const SPEED = 0.05
 
 	if rl.IsKeyPressed(rl.KeyOne) {
@@ -57,81 +59,88 @@ func (e *Editor) Update(g *Game) {
 		e.Tool = TOOL_WALLS
 	}
 
-	forward := e.Camera.Target.Subtract(e.Camera.Position).Normalize()
-	right := forward.CrossProduct(e.Camera.Up).Normalize()
-
-	forward = NewVec3(
-		forward.X,
-		0,
-		forward.Z,
-	).Normalize()
-
-	up := Y
-	movement := NewVec3(0, 0, 0)
-
-	if rl.IsKeyDown(rl.KeyW) {
-		movement = movement.Add(forward)
-	}
-	if rl.IsKeyDown(rl.KeyS) {
-		movement = movement.Subtract(forward)
-	}
-	if rl.IsKeyDown(rl.KeyD) {
-		movement = movement.Add(right)
-	}
-	if rl.IsKeyDown(rl.KeyA) {
-		movement = movement.Subtract(right)
-	}
-	if rl.IsKeyDown(rl.KeyQ) {
-		movement = movement.Subtract(up)
-	}
-	if rl.IsKeyDown(rl.KeyE) {
-		movement = movement.Add(up)
+	if rl.IsKeyPressed(rl.KeyThree) {
+		e.Tool = TOOL_PLAY
 	}
 
-	if movement.Length() > 0 {
-		movement = movement.Normalize().Scale(SPEED)
-		e.Camera.Position = e.Camera.Position.Add(movement)
-	}
+	if e.Tool != TOOL_PLAY {
 
-	currentMousePos := Vec2FromRaylib(rl.GetMousePosition())
+		forward := e.Camera.Target.Subtract(e.Camera.Position).Normalize()
+		right := forward.CrossProduct(e.Camera.Up).Normalize()
 
-	if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-		mouseMove := (currentMousePos.Subtract(e.MousePosition)).Scale(0.005)
-		e.Yaw += mouseMove.X
-		e.Pitch -= mouseMove.Y
+		forward = NewVec3(
+			forward.X,
+			0,
+			forward.Z,
+		).Normalize()
 
-		if e.Pitch < -Pi/2+1e-5 {
-			e.Pitch = -Pi/2 + 1e-5
+		up := Y
+		movement := NewVec3(0, 0, 0)
+
+		if rl.IsKeyDown(rl.KeyW) {
+			movement = movement.Add(forward)
+		}
+		if rl.IsKeyDown(rl.KeyS) {
+			movement = movement.Subtract(forward)
+		}
+		if rl.IsKeyDown(rl.KeyD) {
+			movement = movement.Add(right)
+		}
+		if rl.IsKeyDown(rl.KeyA) {
+			movement = movement.Subtract(right)
+		}
+		if rl.IsKeyDown(rl.KeyQ) {
+			movement = movement.Subtract(up)
+		}
+		if rl.IsKeyDown(rl.KeyE) {
+			movement = movement.Add(up)
 		}
 
-		if e.Pitch >= Pi/2-1e-5 {
-			e.Pitch = Pi/2 - 1e-5
+		if movement.Length() > 0 {
+			movement = movement.Normalize().Scale(SPEED)
+			e.Camera.Position = e.Camera.Position.Add(movement)
 		}
-	}
-	e.MousePosition = currentMousePos
 
-	mouseRay := rl.GetScreenToWorldRay(rl.Vector2{float32(currentMousePos.X), float32(currentMousePos.Y)}, e.Camera.Raylib())
+		currentMousePos := Vec2FromRaylib(rl.GetMousePosition())
 
-	origin := Vec3FromRaylib(mouseRay.Position)
-	dir := Vec3FromRaylib(mouseRay.Direction)
-	ground := math.Floor(e.Y)
+		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
+			mouseMove := (currentMousePos.Subtract(e.MousePosition)).Scale(0.005)
+			e.Yaw += mouseMove.X
+			e.Pitch -= mouseMove.Y
 
-	if math.Abs(dir.Y) >= 1e-6 {
-		t := (ground - origin.Y) / dir.Y
+			if e.Pitch < -Pi/2+1e-5 {
+				e.Pitch = -Pi/2 + 1e-5
+			}
 
-		if t >= 0 {
-
-			e.HitPos = origin.Add(dir.Scale(t))
-			e.HitPos.Y = ground
-
+			if e.Pitch >= Pi/2-1e-5 {
+				e.Pitch = Pi/2 - 1e-5
+			}
 		}
-	}
+		e.MousePosition = currentMousePos
 
-	scroll := float64(rl.GetMouseWheelMove())
-	if scroll != 0 {
-		yDiff := scroll / math.Abs(scroll)
+		mouseRay := rl.GetScreenToWorldRay(rl.Vector2{float32(currentMousePos.X), float32(currentMousePos.Y)}, e.Camera.Raylib())
 
-		e.Y += yDiff
+		origin := Vec3FromRaylib(mouseRay.Position)
+		dir := Vec3FromRaylib(mouseRay.Direction)
+		ground := math.Floor(e.Y)
+
+		if math.Abs(dir.Y) >= 1e-6 {
+			t := (ground - origin.Y) / dir.Y
+
+			if t >= 0 {
+
+				e.HitPos = origin.Add(dir.Scale(t))
+				e.HitPos.Y = ground
+
+			}
+		}
+
+		scroll := float64(rl.GetMouseWheelMove())
+		if scroll != 0 {
+			yDiff := scroll / math.Abs(scroll)
+
+			e.Y += yDiff
+		}
 	}
 
 	e.Camera.Target = e.Camera.Position.Add(NewVec3(
@@ -145,29 +154,43 @@ func (e *Editor) Update(g *Game) {
 		e.ToolWall.Update(g, e)
 	case TOOL_FLOOR:
 		e.ToolFloor.Update(g, e)
+	case TOOL_PLAY:
+		g.Update(dt)
 	}
-
 }
 
 func (e *Editor) Draw(g *Game) {
 	rl.ClearBackground(rl.Black)
 
-	BeginMode3D(e.Camera, func() {
+	camera := e.Camera
+	maxY := int(e.Y)
+
+	if e.Tool == TOOL_PLAY {
+		camera = g.Camera
+		maxY = int(g.Player.Y)
+	}
+
+	BeginMode3D(camera, func() {
 		g.MainShader.FullBright.Set(1)
-		g.Draw3D(int(e.Y))
+		g.Draw3D(maxY)
 
 		BeginOverlayMode(func() {
-			g.Monster.PathFinder.Draw3D(g)
+			// g.Monster.PathFinder.Draw3D(g)
+			for _, arm := range g.Monster.arms {
+				tip := arm.Tip()
+
+				rl.DrawLine3D(tip.Position3D().Raylib(), arm.tipTarget.Raylib(), rl.Blue)
+			}
 
 			if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
-				drawer := NewPhysicsDrawer(e.Y, true, true, true)
+				drawer := NewPhysicsDrawer(float64(maxY), true, true, true)
 
 				renderBody := func(body *cp.Body) {
 					body.EachConstraint(func(c *cp.Constraint) {
 						cp.DrawConstraint(c, &drawer)
 					})
 					body.EachShape(func(s *cp.Shape) {
-						if s.Filter.Categories&(1<<uint(math.Floor(e.Y))) != 0 {
+						if s.Filter.Categories&(1<<uint(math.Floor(float64(maxY)))) != 0 {
 							cp.DrawShape(s, &drawer)
 						}
 					})
@@ -201,6 +224,12 @@ func (e *Editor) Draw(g *Game) {
 	size := float64(30)
 	line := NewLineLayout(90, 0, size)
 
+	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_PHOTO_CAMERA_FLASH, ""), g.RenderFlags&RENDER_FLAG_FULLBRIGHT != 0) {
+		g.RenderFlags |= RENDER_FLAG_FULLBRIGHT
+	} else {
+		g.RenderFlags &^= RENDER_FLAG_FULLBRIGHT
+	}
+
 	if raygui.Toggle(line.Next(size), raygui.IconText(raygui.ICON_LASER, ""), g.RenderFlags&RENDER_FLAG_PHYSICS != 0) {
 		g.RenderFlags |= RENDER_FLAG_PHYSICS
 	} else {
@@ -214,5 +243,4 @@ func (e *Editor) Draw(g *Game) {
 		e.ToolFloor.DrawHUD(g, e)
 	}
 
-	rl.DrawFPS(5, 5)
 }

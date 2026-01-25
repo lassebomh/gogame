@@ -62,7 +62,7 @@ func (t *ToolWall) Update(g *Game, e *Editor) {
 }
 
 func (t *ToolWall) Draw3D(g *Game, e *Editor) {
-	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.4, 0.5)))
+	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.5, 0.5)))
 
 	col := rl.White
 

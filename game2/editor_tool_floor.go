@@ -51,7 +51,7 @@ func (t *ToolFloor) Update(g *Game, e *Editor) {
 }
 
 func (t *ToolFloor) Draw3D(g *Game, e *Editor) {
-	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.4, 0.5)))
+	cellPos := (t.CellPos.Add(NewVec3(0.5, 0.5-WALL_WIDTH, 0.5)))
 
 	col := rl.White
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {

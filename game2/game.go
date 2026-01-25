@@ -15,6 +15,7 @@ type RenderFlags = int32
 
 const (
 	RENDER_FLAG_PHYSICS = RenderFlags(1 << iota)
+	RENDER_FLAG_FULLBRIGHT
 )
 
 const PHYSICS_TICKRATE = time.Second / 60
@@ -93,7 +94,7 @@ func (g *Game) Update(dt time.Duration) {
 		g.TimePhysicsAccumulator -= PHYSICS_TICKRATE
 	}
 
-	g.Camera.Position = g.Player.Position3D().Add(NewVec3(0, 8, -3).Normalize().Scale(10))
+	g.Camera.Position = g.Player.Position3D().Add(NewVec3(0, 8, -5).Normalize().Scale(10))
 	g.Camera.Target = g.Player.Position3D()
 
 	mousePos := rl.GetMousePosition()
@@ -183,6 +184,8 @@ func (save GameSave) Load() *Game {
 	g.LoadModel("wall", "./models/wallx.glb", g.MainShader, &g.Tileset.Texture)
 	g.LoadModel("stair", "./models/stair.glb", g.MainShader, &g.Tileset.Texture)
 	g.LoadModel("door", "./models/door.glb", g.MainShader, &g.Tileset.Texture)
+	g.LoadModel("monster_arm_segment", "./models/monster/monster_arm_segment.glb", g.MainShader, &g.Tileset.Texture)
+	g.LoadModel("monster_body", "./models/monster/monster_body.glb", g.MainShader, &g.Tileset.Texture)
 
 	save.Player.Load(g)
 	save.Monster.Load(g)
@@ -216,8 +219,13 @@ func (g *Game) Draw() {
 
 		BeginMode3D(g.Camera, func() {
 
-			g.MainShader.FullBright.Set(0)
-			g.MainShader.Ambient.SetColor(color.RGBA{5, 5, 5, 255})
+			if g.RenderFlags&RENDER_FLAG_FULLBRIGHT != 0 {
+				g.MainShader.FullBright.Set(1)
+			} else {
+				g.MainShader.FullBright.Set(0)
+			}
+
+			g.MainShader.Ambient.SetColor(color.RGBA{50, 50, 50, 255})
 
 			if !g.IsStation {
 
@@ -228,13 +236,13 @@ func (g *Game) Draw() {
 
 				sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
 
-				g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 0.5)
+				g.MainShader.LightDirectional(NewVec3((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 1)
 
 			} else {
 				g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
 			}
 
-			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 35, rl.White, 1)
+			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius*3)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius*2)), 30, 40, rl.White, 1.5)
 
 			g.MainShader.UpdateValues()
 
@@ -270,7 +278,7 @@ func c(x float64) float64 {
 
 func (g *Game) Draw3D(maxY int) {
 	g.Player.Draw(g)
-	g.Monster.Draw(g)
+	g.Monster.Draw3D(g, maxY)
 	g.Level.Draw(g, maxY)
 }
 

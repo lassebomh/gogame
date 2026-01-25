@@ -1,12 +1,14 @@
 package game2
 
 import (
+	"math"
+
 	"github.com/beefsack/go-astar"
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
 
-const WALL_WIDTH = float64(0.1)
+const WALL_WIDTH = float64(0.15)
 
 type FaceIndex = uint8
 
@@ -44,6 +46,12 @@ var FACE_OPPOSITE = [4]FaceIndex{
 	FACE_SOUTH,
 	FACE_WEST,
 	FACE_NORTH,
+}
+var FACE_NEXT = [4]FaceIndex{
+	FACE_NORTH,
+	FACE_EAST,
+	FACE_SOUTH,
+	FACE_WEST,
 }
 
 var FACE_DEGREE = [4]float64{
@@ -106,36 +114,58 @@ func (c *Cell) Wake(g *Game) {
 				face.body = g.Space.StaticBody
 				shape := cp.NewPolyShape(face.body, 4, WALL_VERTS[FACE], transform, 0)
 				shape.Filter.Categories = 1 << uint(c.Position.Y)
+				shape.Filter.Group = 1
 				face.shape = g.Space.AddShape(shape)
 			case FaceDoor:
-				face.body = g.Space.AddBody(cp.NewBody(10, 10))
-				offset := FACE_DIRECTION[FACE_OPPOSITE[FACE]].Scale(1 - WALL_WIDTH)
+				position := c.Position.AddXYZ(0.5, 0, 0.5).Subtract(FACE_DIRECTION[FACE_OPPOSITE[FACE]].Scale((1 - WALL_WIDTH) / 2))
+				mass := float64(0.2)
+				moment := cp.MomentForBox(mass, 1, WALL_WIDTH)
+				angle := (FACE_DEGREE[FACE_NEXT[FACE]]) * rl.Deg2rad
 
-				face.body.SetPosition(cp.Vector{c.Position.X - offset.X/2 + 0.5, c.Position.Z - offset.Z/2 + 0.5})
-				face.body.SetAngle((FACE_DEGREE[FACE] + 90) * rl.Deg2rad)
-				shape := cp.NewPolyShape(face.body, 4, DOOR_VERTS, cp.NewTransformIdentity(), 0)
-				shape.Filter.Categories = 1 << uint(c.Position.Y)
-				face.shape = g.Space.AddShape(shape)
+				face.body = g.Space.AddBody(cp.NewBody(mass, moment))
+				face.body.SetPosition(position.Chipmunk())
+				face.body.SetAngle(angle)
+
+				face.shape = cp.NewPolyShape(face.body, 4, DOOR_VERTS, cp.NewTransformIdentity(), 0)
+				face.shape.Filter.Categories = 1 << uint(c.Position.Y)
+				face.shape.Filter.Group = 1
+				g.Space.AddShape(face.shape)
+
+				pivotPos := position.Add(FACE_DIRECTION[FACE_NEXT[FACE]].Scale(0.5))
+				pivot := cp.NewPivotJoint(face.body, g.Space.StaticBody, pivotPos.Chipmunk())
+
+				stiffness := 5.0 * face.body.Moment()
+				damping := 3 * math.Sqrt(stiffness*face.body.Moment())
+				dampedSpring := cp.NewDampedRotarySpring(g.Space.StaticBody, face.body, -angle, stiffness, damping)
+
+				minAngle := angle - rl.Pi/1.2
+				maxAngle := angle + rl.Pi/1.2
+				rotaryLimit := cp.NewRotaryLimitJoint(g.Space.StaticBody, face.body, minAngle, maxAngle)
+				rotaryLimit.SetMaxForce(1e8)
+
+				g.Space.AddConstraint(rotaryLimit)
+				g.Space.AddConstraint(pivot)
+				g.Space.AddConstraint(dampedSpring)
 			}
 		}
 
 	}
 }
 
-func (f *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees float32) {
-	switch f.Type {
+func (face *Face) Draw(g *Game, cellPos Vec3, rotationAxis Vec3, rotationDegrees float32) {
+	switch face.Type {
 	case FaceWall:
-		aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
+		aa, bb := g.Tileset.GetAABB(face.TileX, face.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
 		center := cellPos
 		rl.DrawModelEx(g.GetModel("wall"), center.Raylib(), rotationAxis.Raylib(), rotationDegrees, XYZ.Raylib(), rl.White)
 	case FaceDoor:
-		if f.body != nil {
-			aa, bb := g.Tileset.GetAABB(f.TileX, f.TileY)
+		if face.body != nil {
+			aa, bb := g.Tileset.GetAABB(face.TileX, face.TileY)
 			g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-			pos := f.body.Position()
+			pos := face.body.Position()
 			origin := NewVec3(pos.X, cellPos.Y-0.5, pos.Y)
-			angle := f.body.Angle() * rl.Rad2deg
+			angle := face.body.Angle() * rl.Rad2deg
 			rl.DrawModelEx(g.GetModel("door"), origin.Raylib(), Y.Negate().Raylib(), float32(angle), XYZ.Raylib(), rl.White)
 		}
 
@@ -146,11 +176,12 @@ func (gr *Ground) Draw(g *Game, cellPos Vec3) {
 	if gr.Type == GroundFloor {
 		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		rl.DrawModelEx(g.GetModel("wall"), cellPos.Raylib(), Z.Raylib(), float32(-90), XYZ.Raylib(), rl.White)
+		center := cellPos.Add(NewVec3(0.5, 0.5-WALL_WIDTH+0.01, 0.5))
+		rl.DrawModelEx(g.GetModel("wall"), center.Raylib(), Z.Raylib(), float32(-90), XYZ.Raylib(), rl.White)
 	} else if gr.Type == GroundStair {
 		aa, bb := g.Tileset.GetAABB(gr.TileX, gr.TileY)
 		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
-		center := cellPos.Subtract(NewVec3(0, 0.5, 0))
+		center := cellPos.AddXYZ(0.5, 0, 0.5)
 		rl.DrawModelEx(g.GetModel("stair"), center.Raylib(), Y.Negate().Raylib(), float32(FACE_DEGREE[gr.StairDirection]-90), XYZ.Scale(0.99).Raylib(), rl.White)
 	}
 }
