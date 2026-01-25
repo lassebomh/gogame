@@ -10,6 +10,7 @@ in vec3 fragNormal;
 uniform vec4 colDiffuse;
 uniform vec4 uvClamp;
 uniform sampler2D texture0;
+uniform vec2 iResolution;
 
 uniform sampler2D shadowMap;
 uniform mat4 playerMvp;
@@ -123,10 +124,28 @@ void main()
 
         }
     }
+    
+    // int sampleDist = 2;
+    // int samples = (sampleDist+1) * (sampleDist+1);
+    float inView = 0;
+    
+    // for (int x = -sampleDist; x < sampleDist+1; x++) {
+    //   for (int y = -sampleDist; y < sampleDist+1; y++) {
+    //     vec2 offset = vec2(x, y);
+    //     inView += texture(shadowMap, (gl_FragCoord.xy+offset) / iResolution).g;
+    //   }
+    // }
+    
+    // inView = min(((inView*1.5) / samples), 1);
+    
+    inView = texture(shadowMap, (gl_FragCoord.xy) / iResolution).g;
+    
+    lightDot *= inView;
 
     finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
     finalColor += texelColor*(ambient)*colDiffuse;
 
+    // finalColor = texture(shadowMap, gl_FragCoord.xy / iResolution);
 
     // // Shadow calculations
     // vec4 fragPosLightSpace = playerMvp*vec4(fragPosition, 1);

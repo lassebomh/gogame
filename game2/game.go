@@ -138,7 +138,6 @@ func (g *Game) LoadModel(name string, path string, shader Shader, texture *rl.Te
 			mat.Maps.Texture = *texture
 		}
 	}
-
 }
 
 func (g *Game) GetModel(name string) rl.Model {
@@ -213,11 +212,19 @@ func NewGameSave() GameSave {
 }
 
 func (g *Game) Draw() {
+	// downscale := int32(8)
+	screenWidth := int32(rl.GetScreenWidth())
+	screenHeight := int32(rl.GetScreenHeight())
+
+	g.Player.RenderViewTexture(g)
 
 	BeginTextureMode(g.MainTexture, func() {
 		rl.ClearBackground(rl.Black)
 
 		BeginMode3D(g.Camera, func() {
+
+			g.MainShader.ShadowMap.Set(g.Player.ViewTexture.Texture)
+			g.MainShader.Resolution.Set(float64(g.Player.ViewTexture.Texture.Width), float64(g.Player.ViewTexture.Texture.Height))
 
 			if g.RenderFlags&RENDER_FLAG_FULLBRIGHT != 0 {
 				g.MainShader.FullBright.Set(1)
@@ -242,7 +249,7 @@ func (g *Game) Draw() {
 				g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
 			}
 
-			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius*3)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius*2)), 30, 40, rl.White, 1.5)
+			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 40, rl.White, 1.5)
 
 			g.MainShader.UpdateValues()
 
@@ -251,14 +258,19 @@ func (g *Game) Draw() {
 
 	})
 
-	// downscale := int32(8)
-	screenWidth := int32(rl.GetScreenWidth())
-	screenHeight := int32(rl.GetScreenHeight())
-
 	rl.DrawTexturePro(
 		g.MainTexture.Texture,
 		rl.NewRectangle(0, 0, float32(g.MainTexture.Texture.Width), -float32(g.MainTexture.Texture.Height)),
 		rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight)),
+		rl.Vector2{0, 0},
+		0,
+		rl.White,
+	)
+
+	rl.DrawTexturePro(
+		g.Player.ViewTexture.Texture,
+		rl.NewRectangle(0, 0, float32(g.Player.ViewTexture.Texture.Width), -float32(g.Player.ViewTexture.Texture.Height)),
+		rl.NewRectangle(0, 0, float32(screenWidth)/4, float32(screenHeight)/4),
 		rl.Vector2{0, 0},
 		0,
 		rl.White,
@@ -277,9 +289,9 @@ func c(x float64) float64 {
 }
 
 func (g *Game) Draw3D(maxY int) {
-	g.Player.Draw(g)
 	g.Monster.Draw3D(g, maxY)
 	g.Level.Draw(g, maxY)
+	g.Player.Draw(g)
 }
 
 func LoadSaveFromFile(path string, save *GameSave) error {

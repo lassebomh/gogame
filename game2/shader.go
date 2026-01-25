@@ -25,6 +25,7 @@ type MainShader struct {
 	ShadowMap UniformTexture `glsl:"shadowMap"`
 	PlayerMvp UniformMat4    `glsl:"playerMvp"`
 
+	Resolution       UniformVec2              `glsl:"iResolution"`
 	FullBright       UniformInt               `glsl:"fullBright"`
 	Ambient          UniformVec4              `glsl:"ambient"`
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`

@@ -1,11 +1,16 @@
 package game2
 
 import (
+	"image/color"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
+
+const VISIBILITY_VERTS = 40
+const VISIBILITY_CONE_RADIANS = math.Pi / 3
+const VISIBILITY_DISTANCE = 8
 
 type Player struct {
 	Y         float64
@@ -14,6 +19,9 @@ type Player struct {
 	body      *cp.Body
 	shape     *cp.Shape
 
+	visibilityVerts [VISIBILITY_VERTS]Vec3
+
+	ViewTexture  rl.RenderTexture2D
 	LookPosition Vec3
 }
 
@@ -59,8 +67,27 @@ func (p *Player) Update(g *Game) {
 		playerPos.Z-p.LookPosition.Z,
 		playerPos.X-p.LookPosition.X,
 	)
-
 	p.body.SetAngle(playerAngle)
+
+	p.visibilityVerts[0] = playerPos
+
+	from := playerPos.To2D()
+
+	for i := range VISIBILITY_VERTS - 1 {
+		f := (float64(i)/float64(VISIBILITY_VERTS-2))*2 - 1
+
+		baseAngle := (math.Floor((playerAngle/(math.Pi*2))*VISIBILITY_VERTS) / VISIBILITY_VERTS) * math.Pi * 2
+		// baseAngle := playerAngle
+		angleOffset := f*VISIBILITY_CONE_RADIANS - math.Pi
+		angle := baseAngle - angleOffset
+		dir := NewVec2(math.Cos(angle), math.Sin(angle))
+		to := from.Add(dir.Scale(VISIBILITY_DISTANCE))
+
+		result := g.Space.SegmentQueryFirst(from.CP(), to.CP(), 0, cp.NewShapeFilter(p.shape.Filter.Group, p.shape.Filter.Categories, p.shape.Filter.Mask))
+
+		p.visibilityVerts[i+1] = NewVec3(result.Point.X, p.Y, result.Point.Y)
+	}
+
 }
 
 func (p *Player) Position3D() Vec3 {
@@ -81,9 +108,10 @@ func (p *Player) ToSave(g *Game) PlayerSave {
 
 func (save PlayerSave) Load(g *Game) *Player {
 	p := &Player{
-		Radius: 0.25,
-		Y:      save.Y,
-		body:   nil,
+		Radius:      0.25,
+		Y:           save.Y,
+		body:        nil,
+		ViewTexture: rl.LoadRenderTexture(g.MainTexture.Texture.Width, g.MainTexture.Texture.Height),
 	}
 
 	mass := p.Radius * p.Radius * 4
@@ -93,6 +121,7 @@ func (save PlayerSave) Load(g *Game) *Player {
 	p.shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
 	p.shape.SetElasticity(0)
 	p.shape.SetFriction(0)
+	p.shape.Filter.Group = 3
 	p.body = body
 	g.Player = p
 
@@ -105,4 +134,19 @@ func (save PlayerSave) Load(g *Game) *Player {
 
 func (p *Player) Draw(g *Game) {
 	rl.DrawSphere(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)).Raylib(), float32(g.Player.Radius), rl.Red)
+}
+
+func (p *Player) RenderViewTexture(g *Game) {
+	BeginTextureMode(p.ViewTexture, func() {
+		BeginMode3D(g.Camera, func() {
+			rl.ClearBackground(color.RGBA{})
+
+			a := p.visibilityVerts[0]
+			for i, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
+				c := p.visibilityVerts[i+1]
+
+				rl.DrawTriangle3D(a.Raylib(), b.Raylib(), c.Raylib(), color.RGBA{0, 255, 0, 255})
+			}
+		})
+	})
 }
