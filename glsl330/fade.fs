@@ -1,13 +1,9 @@
 #version 330
 
-
 uniform float iTransition;
 uniform vec2 iResolution;
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
-uniform sampler2DShadow iChannel0Depth;
-uniform sampler2DShadow iChannel1Depth;
-uniform sampler2D iChannelPrev;
 
 in vec2 fragTexCoord;
 out vec4 finalColor;
@@ -102,4 +98,6 @@ void main() {
     lab2rgb(lab.xyz),
     finalColor.w
   ); 
+  
+  finalColor.xyz = texture(iChannel1, uv).xyz;
 }

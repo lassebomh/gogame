@@ -23,9 +23,10 @@ type MainShader struct {
 	UVClamp UniformVec4 `glsl:"uvClamp"`
 
 	ShadowMap UniformTexture `glsl:"shadowMap"`
-	PlayerMvp UniformMat4    `glsl:"playerMvp"`
 
-	Resolution       UniformVec2              `glsl:"iResolution"`
+	PlayerPosition UniformVec3 `glsl:"playerPosition"`
+	// PlayerViewResolution UniformVec2 `glsl:"iResolution"`
+
 	FullBright       UniformInt               `glsl:"fullBright"`
 	Ambient          UniformVec4              `glsl:"ambient"`
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`
@@ -86,4 +87,21 @@ func (m *MainShader) UpdateValues() {
 		m.LightEnabled[i].Set(0)
 	}
 	m.LightI = -1
+}
+
+type TransitionShader struct {
+	shader rl.Shader
+
+	Channel0   UniformTexture `glsl:"iChannel0"`
+	Channel1   UniformTexture `glsl:"iChannel1"`
+	Transition UniformFloat   `glsl:"iTransition"`
+	Resolution UniformVec2    `glsl:"iResolution"`
+}
+
+func (m *TransitionShader) GetRaylibShader() rl.Shader {
+	return m.shader
+}
+
+func (m *TransitionShader) SetRaylibShader(shader rl.Shader) {
+	m.shader = shader
 }

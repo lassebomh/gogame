@@ -38,6 +38,7 @@ func (p *PathFinder) SetTarget(position Vec3) {
 	end := p.level.GetCell(p.Target.Floor())
 
 	pathers, length, found := astar.Path(end, start)
+
 	p.Idle = !found
 
 	if !found {
@@ -58,6 +59,8 @@ func (p *PathFinder) SetTarget(position Vec3) {
 	for i, cell := range cells {
 		path[i] = cell.Position.Add(NewVec3(0.5, 0, 0.5))
 	}
+
+	p.Path = path
 
 }
 

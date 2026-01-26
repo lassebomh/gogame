@@ -45,8 +45,13 @@ type Game struct {
 	MouseRayOrigin    Vec3
 	MouseRayDirection Vec3
 
-	MainTexture rl.RenderTexture2D
-	MainShader  *MainShader
+	// MainTexture              rl.RenderTexture2D
+	MainShader       *MainShader
+	TransitionShader *TransitionShader
+
+	MainTexture              rl.RenderTexture2D
+	TransitionStationTexture rl.RenderTexture2D
+	TransitionEarthTexture   rl.RenderTexture2D
 
 	Textures map[string]rl.Texture2D
 
@@ -166,15 +171,19 @@ func (save GameSave) Load() *Game {
 
 		Tileset: NewTileset("./models/atlas.png", 5),
 
-		MainTexture: rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
+		MainTexture:              rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
+		TransitionEarthTexture:   rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
+		TransitionStationTexture: rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
 
 		Models: map[string]rl.Model{},
 
-		Textures:   map[string]rl.Texture2D{},
-		MainShader: NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
+		Textures:         map[string]rl.Texture2D{},
+		MainShader:       NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs"),
+		TransitionShader: NewShader(&TransitionShader{}, "", "./glsl330/fade.fs"),
 	}
 
-	rl.SetTextureFilter(g.MainTexture.Texture, rl.FilterPoint)
+	rl.SetTextureFilter(g.TransitionEarthTexture.Texture, rl.FilterPoint)
+	rl.SetTextureFilter(g.TransitionStationTexture.Texture, rl.FilterPoint)
 
 	g.Space = cp.NewSpace()
 	g.Level = save.Level.Init()
@@ -212,19 +221,15 @@ func NewGameSave() GameSave {
 }
 
 func (g *Game) Draw() {
-	// downscale := int32(8)
-	screenWidth := int32(rl.GetScreenWidth())
-	screenHeight := int32(rl.GetScreenHeight())
-
 	g.Player.RenderViewTexture(g)
 
 	BeginTextureMode(g.MainTexture, func() {
-		rl.ClearBackground(rl.Black)
+		rl.ClearBackground(color.RGBA{})
 
 		BeginMode3D(g.Camera, func() {
 
 			g.MainShader.ShadowMap.Set(g.Player.ViewTexture.Texture)
-			g.MainShader.Resolution.Set(float64(g.Player.ViewTexture.Texture.Width), float64(g.Player.ViewTexture.Texture.Height))
+			g.MainShader.PlayerPosition.SetVec3(g.Player.Position3D())
 
 			if g.RenderFlags&RENDER_FLAG_FULLBRIGHT != 0 {
 				g.MainShader.FullBright.Set(1)
@@ -258,19 +263,49 @@ func (g *Game) Draw() {
 
 	})
 
+	// BeginTextureMode(g.MainTexture, func() {
+	// 	// rl.ClearBackground(color.RGBA{})
+	// 	rl.ClearBackground(rl.Black)
+	// 	BeginShaderMode(g.TransitionShader, func() {
+	// 		// if g.IsStation {
+	// 		// 	g.TransitionShader.Channel0.Set(earthTexture.Texture)
+	// 		// 	g.TransitionShader.Channel1.Set(stationTexture.Texture)
+	// 		// 	g.TransitionShader.Transition.Set(game.TeleportTransition)
+	// 		// } else {
+	// 		g.TransitionShader.Channel0.Set(g.TransitionStationTexture.Texture)
+	// 		g.TransitionShader.Channel1.Set(g.TransitionEarthTexture.Texture)
+	// 		// g.TransitionShader.Transition.Set(1 - g.TeleportTransition)
+	// 		g.TransitionShader.Transition.Set(1)
+	// 		// }
+	// 		g.TransitionShader.Resolution.Set(float64(g.MainTexture.Texture.Width), float64(g.MainTexture.Texture.Height))
+	// 		// fmt.Printf("%+v\n", g.MainTexture.Texture)
+	// 		rl.DrawRectangle(0, 0, g.MainTexture.Texture.Width, g.MainTexture.Texture.Height, rl.White)
+	// 	})
+	// })
+
+	rl.ClearBackground(rl.Black)
 	rl.DrawTexturePro(
 		g.MainTexture.Texture,
-		rl.NewRectangle(0, 0, float32(g.MainTexture.Texture.Width), -float32(g.MainTexture.Texture.Height)),
-		rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight)),
-		rl.Vector2{0, 0},
+		rl.Rectangle{X: 0, Y: 0, Width: float32(g.MainTexture.Texture.Width), Height: -float32(g.MainTexture.Texture.Height)},
+		rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetRenderWidth()), Height: float32(rl.GetRenderHeight())},
+		rl.Vector2{X: 0, Y: 0},
 		0,
 		rl.White,
 	)
 
+	// rl.DrawTexturePro(
+	// 	g.MainTexture.Texture,
+	// 	rl.NewRectangle(0, 0, float32(g.MainTexture.Texture.Width), -float32(g.MainTexture.Texture.Height)),
+	// 	rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight)),
+	// 	rl.Vector2{0, 0},
+	// 	0,
+	// 	rl.White,
+	// )
+
 	rl.DrawTexturePro(
 		g.Player.ViewTexture.Texture,
 		rl.NewRectangle(0, 0, float32(g.Player.ViewTexture.Texture.Width), -float32(g.Player.ViewTexture.Texture.Height)),
-		rl.NewRectangle(0, 0, float32(screenWidth)/4, float32(screenHeight)/4),
+		rl.NewRectangle(0, 0, 500, 500),
 		rl.Vector2{0, 0},
 		0,
 		rl.White,

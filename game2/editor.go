@@ -175,7 +175,7 @@ func (e *Editor) Draw(g *Game) {
 		g.Draw3D(maxY)
 
 		BeginOverlayMode(func() {
-			// g.Monster.PathFinder.Draw3D(g)
+			g.Monster.PathFinder.Draw3D(g)
 			for _, arm := range g.Monster.arms {
 				tip := arm.Tip()
 

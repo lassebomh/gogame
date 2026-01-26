@@ -9,12 +9,12 @@ import (
 )
 
 type Monster struct {
-	Y         float64
-	YVelocity float64
-	Radius    float64
-	body      *cp.Body
-	shape     *cp.Shape
-	// PathFinder *PathFinder
+	Y          float64
+	YVelocity  float64
+	Radius     float64
+	body       *cp.Body
+	shape      *cp.Shape
+	PathFinder *PathFinder
 
 	arms []*MonsterArm
 
@@ -22,28 +22,26 @@ type Monster struct {
 }
 
 func (p *Monster) Update(g *Game) {
-	// monsterPos := p.Position3D()
+	monsterPos := p.Position3D()
 
-	// target := NewVec3(0, 0, 0)
-
-	// p.PathFinder.SetPosition(p.Position3D())
-	// p.PathFinder.SetTarget(g.Player.Position3D())
+	p.PathFinder.SetPosition(p.Position3D())
+	p.PathFinder.SetTarget(g.Player.Position3D())
 
 	force := cp.Vector{}
 
-	// if !p.PathFinder.Idle && len(p.PathFinder.Path) > 2 {
-	// 	a := p.PathFinder.Path[0]
-	// 	b := p.PathFinder.Path[1]
+	if !p.PathFinder.Idle && len(p.PathFinder.Path) >= 2 {
+		a := p.PathFinder.Path[0]
+		b := p.PathFinder.Path[1]
 
-	// 	force3D := b.Lerp(a, 0.5).Subtract(monsterPos)
-	// 	force.X = force3D.X
-	// 	force.Y = force3D.Z
-	// }
+		force3D := b.Lerp(a, 0.5).Subtract(monsterPos)
+		force.X = force3D.X
+		force.Y = force3D.Z
+	}
 
 	forceMag := force.Length()
 
 	if forceMag != 0 {
-		force = force.Normalize().Mult(p.body.Mass() * 30)
+		force = force.Normalize().Mult(p.body.Mass() * 40)
 	}
 
 	p.body.SetForce(force)
@@ -78,12 +76,14 @@ func (p *Monster) Update(g *Game) {
 			segment.body.SetTorque(angle * tip.body.Moment() * 500)
 		}
 
-		// delta := arm.tipTarget.Subtract(tip.Position3D())
-		// currentDir := cp.ForAngle(tip.body.Angle())
-		// relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
+		arm.tipTarget = g.Player.Position3D()
 
-		// tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
-		// tip.body.SetForce(delta.Normalize().Scale(50 * tip.body.Mass()).Chipmunk())
+		delta := arm.tipTarget.Subtract(tip.Position3D())
+		currentDir := cp.ForAngle(tip.body.Angle())
+		relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
+
+		tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
+		tip.body.SetForce(delta.Normalize().Scale(50 * tip.body.Mass()).Chipmunk())
 
 		for _, segment := range arm.segments {
 			segment.Y, segment.YVelocity = UpdatePhysicsY(g, segment.shape, segment.Y, segment.YVelocity)
@@ -128,10 +128,10 @@ func (p *Monster) ToSave(g *Game) *Monster {
 
 func (p *Monster) Load(g *Game) *Monster {
 	p.Radius = 0.3
-	// if p.PathFinder == nil {
-	// 	p.PathFinder = NewPathFinder(g.Level)
-	// }
-	// p.PathFinder.level = g.Level
+	if p.PathFinder == nil {
+		p.PathFinder = NewPathFinder(g.Level)
+	}
+	p.PathFinder.level = g.Level
 
 	group := uint(2)
 
@@ -153,7 +153,7 @@ func (p *Monster) Load(g *Game) *Monster {
 
 	p.arms = make([]*MonsterArm, 0)
 
-	for range 1 {
+	for range 5 {
 
 		arm := &MonsterArm{
 			// Index:     i,

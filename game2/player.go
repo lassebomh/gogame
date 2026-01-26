@@ -8,7 +8,7 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
-const VISIBILITY_VERTS = 40
+const VISIBILITY_VERTS = 240
 const VISIBILITY_CONE_RADIANS = math.Pi / 3
 const VISIBILITY_DISTANCE = 8
 
@@ -76,7 +76,7 @@ func (p *Player) Update(g *Game) {
 	for i := range VISIBILITY_VERTS - 1 {
 		f := (float64(i)/float64(VISIBILITY_VERTS-2))*2 - 1
 
-		baseAngle := (math.Floor((playerAngle/(math.Pi*2))*VISIBILITY_VERTS) / VISIBILITY_VERTS) * math.Pi * 2
+		baseAngle := (math.Round((playerAngle/(math.Pi*2))*(VISIBILITY_VERTS)) / (VISIBILITY_VERTS)) * math.Pi * 2
 		// baseAngle := playerAngle
 		angleOffset := f*VISIBILITY_CONE_RADIANS - math.Pi
 		angle := baseAngle - angleOffset
@@ -87,7 +87,6 @@ func (p *Player) Update(g *Game) {
 
 		p.visibilityVerts[i+1] = NewVec3(result.Point.X, p.Y, result.Point.Y)
 	}
-
 }
 
 func (p *Player) Position3D() Vec3 {
@@ -111,7 +110,7 @@ func (save PlayerSave) Load(g *Game) *Player {
 		Radius:      0.25,
 		Y:           save.Y,
 		body:        nil,
-		ViewTexture: rl.LoadRenderTexture(g.MainTexture.Texture.Width, g.MainTexture.Texture.Height),
+		ViewTexture: rl.LoadRenderTexture(16*40, 16*40),
 	}
 
 	mass := p.Radius * p.Radius * 4
@@ -138,7 +137,14 @@ func (p *Player) Draw(g *Game) {
 
 func (p *Player) RenderViewTexture(g *Game) {
 	BeginTextureMode(p.ViewTexture, func() {
-		BeginMode3D(g.Camera, func() {
+		camera := Camera3D{
+			Position:   g.Player.Position3D().Add(Y.Scale(5)),
+			Target:     g.Player.Position3D().AddXYZ(0, 0, 0.0001),
+			Fovy:       20,
+			Projection: rl.CameraOrthographic,
+			Up:         Y,
+		}
+		BeginMode3D(camera, func() {
 			rl.ClearBackground(color.RGBA{})
 
 			a := p.visibilityVerts[0]
