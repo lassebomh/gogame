@@ -27,7 +27,7 @@ func main() {
 	screenWidth := int32(1700)
 	screenHeight := int32(800)
 
-	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowUnfocused)
+	rl.SetConfigFlags(rl.FlagVsyncHint)
 	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.SetTargetFPS(144)
 	rl.InitWindow(screenWidth, screenHeight, "raylib")

@@ -127,7 +127,7 @@ void main()
     
     // int sampleDist = 2;
     // int samples = (sampleDist+1) * (sampleDist+1);
-    float inView = 0;
+    // float inView = 0;
     
     // for (int x = -sampleDist; x < sampleDist+1; x++) {
     //   for (int y = -sampleDist; y < sampleDist+1; y++) {
@@ -138,9 +138,9 @@ void main()
     
     // inView = min(((inView*1.5) / samples), 1);
     
-    inView = texture(shadowMap, (gl_FragCoord.xy) / iResolution).g;
+    // inView = texture(shadowMap, (gl_FragCoord.xy) / iResolution).g;
     
-    lightDot *= inView;
+    // lightDot *= inView;
 
     finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
     finalColor += texelColor*(ambient)*colDiffuse;
