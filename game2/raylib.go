@@ -206,3 +206,12 @@ func (l *LineLayout) Break(height float64) {
 	l.Y += l.Height
 	l.Height = height
 }
+
+func ScreenToWorld(camera Camera3D, screen Vec2, y float64) Vec3 {
+	ray := rl.GetScreenToWorldRay(screen.Raylib(), camera.Raylib())
+	origin := Vec3FromRaylib(ray.Position)
+	direction := Vec3FromRaylib(ray.Direction)
+	hitpos := origin.Add(direction.Scale((y - origin.Y) / direction.Y))
+	hitpos.Y = y
+	return hitpos
+}

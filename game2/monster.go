@@ -41,12 +41,12 @@ func (p *Monster) Update(g *Game) {
 	forceMag := force.Length()
 
 	if forceMag != 0 {
-		force = force.Normalize().Mult(p.body.Mass() * 40)
+		force = force.Normalize().Mult(p.body.Mass() * 60)
 	}
 
 	p.body.SetForce(force)
 
-	newVelocity := Vec2FromCP(p.body.Velocity()).Scale(math.Pow(0.01, g.TimeDelta.Seconds()*2))
+	newVelocity := Vec2FromCP(p.body.Velocity()).Scale(math.Pow(0.01, g.TimeDelta.Seconds()*4))
 	p.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
 	p.Y, p.YVelocity = UpdatePhysicsY(g, p.shape, p.Y, p.YVelocity)
@@ -76,7 +76,27 @@ func (p *Monster) Update(g *Game) {
 			segment.body.SetTorque(angle * tip.body.Moment() * 500)
 		}
 
-		arm.tipTarget = g.Player.Position3D()
+		if !p.PathFinder.Idle && len(p.PathFinder.Path) >= 2 && p.PathFinder.PathLength > 3 {
+			closestI := 0
+			closestDistance := math.Inf(1)
+
+			for i, point := range p.PathFinder.Path[:len(p.PathFinder.Path)-1] {
+				distance := point.Distance(tip.Position3D())
+				if distance < closestDistance {
+					closestDistance = distance
+					closestI = i
+				}
+			}
+
+			if closestDistance > 3 {
+				arm.tipTarget = p.PathFinder.Path[closestI]
+			} else {
+				arm.tipTarget = p.PathFinder.Path[closestI].Lerp(p.PathFinder.Path[closestI+1], 1)
+			}
+
+		} else {
+			arm.tipTarget = g.Player.Position3D()
+		}
 
 		delta := arm.tipTarget.Subtract(tip.Position3D())
 		currentDir := cp.ForAngle(tip.body.Angle())
@@ -122,6 +142,9 @@ func (p *MonsterArmSegment) Position3D() Vec3 {
 }
 
 func (p *Monster) ToSave(g *Game) *Monster {
+	if p == nil {
+		return nil
+	}
 	p.SavePosition = Vec2FromCP(p.body.Position())
 	return p
 }
@@ -133,9 +156,7 @@ func (p *Monster) Load(g *Game) *Monster {
 	}
 	p.PathFinder.level = g.Level
 
-	group := uint(2)
-
-	mass := p.Radius * p.Radius * 4
+	mass := p.Radius * p.Radius
 	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, Vec2{2, 2}.CP())))
 	position := p.SavePosition
 	body.SetPosition(position.CP())
@@ -145,11 +166,7 @@ func (p *Monster) Load(g *Game) *Monster {
 	p.shape.SetFriction(0)
 	p.body = body
 	g.Monster = p
-
-	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
-	p.shape.Filter.Categories = yLevelCategory
-	p.shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
-	p.shape.Filter.Group = group
+	p.shape.Filter.Group = GroupMonster
 
 	p.arms = make([]*MonsterArm, 0)
 
@@ -175,7 +192,7 @@ func (p *Monster) Load(g *Game) *Monster {
 			}
 			arm.segments = append(arm.segments, segment)
 
-			mass := segment.Length * segment.Width
+			mass := segment.Length * segment.Width * 1.5
 
 			segment.body = g.Space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
 			position := prevPosition.AddXY(segment.Length, 0)
@@ -184,11 +201,7 @@ func (p *Monster) Load(g *Game) *Monster {
 			segment.shape = g.Space.AddShape(cp.NewBox(segment.body, segment.Length, segment.Width, 0))
 			segment.shape.SetElasticity(0.)
 			segment.shape.SetFriction(0.1)
-
-			yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
-			segment.shape.Filter.Categories = yLevelCategory
-			segment.shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
-			segment.shape.Filter.Group = group
+			segment.shape.Filter.Group = GroupMonster
 
 			constraint := g.Space.AddConstraint(cp.NewPivotJoint(prevBody, segment.body, prevPosition.CP()))
 			constraint.SetMaxForce(1e12)
@@ -219,6 +232,10 @@ func (p *Monster) Load(g *Game) *Monster {
 }
 
 func (p *Monster) Draw3D(g *Game, maxY int) {
+	rl.BeginBlendMode(rl.BlendAlpha)
+	defer rl.EndBlendMode()
+
+	g.MainShader.HideOutsideView.Set(1)
 
 	aa, bb := g.Tileset.GetAABB(0, 4)
 	g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
@@ -242,5 +259,7 @@ func (p *Monster) Draw3D(g *Game, maxY int) {
 			}
 		}
 	}
+
+	g.MainShader.HideOutsideView.Set(0)
 
 }

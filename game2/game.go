@@ -18,6 +18,8 @@ const (
 	RENDER_FLAG_FULLBRIGHT
 )
 
+const DOWNSCALE = int32(4)
+
 const PHYSICS_TICKRATE = time.Second / 60
 
 type Game struct {
@@ -93,13 +95,14 @@ func (g *Game) Update(dt time.Duration) {
 	g.TimePhysicsAccumulator += dt
 
 	g.Day += dt.Seconds() / 100
+	// g.Day = 0.5
 
 	for g.TimePhysicsAccumulator >= PHYSICS_TICKRATE {
 		g.Space.Step(PHYSICS_TICKRATE.Seconds())
 		g.TimePhysicsAccumulator -= PHYSICS_TICKRATE
 	}
 
-	g.Camera.Position = g.Player.Position3D().Add(NewVec3(0, 8, -5).Normalize().Scale(10))
+	g.Camera.Position = g.Player.Position3D().Add(NewVec3(0, 8, -3).Normalize().Scale(10))
 	g.Camera.Target = g.Player.Position3D()
 
 	mousePos := rl.GetMousePosition()
@@ -111,7 +114,10 @@ func (g *Game) Update(dt time.Duration) {
 	g.MouseRayDirection = Vec3FromRaylib(mouseRay.Direction)
 
 	g.Player.Update(g)
-	g.Monster.Update(g)
+
+	if g.Monster != nil {
+		g.Monster.Update(g)
+	}
 
 	cellWakeX := 8
 	cellWakeZ := 8
@@ -151,7 +157,6 @@ func (g *Game) GetModel(name string) rl.Model {
 }
 
 func (save GameSave) Load() *Game {
-	downscale := int32(4)
 	screenWidth, screenHeight := int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight())
 
 	g := &Game{
@@ -171,9 +176,9 @@ func (save GameSave) Load() *Game {
 
 		Tileset: NewTileset("./models/atlas.png", 5),
 
-		MainTexture:              rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
-		TransitionEarthTexture:   rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
-		TransitionStationTexture: rl.LoadRenderTexture(int32(screenWidth/downscale), int32(screenHeight/downscale)),
+		MainTexture:              rl.LoadRenderTexture(int32(screenWidth/DOWNSCALE), int32(screenHeight/DOWNSCALE)),
+		TransitionEarthTexture:   rl.LoadRenderTexture(int32(screenWidth/DOWNSCALE), int32(screenHeight/DOWNSCALE)),
+		TransitionStationTexture: rl.LoadRenderTexture(int32(screenWidth/DOWNSCALE), int32(screenHeight/DOWNSCALE)),
 
 		Models: map[string]rl.Model{},
 
@@ -196,6 +201,9 @@ func (save GameSave) Load() *Game {
 	g.LoadModel("monster_body", "./models/monster/monster_body.glb", g.MainShader, &g.Tileset.Texture)
 
 	save.Player.Load(g)
+	if save.Monster == nil {
+		save.Monster = &Monster{SavePosition: NewVec2(0, 0)}
+	}
 	save.Monster.Load(g)
 
 	return g
@@ -258,7 +266,7 @@ func (g *Game) Draw() {
 
 			g.MainShader.UpdateValues()
 
-			g.Draw3D(int(g.Player.Y))
+			g.Draw3D(int(g.Player.Y) + 4)
 		})
 
 	})
@@ -324,9 +332,38 @@ func c(x float64) float64 {
 }
 
 func (g *Game) Draw3D(maxY int) {
-	g.Monster.Draw3D(g, maxY)
+
 	g.Level.Draw(g, maxY)
+
+	/*
+		{
+			w, h := float64(g.MainTexture.Texture.Width*DOWNSCALE), float64(g.MainTexture.Texture.Height*DOWNSCALE)
+			y := g.Player.Y
+
+			tl := ScreenToWorld(g.Camera, NewVec2(0, 0), y).To2D()
+			tr := ScreenToWorld(g.Camera, NewVec2(w, 0), y).To2D()
+			bl := ScreenToWorld(g.Camera, NewVec2(0, h), y).To2D()
+			br := ScreenToWorld(g.Camera, NewVec2(w, h), y).To2D()
+
+
+			minX := math.Floor(min(tr.X, br.X))
+			maxX := math.Ceil(max(tl.X, bl.X))
+			minZ := math.Floor(min(tr.Y, br.Y))
+			maxZ := math.Ceil(max(tl.Y, bl.Y))
+
+
+			// make a "chunk draw" function
+			// it takes a chunk BB and renders all cells within in
+
+			trChunk := g.Level.Chunks[tr.Scale(1/float64(CHUNK_WIDTH)).Floor()]
+
+
+		}*/
+
 	g.Player.Draw(g)
+	if g.Monster != nil {
+		g.Monster.Draw3D(g, maxY)
+	}
 }
 
 func LoadSaveFromFile(path string, save *GameSave) error {

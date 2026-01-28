@@ -17,6 +17,7 @@ uniform sampler2D texture0;
 uniform bool fullBright;
 uniform sampler2D shadowMap;
 uniform vec3 playerPosition;
+uniform bool hideOutsideView;
 
 out vec4 finalColor;
 
@@ -111,7 +112,23 @@ void main()
   
   finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
   finalColor += texelColor*(ambient)*colDiffuse * clamp(inView, 0.1, 1);
-  
+
+  if (hideOutsideView) {
+    
+    float inView = 0;
+    for (float x = -2; x <= 2; x++) {
+      for (float y = -2; y <= 2; y++) {
+        vec2 uv2 = ((fragPosition.xyz - playerPosition).xz + vec2(x, y)/5) / (20) + 0.5;
+        uv2.x *= -1;
+        inView += texture(shadowMap, uv2).g / 6;
+      }
+    }
+    
+    float dither = fract(sin(dot(gl_FragCoord.xy/8, vec2(12.9898, 78.233))) * 43758.5453);
+    
+    
+    finalColor.w = clamp(inView-dither, 0, 1);
+  }  
   
   // finalColor.rgb *= inView;
 }

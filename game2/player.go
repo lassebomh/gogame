@@ -83,7 +83,7 @@ func (p *Player) Update(g *Game) {
 		dir := NewVec2(math.Cos(angle), math.Sin(angle))
 		to := from.Add(dir.Scale(VISIBILITY_DISTANCE))
 
-		result := g.Space.SegmentQueryFirst(from.CP(), to.CP(), 0, cp.NewShapeFilter(p.shape.Filter.Group, p.shape.Filter.Categories, p.shape.Filter.Mask))
+		result := g.Space.SegmentQueryFirst(from.CP(), to.CP(), 0, cp.NewShapeFilter(0, Category(p.Y, true, false), Category(p.Y, true, false)))
 
 		p.visibilityVerts[i+1] = NewVec3(result.Point.X, p.Y, result.Point.Y)
 	}
@@ -116,17 +116,14 @@ func (save PlayerSave) Load(g *Game) *Player {
 	mass := p.Radius * p.Radius * 4
 	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, Vec2{2, 2}.CP())))
 	body.SetPosition(save.Position.CP())
-
 	p.shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
 	p.shape.SetElasticity(0)
 	p.shape.SetFriction(0)
-	p.shape.Filter.Group = 3
-	p.body = body
-	g.Player = p
+	p.shape.Filter.Group = GroupPlayer
 
-	yLevelCategory := uint(1 << uint(math.Floor(p.Y)))
-	p.shape.Filter.Categories = yLevelCategory
-	p.shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(p.Y+0.25)))
+	p.body = body
+
+	g.Player = p
 
 	return p
 }

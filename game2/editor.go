@@ -175,11 +175,14 @@ func (e *Editor) Draw(g *Game) {
 		g.Draw3D(maxY)
 
 		BeginOverlayMode(func() {
-			g.Monster.PathFinder.Draw3D(g)
-			for _, arm := range g.Monster.arms {
-				tip := arm.Tip()
+			if g.Monster != nil {
+				g.Monster.PathFinder.Draw3D(g)
 
-				rl.DrawLine3D(tip.Position3D().Raylib(), arm.tipTarget.Raylib(), rl.Blue)
+				for _, arm := range g.Monster.arms {
+					tip := arm.Tip()
+
+					rl.DrawLine3D(tip.Position3D().Raylib(), arm.tipTarget.Raylib(), rl.Blue)
+				}
 			}
 
 			if g.RenderFlags&(RENDER_FLAG_PHYSICS) != 0 {
@@ -190,9 +193,10 @@ func (e *Editor) Draw(g *Game) {
 						cp.DrawConstraint(c, &drawer)
 					})
 					body.EachShape(func(s *cp.Shape) {
-						if s.Filter.Categories&(1<<uint(math.Floor(float64(maxY)))) != 0 {
-							cp.DrawShape(s, &drawer)
-						}
+
+						// if s.Filter.Categories&(1<<uint(math.Floor(float64(maxY)))) != 0 {
+						cp.DrawShape(s, &drawer)
+						// }
 					})
 				}
 

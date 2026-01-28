@@ -160,9 +160,27 @@ func UpdatePhysicsY(g *Game, shape *cp.Shape, y float64, yVelocity float64) (flo
 		y = math.Ceil(y)
 	}
 
-	yLevelCategory := uint(1 << uint(math.Floor(y)))
-	shape.Filter.Categories = yLevelCategory
-	shape.Filter.Mask = yLevelCategory | (1 << uint(math.Floor(y+0.25)))
+	shape.Filter.Categories = Category(y, false, true)
+	shape.Filter.Mask = Category(y, true, true)
 
 	return y, yVelocity
+}
+
+const (
+	GroupStatic = uint(1 << iota)
+	GroupPlayer
+	GroupMonster
+)
+
+func Category(y float64, level bool, entity bool) uint {
+	category := uint(0)
+	yCategory := uint(1 << uint(math.Floor(y)))
+
+	if level {
+		category |= yCategory
+	}
+	if entity {
+		category |= yCategory << uint(CHUNK_HEIGHT)
+	}
+	return category
 }

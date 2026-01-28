@@ -113,8 +113,11 @@ func (c *Cell) Wake(g *Game) {
 			case FaceWall:
 				face.body = g.Space.StaticBody
 				shape := cp.NewPolyShape(face.body, 4, WALL_VERTS[FACE], transform, 0)
-				shape.Filter.Categories = 1 << uint(c.Position.Y)
-				shape.Filter.Group = 1
+
+				shape.Filter.Group = GroupStatic
+				shape.Filter.Categories = Category(c.Position.Y, true, false)
+				shape.Filter.Mask = Category(c.Position.Y, true, true)
+
 				face.shape = g.Space.AddShape(shape)
 			case FaceDoor:
 				position := c.Position.AddXYZ(0.5, 0, 0.5).Subtract(FACE_DIRECTION[FACE_OPPOSITE[FACE]].Scale((1 - WALL_WIDTH) / 2))
@@ -127,8 +130,10 @@ func (c *Cell) Wake(g *Game) {
 				face.body.SetAngle(angle)
 
 				face.shape = cp.NewPolyShape(face.body, 4, DOOR_VERTS, cp.NewTransformIdentity(), 0)
-				face.shape.Filter.Categories = 1 << uint(c.Position.Y)
-				face.shape.Filter.Group = 1
+				face.shape.Filter.Group = GroupStatic
+				face.shape.Filter.Categories = Category(c.Position.Y, true, false)
+				face.shape.Filter.Mask = Category(c.Position.Y, true, true)
+
 				g.Space.AddShape(face.shape)
 
 				pivotPos := position.Add(FACE_DIRECTION[FACE_NEXT[FACE]].Scale(0.5))
@@ -242,4 +247,36 @@ func (c *Cell) PathNeighborCost(to astar.Pather) float64 {
 func (c *Cell) PathEstimatedCost(to astar.Pather) float64 {
 	other := to.(*Cell)
 	return c.Position.Distance(other.Position)
+}
+
+func (cell *Cell) Draw(g *Game) {
+	cellPos := cell.Position
+	cell.Ground.Draw(g, cellPos)
+
+	if cell.Ground.Type == GroundStair {
+		offset := FACE_DIRECTION[cell.Ground.StairDirection].Add(Y)
+		forwardUp := cell.level.GetCell(cell.Position.Add(offset))
+		forwardUp.Ground.Draw(g, cellPos.Add(offset))
+	}
+
+	for FACE := range FACES {
+		face := &cell.Faces[FACE]
+
+		aa, bb := g.Tileset.GetAABB(face.TileX, face.TileY)
+		g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
+		center := cellPos.AddXYZ(0.5, 0.5, 0.5)
+
+		switch face.Type {
+		case FaceWall:
+			rl.DrawModelEx(g.GetModel("wall"), center.Raylib(), Y.Negate().Raylib(), float32(FACE_DEGREE[FACE]), XYZ.Raylib(), rl.White)
+		case FaceDoor:
+			if face.body != nil {
+				pos := face.body.Position()
+				origin := NewVec3(pos.X, cellPos.Y, pos.Y)
+				angle := face.body.Angle() * rl.Rad2deg
+				rl.DrawModelEx(g.GetModel("door"), origin.Raylib(), Y.Negate().Raylib(), float32(angle), XYZ.Raylib(), rl.White)
+			}
+
+		}
+	}
 }
