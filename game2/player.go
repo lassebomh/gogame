@@ -94,7 +94,7 @@ func (p *Player) Update(g *Game) {
 
 	a := p.visibilityVerts[0]
 	for _, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
-		step := 1 / a.Distance(b)
+		step := (1 / a.Distance(b)) / 2
 
 		for i := float64(0); i <= 1; i += step {
 			cellCoords[a.Lerp(b, i).Floor()] = true
@@ -195,7 +195,7 @@ func (p *Player) UpdateView(g *Game) {
 					pos := NewVec3(cell.Position.X+0.5, p.Y-0.5, cell.Position.Z+0.5)
 					seen := float64(0)
 					if cell.LastSeenPlayer != 0 {
-						seen = Clamp((30-(g.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
+						seen = Clamp((5-(g.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
 					}
 					rl.DrawCube(pos.Raylib(), 1, 0, 1, X.Scale(seen).ToColor())
 				}
