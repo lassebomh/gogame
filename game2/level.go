@@ -7,20 +7,24 @@ import (
 	"github.com/beefsack/go-astar"
 )
 
-const CHUNK_WIDTH = int(8)
-const CHUNK_HEIGHT = int(16)
+const CHUNK_WIDTH = 8
+const CHUNK_HEIGHT = 16
 
 type Chunk = [CHUNK_WIDTH][CHUNK_WIDTH][CHUNK_HEIGHT]Cell
 
 type Level struct {
 	Chunks map[Vec2]*Chunk
 
-	refs map[Vec3]*Cell
+	chunksAwake map[Vec2]bool
+	refs        map[Vec3]*Cell
 }
 
 func (l *Level) Init() *Level {
 	if l.refs == nil {
 		l.refs = make(map[Vec3]*Cell, 0)
+	}
+	if l.chunksAwake == nil {
+		l.chunksAwake = make(map[Vec2]bool, 0)
 	}
 	if l.Chunks == nil {
 		l.Chunks = make(map[Vec2]*Chunk, 0)
@@ -80,7 +84,6 @@ func (l *Level) Draw(g *Game, maxY int) {
 					}
 
 					cell.Draw(g)
-
 				}
 			}
 		}

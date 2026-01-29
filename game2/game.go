@@ -119,23 +119,26 @@ func (g *Game) Update(dt time.Duration) {
 		g.Monster.Update(g)
 	}
 
-	cellWakeX := 8
-	cellWakeZ := 8
-	playerPos := g.Player.Position3D()
+	// cellWakeX := 8
+	// cellWakeZ := 8
+	// cellWakeY := 2
+	// playerPos := g.Player.Position3D()
 
-	for ix := range cellWakeX {
-		for iz := range cellWakeZ {
-			cellPos := playerPos.Add(NewVec3(
-				float64(ix)-float64(cellWakeX-1)/2,
-				0,
-				float64(iz)-float64(cellWakeZ-1)/2,
-			))
+	// for ix := range cellWakeX {
+	// 	for iz := range cellWakeZ {
 
-			cell := g.Level.GetCell(cellPos)
-			cell.Wake(g)
-		}
-	}
+	// 		// for iy := range cellWakeZ {
+	// 		cellPos := playerPos.Add(NewVec3(
+	// 			float64(ix)-float64(cellWakeX-1)/2,
+	// 			0, // Clamp(float64(iy)-float64(cellWakeY-1)/2, 0, CHUNK_HEIGHT-1),
+	// 			float64(iz)-float64(cellWakeZ-1)/2,
+	// 		))
 
+	// 		cell := g.Level.GetCell(cellPos)
+	// 		cell.Wake(g)
+	// 		// }
+	// 	}
+	// }
 }
 
 func (g *Game) LoadModel(name string, path string, shader Shader, texture *rl.Texture2D) {
@@ -229,7 +232,7 @@ func NewGameSave() GameSave {
 }
 
 func (g *Game) Draw() {
-	g.Player.RenderViewTexture(g)
+	g.Player.UpdateView(g)
 
 	BeginTextureMode(g.MainTexture, func() {
 		rl.ClearBackground(color.RGBA{})
@@ -266,7 +269,7 @@ func (g *Game) Draw() {
 
 			g.MainShader.UpdateValues()
 
-			g.Draw3D(int(g.Player.Y) + 4)
+			g.Draw3D(int(g.Player.Y))
 		})
 
 	})
@@ -301,19 +304,10 @@ func (g *Game) Draw() {
 		rl.White,
 	)
 
-	// rl.DrawTexturePro(
-	// 	g.MainTexture.Texture,
-	// 	rl.NewRectangle(0, 0, float32(g.MainTexture.Texture.Width), -float32(g.MainTexture.Texture.Height)),
-	// 	rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight)),
-	// 	rl.Vector2{0, 0},
-	// 	0,
-	// 	rl.White,
-	// )
-
 	rl.DrawTexturePro(
 		g.Player.ViewTexture.Texture,
 		rl.NewRectangle(0, 0, float32(g.Player.ViewTexture.Texture.Width), -float32(g.Player.ViewTexture.Texture.Height)),
-		rl.NewRectangle(0, 0, 500, 500),
+		rl.NewRectangle(0, 0, 100, 100),
 		rl.Vector2{0, 0},
 		0,
 		rl.White,
@@ -333,32 +327,30 @@ func c(x float64) float64 {
 
 func (g *Game) Draw3D(maxY int) {
 
-	g.Level.Draw(g, maxY)
+	// g.Level.Draw(g, maxY)
 
-	/*
-		{
-			w, h := float64(g.MainTexture.Texture.Width*DOWNSCALE), float64(g.MainTexture.Texture.Height*DOWNSCALE)
-			y := g.Player.Y
+	{
+		w, h := float64(g.MainTexture.Texture.Width*DOWNSCALE), float64(g.MainTexture.Texture.Height*DOWNSCALE)
+		y := g.Player.Y
 
-			tl := ScreenToWorld(g.Camera, NewVec2(0, 0), y).To2D()
-			tr := ScreenToWorld(g.Camera, NewVec2(w, 0), y).To2D()
-			bl := ScreenToWorld(g.Camera, NewVec2(0, h), y).To2D()
-			br := ScreenToWorld(g.Camera, NewVec2(w, h), y).To2D()
+		tl := ScreenToWorld(g.Camera, NewVec2(0, 0), y).To2D()
+		tr := ScreenToWorld(g.Camera, NewVec2(w, 0), y).To2D()
+		bl := ScreenToWorld(g.Camera, NewVec2(0, h), y).To2D()
+		br := ScreenToWorld(g.Camera, NewVec2(w, h), y).To2D()
 
+		minX := math.Floor(min(tr.X, br.X))
+		maxX := math.Ceil(max(tl.X, bl.X))
+		minZ := math.Floor(min(tr.Y, br.Y))
+		maxZ := math.Ceil(max(tl.Y, bl.Y))
 
-			minX := math.Floor(min(tr.X, br.X))
-			maxX := math.Ceil(max(tl.X, bl.X))
-			minZ := math.Floor(min(tr.Y, br.Y))
-			maxZ := math.Ceil(max(tl.Y, bl.Y))
-
-
-			// make a "chunk draw" function
-			// it takes a chunk BB and renders all cells within in
-
-			trChunk := g.Level.Chunks[tr.Scale(1/float64(CHUNK_WIDTH)).Floor()]
-
-
-		}*/
+		for x := minX; x < maxX; x++ {
+			for z := minZ; z < maxZ; z++ {
+				for y := float64(0); y < float64(maxY)+1; y++ {
+					g.Level.GetCell(NewVec3(x, y, z)).Draw(g)
+				}
+			}
+		}
+	}
 
 	g.Player.Draw(g)
 	if g.Monster != nil {

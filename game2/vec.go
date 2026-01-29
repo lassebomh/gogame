@@ -430,6 +430,9 @@ func (v1 Vec3) SubtractXYZ(x, y, z float64) Vec3 {
 func (v1 Vec3) To2D() Vec2 {
 	return NewVec2(v1.X, v1.Z)
 }
+func (v Vec3) ToColor() color.RGBA {
+	return color.RGBA{uint8(v.X * 255), uint8(v.Y * 255), uint8(v.Z * 255), 255}
+}
 
 // Vector3Add - Add two vectors
 func (v1 Vec3) Chipmunk() cp.Vector {

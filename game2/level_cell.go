@@ -2,6 +2,7 @@ package game2
 
 import (
 	"math"
+	"time"
 
 	"github.com/beefsack/go-astar"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -99,6 +100,8 @@ type Cell struct {
 
 	level    *Level
 	Position Vec3
+
+	LastSeenPlayer time.Duration
 }
 
 func (c *Cell) Wake(g *Game) {

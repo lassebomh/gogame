@@ -41,6 +41,11 @@ void main()
 {
   // Texel color fetching from texture sampler
   
+  
+  
+  float seenBefore = texture(shadowMap, (((fragPosition.xyz - playerPosition).xz) / (20) + 0.5) * vec2(-1, 1)).r;
+  
+  
   float inView = 0;
   for (float x = -2; x <= 2; x++) {
     for (float y = -2; y <= 2; y++) {
@@ -110,8 +115,19 @@ void main()
     }
   }
   
+  
   finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
-  finalColor += texelColor*(ambient)*colDiffuse * clamp(inView, 0.1, 1);
+  finalColor += texelColor*colDiffuse*clamp(inView, 0.2, .3);
+  
+  // finalColor *= seenBefore;
+  // finalColor.w = 1;
+  
+  // if (seenBefore > 0 || inView > 0) {
+  // } else {
+  //   finalColor = vec4(0, 0, 0, 1);
+  //   finalColor = (texelColor*((colDiffuse+vec4(specular, 1.0))*vec4(lightDot, 1.0)));
+  //   // finalColor += texelColor*colDiffuse*0.01;
+  // }
 
   if (hideOutsideView) {
     
@@ -124,10 +140,14 @@ void main()
       }
     }
     
+    inView += clamp(3-distance(fragPosition.xyz * vec3(1, 8, 1), playerPosition * vec3(1, 8, 1))*1.5, 0, 1);
+    
+    inView = clamp(inView, 0, 1);
+    
     float dither = fract(sin(dot(gl_FragCoord.xy/8, vec2(12.9898, 78.233))) * 43758.5453);
     
     
-    finalColor.w = clamp(inView-dither, 0, 1);
+    finalColor.w = clamp(inView, 0, 1);
   }  
   
   // finalColor.rgb *= inView;

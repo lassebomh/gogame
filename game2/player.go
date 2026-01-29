@@ -52,6 +52,7 @@ func (p *Player) Update(g *Game) {
 
 	p.Y, p.YVelocity = UpdatePhysicsY(g, p.shape, p.Y, p.YVelocity)
 
+	// look position
 	if math.Abs(g.MouseRayDirection.Y) >= 1e-6 {
 		t := (p.Y - g.MouseRayOrigin.Y) / g.MouseRayDirection.Y
 
@@ -61,6 +62,7 @@ func (p *Player) Update(g *Game) {
 		}
 	}
 
+	// update visibility verticies
 	playerPos := p.Position3D()
 
 	playerAngle := math.Atan2(
@@ -76,8 +78,7 @@ func (p *Player) Update(g *Game) {
 	for i := range VISIBILITY_VERTS - 1 {
 		f := (float64(i)/float64(VISIBILITY_VERTS-2))*2 - 1
 
-		baseAngle := (math.Round((playerAngle/(math.Pi*2))*(VISIBILITY_VERTS)) / (VISIBILITY_VERTS)) * math.Pi * 2
-		// baseAngle := playerAngle
+		baseAngle := playerAngle
 		angleOffset := f*VISIBILITY_CONE_RADIANS - math.Pi
 		angle := baseAngle - angleOffset
 		dir := NewVec2(math.Cos(angle), math.Sin(angle))
@@ -87,6 +88,48 @@ func (p *Player) Update(g *Game) {
 
 		p.visibilityVerts[i+1] = NewVec3(result.Point.X, p.Y, result.Point.Y)
 	}
+
+	// update last seen cells
+	cellCoords := map[Vec3]bool{}
+
+	a := p.visibilityVerts[0]
+	for _, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
+		step := 1 / a.Distance(b)
+
+		for i := float64(0); i <= 1; i += step {
+			cellCoords[a.Lerp(b, i).Floor()] = true
+		}
+	}
+
+	for cellCoord := range cellCoords {
+		cell := g.Level.GetCell(cellCoord)
+		cell.LastSeenPlayer = g.Time
+	}
+
+	// wake surrounding chunks
+
+	for x := -1; x <= 1; x++ {
+		for z := -1; z <= 1; z++ {
+
+			chunkPos := playerPos.To2D().Scale(1/CHUNK_WIDTH).Floor().AddXY(float64(x), float64(z))
+
+			if !g.Level.chunksAwake[chunkPos] {
+				chunk := g.Level.Chunks[chunkPos]
+
+				for x := range CHUNK_WIDTH {
+					for z := range CHUNK_WIDTH {
+						for y := range CHUNK_HEIGHT {
+							chunk[x][z][y].Wake(g)
+						}
+					}
+				}
+
+				g.Level.chunksAwake[chunkPos] = true
+			}
+
+		}
+	}
+
 }
 
 func (p *Player) Position3D() Vec3 {
@@ -132,7 +175,7 @@ func (p *Player) Draw(g *Game) {
 	rl.DrawSphere(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)).Raylib(), float32(g.Player.Radius), rl.Red)
 }
 
-func (p *Player) RenderViewTexture(g *Game) {
+func (p *Player) UpdateView(g *Game) {
 	BeginTextureMode(p.ViewTexture, func() {
 		camera := Camera3D{
 			Position:   g.Player.Position3D().Add(Y.Scale(5)),
@@ -144,6 +187,20 @@ func (p *Player) RenderViewTexture(g *Game) {
 		BeginMode3D(camera, func() {
 			rl.ClearBackground(color.RGBA{})
 
+			playerPos := p.Position3D()
+
+			for x := float64(-camera.Fovy); x <= camera.Fovy+1; x++ {
+				for z := float64(-camera.Fovy); z <= camera.Fovy+1; z++ {
+					cell := g.Level.GetCell(playerPos.AddXYZ(x, 0, z))
+					pos := NewVec3(cell.Position.X+0.5, p.Y-0.5, cell.Position.Z+0.5)
+					seen := float64(0)
+					if cell.LastSeenPlayer != 0 {
+						seen = Clamp((30-(g.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
+					}
+					rl.DrawCube(pos.Raylib(), 1, 0, 1, X.Scale(seen).ToColor())
+				}
+			}
+
 			a := p.visibilityVerts[0]
 			for i, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
 				c := p.visibilityVerts[i+1]
@@ -152,4 +209,5 @@ func (p *Player) RenderViewTexture(g *Game) {
 			}
 		})
 	})
+
 }
