@@ -265,7 +265,7 @@ func (g *Game) Draw() {
 				g.MainShader.LightDirectional(NewVec3(0, -1, 0).Normalize(), rl.White, 0.25)
 			}
 
-			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 40, rl.White, 1.5)
+			g.MainShader.LightSpot(g.Player.Position3D().Add(Y.Scale(g.Player.Radius)), g.Player.LookPosition.Add(Y.Scale(g.Player.Radius)), 30, 40, rl.White, 3)
 
 			g.MainShader.UpdateValues()
 

@@ -231,7 +231,7 @@ void main()
   finalColor = vec4(
     lab2rgb(lab.xyz),
     finalColor.w
-  ); 
+  );
   // finalColor.rgb *= inView;
 }
 
