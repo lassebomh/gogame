@@ -115,6 +115,10 @@ func (p *Player) Update(g *Game) {
 
 			if !g.Level.chunksAwake[chunkPos] {
 				chunk := g.Level.Chunks[chunkPos]
+				
+				if chunk == nil {
+					continue
+				}
 
 				for x := range CHUNK_WIDTH {
 					for z := range CHUNK_WIDTH {
