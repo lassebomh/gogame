@@ -269,7 +269,7 @@ func (g *Game) Draw() {
 
 			g.MainShader.UpdateValues()
 
-			g.Draw3D(int(g.Player.Y))
+			g.Draw3D(g.Player.Position3D())
 		})
 
 	})
@@ -325,27 +325,20 @@ func c(x float64) float64 {
 	return (1 + math.Tanh(x)) / 2
 }
 
-func (g *Game) Draw3D(maxY int) {
+func (g *Game) Draw3D(position Vec3) {
 
 	// g.Level.Draw(g, maxY)
 
 	{
-		w, h := float64(g.MainTexture.Texture.Width*DOWNSCALE), float64(g.MainTexture.Texture.Height*DOWNSCALE)
-		y := g.Player.Y
 
-		tl := ScreenToWorld(g.Camera, NewVec2(0, 0), y).To2D()
-		tr := ScreenToWorld(g.Camera, NewVec2(w, 0), y).To2D()
-		bl := ScreenToWorld(g.Camera, NewVec2(0, h), y).To2D()
-		br := ScreenToWorld(g.Camera, NewVec2(w, h), y).To2D()
-
-		minX := math.Floor(min(tr.X, br.X))
-		maxX := math.Ceil(max(tl.X, bl.X))
-		minZ := math.Floor(min(tr.Y, br.Y))
-		maxZ := math.Ceil(max(tl.Y, bl.Y))
+		minX := math.Floor(position.X - 10)
+		maxX := math.Ceil(position.X + 10)
+		minZ := math.Floor(position.Z - 10)
+		maxZ := math.Ceil(position.Z + 10)
 
 		for x := minX; x < maxX; x++ {
 			for z := minZ; z < maxZ; z++ {
-				for y := float64(0); y < float64(maxY)+1; y++ {
+				for y := float64(0); y < float64(position.Y)+1; y++ {
 					g.Level.GetCell(NewVec3(x, y, z)).Draw(g)
 				}
 			}
@@ -354,7 +347,7 @@ func (g *Game) Draw3D(maxY int) {
 
 	g.Player.Draw(g)
 	if g.Monster != nil {
-		g.Monster.Draw3D(g, maxY)
+		g.Monster.Draw3D(g, position)
 	}
 }
 

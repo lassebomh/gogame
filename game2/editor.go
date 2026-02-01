@@ -172,7 +172,7 @@ func (e *Editor) Draw(g *Game) {
 
 	BeginMode3D(camera, func() {
 		g.MainShader.FullBright.Set(1)
-		g.Draw3D(maxY)
+		g.Draw3D(Vec3{camera.Position.X, e.Y, camera.Position.Z})
 
 		BeginOverlayMode(func() {
 			if g.Monster != nil {

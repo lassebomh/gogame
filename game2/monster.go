@@ -231,7 +231,7 @@ func (p *Monster) Load(g *Game) *Monster {
 	return p
 }
 
-func (p *Monster) Draw3D(g *Game, maxY int) {
+func (p *Monster) Draw3D(g *Game, position Vec3) {
 	rl.BeginBlendMode(rl.BlendAlpha)
 	defer rl.EndBlendMode()
 
@@ -241,7 +241,7 @@ func (p *Monster) Draw3D(g *Game, maxY int) {
 	g.MainShader.UVClamp.Set(aa.X, aa.Y, bb.X, bb.Y)
 	col := color.RGBA{30, 30, 30, 255}
 
-	if math.Floor(p.Y) <= float64(maxY) {
+	if math.Floor(p.Y) <= position.Y {
 		rl.DrawModelEx(g.GetModel("monster_body"), p.Position3D().Add(Y.Scale(p.Radius)).Raylib(), Y.Negate().Raylib(), float32(p.body.Angle()*rl.Rad2deg), XYZ.Scale(p.Radius).Raylib(), col)
 	}
 
@@ -249,7 +249,7 @@ func (p *Monster) Draw3D(g *Game, maxY int) {
 
 		for _, segment := range arm.segments {
 
-			if math.Floor(segment.Y) <= float64(maxY) {
+			if math.Floor(segment.Y) <= position.Y {
 
 				position := Vec3From2D(Vec2FromCP(segment.body.Position()), segment.Y).AddXYZ(0, segment.Width/2, 0)
 

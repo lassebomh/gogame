@@ -1,7 +1,6 @@
 package game2
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/beefsack/go-astar"
@@ -52,7 +51,7 @@ func (l *Level) GetCell(pos Vec3) *Cell {
 		l.Chunks[chunkPos] = chunk
 		l.ChunkInit(chunk)
 
-		fmt.Printf("New chunk %+v\n", chunkPos)
+		// fmt.Printf("New chunk %+v\n", chunkPos)
 	}
 
 	cellx := ((int(math.Floor(pos.X))%CHUNK_WIDTH + CHUNK_WIDTH) % CHUNK_WIDTH)
