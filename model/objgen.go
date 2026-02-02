@@ -41,7 +41,7 @@ func (m *ObjGenerator) AddTriangle(a, b, c vec3.Value, uva, uvb, uvc vec2.Value,
 	if !ok {
 		m.VertNormalCount++
 		ni = m.VertNormalCount
-		m.VertNormals[a] = m.VertNormalCount
+		m.VertNormals[normal] = m.VertNormalCount
 	}
 
 	ai, ok := m.Verts[a]

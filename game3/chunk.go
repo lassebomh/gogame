@@ -13,9 +13,32 @@ import (
 
 const CHUNKS_PATH = "./chunks/"
 
-const ChunkWidth = 8
-const ChunkHeight = 8
-const FloorWidth = 0.15
+const (
+	ChunkWidth  = 8
+	ChunkHeight = 8
+)
+
+const (
+	FloorWidth = 0.2
+	WallWidth  = 0.2
+)
+
+var FaceSolidPoint = []vec3.Value{
+	vec3.XYZ(0, 0, 0),
+	vec3.XYZ(1, -FloorWidth, 1),
+
+	vec3.XYZ(1, 0, 0),
+	vec3.XYZ(1-WallWidth, 1, 1),
+
+	vec3.XYZ(0, 0, 1),
+	vec3.XYZ(1, 1, 1-WallWidth),
+
+	vec3.XYZ(0, 0, 0),
+	vec3.XYZ(WallWidth, 1, 1),
+
+	vec3.XYZ(0, 0, 0),
+	vec3.XYZ(1, 1, WallWidth),
+}
 
 type ChunkPos struct {
 	X int
@@ -72,8 +95,14 @@ func (c *Chunk) UpsertModels() {
 		for z := range ChunkWidth {
 			cell := &c.Cells[y][x][z]
 			pos := vec3.XYZ(float64(x), 0, float64(z))
-			if cell.Faces[FaceDown].Type == FaceSolid {
-				model.Cube(pos, pos.Add(vec3.XYZ(1, -FloorWidth, 1)), 0, 2)
+
+			for i := range cell.Faces {
+				if cell.Faces[i].Type != FaceSolid {
+					continue
+				}
+				aa := pos.Add(FaceSolidPoint[i*2])
+				bb := pos.Add(FaceSolidPoint[i*2+1])
+				model.Cube(aa, bb, 0, 2)
 			}
 		}
 	}

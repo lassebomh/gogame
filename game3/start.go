@@ -21,11 +21,10 @@ func Start() {
 	chunk := game.Level.Chunks[pos].Init(pos)
 
 	chunk.Cells[0][0][0].Faces[FaceDown].Type = FaceSolid
-	chunk.Cells[0][1][0].Faces[FaceDown].Type = FaceSolid
-	chunk.Cells[0][2][0].Faces[FaceDown].Type = FaceSolid
-	chunk.Cells[0][0][1].Faces[FaceDown].Type = FaceSolid
-	chunk.Cells[0][1][1].Faces[FaceDown].Type = FaceSolid
-	chunk.Cells[0][2][1].Faces[FaceDown].Type = FaceSolid
+	chunk.Cells[0][0][0].Faces[FaceWest].Type = FaceSolid
+	chunk.Cells[0][0][0].Faces[FaceNorth].Type = FaceSolid
+	chunk.Cells[0][0][0].Faces[FaceEast].Type = FaceSolid
+	chunk.Cells[0][0][0].Faces[FaceSouth].Type = FaceSolid
 
 	chunk.UpsertModels()
 
