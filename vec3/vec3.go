@@ -47,6 +47,10 @@ func (v Value) Raylib() rl.Vector3 {
 	return rl.Vector3{float32(v.X), float32(v.Y), float32(v.Z)}
 }
 
+func FromRaylib(v rl.Vector3) Value {
+	return Value{float64(v.X), float64(v.Y), float64(v.Z)}
+}
+
 // Color type, RGBA (32bit)
 // TODO remove later, keep type for now to not break code
 type Color = color.RGBA

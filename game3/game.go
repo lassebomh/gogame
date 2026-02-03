@@ -1,39 +1,73 @@
 package game3
 
-import rl "github.com/gen2brain/raylib-go/raylib"
+import "game/vec3"
 
 var game *Game
 
 type Game struct {
-	Level *Level
+	Earth   *World
+	Station *World
 
-	atlasTexture rl.Texture2D
+	ActiveEditor *Editor
 }
 
-func (g *Game) Init() {
+func (g *Game) Upsert() {
 	if g == nil {
 		g = &Game{}
 	}
 	game = g
-	game.Level.Init()
+	game.Earth.Upsert(WorldEarth)
+	game.Station.Upsert(WorldStation)
+
 }
+
+type WorldType int32
+
+const (
+	WorldEarth = WorldType(iota)
+	WorldStation
+)
 
 // Seperate levels for station and world?
-type Level struct {
-	Chunks map[ChunkPos]*Chunk
+type World struct {
+	Type   WorldType
+	chunks map[ChunkPos]*Chunk
+
+	Editor *Editor
 }
 
-func (l *Level) Init() *Level {
-	if l == nil {
-		l = &Level{}
+func (w *World) Upsert(worldType WorldType) *World {
+	if w == nil {
+		w = &World{}
 	}
-	game.Level = l
-	if l.Chunks == nil {
-		l.Chunks = make(map[ChunkPos]*Chunk)
-	}
-	for pos, chunk := range l.Chunks {
-		chunk.Init(pos)
+	w.Type = worldType
+	if w.Type == WorldEarth {
+		game.Earth = w
+	} else {
+		game.Station = w
 	}
 
-	return l
+	if w.chunks == nil {
+		w.chunks = make(map[ChunkPos]*Chunk)
+	}
+	for _, chunk := range w.chunks {
+		chunk.Reload()
+	}
+	w.Editor.Upsert(w)
+
+	return w
+}
+
+func (w *World) GetCell(pos vec3.Value) *Cell {
+	cpos, lpos := WorldToChunk(pos)
+
+	chunk, ok := w.chunks[cpos]
+
+	if !ok {
+		chunk = chunk.Upsert(cpos)
+	}
+
+	cell := &chunk.Cells[lpos.Y][lpos.X][lpos.Z]
+
+	return cell
 }

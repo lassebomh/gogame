@@ -2,6 +2,7 @@ package game3
 
 import (
 	"fmt"
+	"game/vec2"
 	"game/vec3"
 	"image/color"
 	"log"
@@ -169,41 +170,41 @@ func (c Camera3D) Raylib() rl.Camera3D {
 	}
 }
 
-// type LineLayout struct {
-// 	X      float64
-// 	Y      float64
-// 	Height float64
-// 	Width  float64
-// }
+type LineLayout struct {
+	X      float64
+	Y      float64
+	Height float64
+	Width  float64
+}
 
-// func NewLineLayout(X float64, Y float64, Height float64) *LineLayout {
-// 	return &LineLayout{X, Y, Height, 0}
-// }
+func NewLineLayout(X float64, Y float64, Height float64) *LineLayout {
+	return &LineLayout{X, Y, Height, 0}
+}
 
-// func (l *LineLayout) Next(width float64) rl.Rectangle {
-// 	rect := rl.NewRectangle(
-// 		float32(l.X+l.Width),
-// 		float32(l.Y),
-// 		float32(width),
-// 		float32(l.Height),
-// 	)
+func (l *LineLayout) Next(width float64) rl.Rectangle {
+	rect := rl.NewRectangle(
+		float32(l.X+l.Width),
+		float32(l.Y),
+		float32(width),
+		float32(l.Height),
+	)
 
-// 	l.Width += width
+	l.Width += width
 
-// 	return rect
-// }
+	return rect
+}
 
-// func (l *LineLayout) Break(height float64) {
-// 	l.Width = 0
-// 	l.Y += l.Height
-// 	l.Height = height
-// }
+func (l *LineLayout) Break(height float64) {
+	l.Width = 0
+	l.Y += l.Height
+	l.Height = height
+}
 
-// func ScreenToWorld(camera Camera3D, screen Vec2, y float64) Vec3 {
-// 	ray := rl.GetScreenToWorldRay(screen.Raylib(), camera.Raylib())
-// 	origin := Vec3FromRaylib(ray.Position)
-// 	direction := Vec3FromRaylib(ray.Direction)
-// 	hitpos := origin.Add(direction.Scale((y - origin.Y) / direction.Y))
-// 	hitpos.Y = y
-// 	return hitpos
-// }
+func ScreenToWorld(camera Camera3D, screen vec2.Value, y float64) vec3.Value {
+	ray := rl.GetScreenToWorldRay(screen.Raylib(), camera.Raylib())
+	origin := vec3.FromRaylib(ray.Position)
+	direction := vec3.FromRaylib(ray.Direction)
+	hitpos := origin.Add(direction.Scale((y - origin.Y) / direction.Y))
+	hitpos.Y = y
+	return hitpos
+}

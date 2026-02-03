@@ -3,6 +3,7 @@ package vec2
 import (
 	"math"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
 )
 
@@ -25,6 +26,13 @@ func All(v float64) Value {
 
 func (v Value) Chipmunk() cp.Vector {
 	return cp.Vector{v.X, v.Y}
+}
+
+func FromRaylib(v rl.Vector2) Value {
+	return Value{float64(v.X), float64(v.Y)}
+}
+func (v Value) Raylib() rl.Vector2 {
+	return rl.Vector2{float32(v.X), float32(v.Y)}
 }
 
 // Clamp - Clamp float value
