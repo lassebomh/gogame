@@ -33,8 +33,16 @@ var FaceSolidPoint = []vec3.Value{
 }
 
 func GenerateChunkYModel(c *Chunk, y int) rl.Model {
-	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", y))
+	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", rl.GetRandomValue(0, 1000)))
+	os.Remove(path)
 	edit := model.NewModel(5, path, "./chunks/chunk.mtl", "Material")
+
+	// aa := vec3.XYZ(0.1, 0.1, 0.1)
+	// bb := aa.Scale(2)
+	// edit.Cube(aa, bb, 1, 0)
+	// edit.Cube(aa.Add(vec3.X(0.5)), bb.Add(vec3.X(0.5)), 2, 0)
+	// edit.Cube(aa.Add(vec3.Y(0.5)), bb.Add(vec3.Y(0.5)), 3, 0)
+	// edit.Cube(aa.Add(vec3.Z(0.5)), bb.Add(vec3.Z(0.5)), 4, 0)
 
 	for x := range ChunkWidth {
 		for z := range ChunkWidth {

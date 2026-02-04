@@ -24,12 +24,12 @@ func (t *ToolFloor) Update(e *Editor) {
 	t.CellPos = vec3.XYZ(ix, e.mouseWorldPosition.Y, iz)
 
 	if rl.IsMouseButtonDown(rl.MouseButtonMiddle) {
-		cellRef := e.world.GetCell(t.CellPos)
+		cellRef, _ := e.world.GetCell(t.CellPos)
 		t.Paste = cellRef.Faces[FaceDown]
 	}
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
-		cellRef := e.world.GetCell(t.CellPos)
+		cellRef, _ := e.world.GetCell(t.CellPos)
 
 		if math.Abs(fx) > math.Abs(fz) {
 			if fx < 0 {
@@ -51,11 +51,7 @@ func (t *ToolFloor) Update(e *Editor) {
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
-		cpos, _ := WorldToChunk(t.CellPos)
-		chunk, ok := e.world.chunks[cpos]
-		if !ok {
-			chunk = chunk.Upsert(cpos)
-		}
+		_, chunk := e.world.GetCell(t.CellPos)
 		chunk.Reload()
 	}
 }

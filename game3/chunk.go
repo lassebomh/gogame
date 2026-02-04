@@ -21,22 +21,18 @@ type ChunkPos struct {
 }
 
 type LocalPos struct {
-	Z uint
-	X uint
-	Y uint
+	X int
+	Y int
+	Z int
 }
 
 func WorldToChunk(v vec3.Value) (ChunkPos, LocalPos) {
 	xi := math.Floor(v.X / float64(ChunkWidth))
 	zi := math.Floor(v.Z / float64(ChunkWidth))
-
 	xf := v.X - xi*ChunkWidth
 	zf := v.Z - zi*ChunkWidth
-
-	// xi, xf := math.Modf(v.X / ChunkWidth)
-	// zi, zf := math.Modf(v.Z / ChunkWidth)
 	chunkPos := ChunkPos{X: int(xi), Z: int(zi)}
-	localPos := LocalPos{X: uint(xf), Y: uint(v.Y), Z: uint(zf)}
+	localPos := LocalPos{X: int(xf), Y: int(v.Y), Z: int(zf)}
 	return chunkPos, localPos
 }
 
@@ -44,26 +40,16 @@ func ChunkToWorld(c ChunkPos, l LocalPos) vec3.Value {
 	return vec3.XYZ(
 		float64(c.X*ChunkWidth)+float64(l.X),
 		float64(l.Y),
-		float64(c.X*ChunkWidth)+float64(l.Z),
+		float64(c.Z*ChunkWidth)+float64(l.Z),
 	)
 }
 
 type Chunk struct {
-	Cells [ChunkHeight][ChunkWidth][ChunkWidth]Cell
+	Cells    [ChunkHeight][ChunkWidth][ChunkWidth]Cell
+	Position ChunkPos
 
 	top    [ChunkWidth][ChunkWidth]*Cell
 	models [ChunkHeight]rl.Model
-	// position ChunkPos
-}
-
-func (c *Chunk) Upsert(position ChunkPos) *Chunk {
-	if c == nil {
-		c = &Chunk{}
-	}
-	game.Earth.chunks[position] = c
-	c.Reload()
-
-	return c
 }
 
 func (c *Chunk) Reload() {

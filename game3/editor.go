@@ -126,9 +126,9 @@ func (e *Editor) Update(timeStep time.Duration) {
 
 		if t >= 0 {
 			e.mouseWorldPosition = origin.Add(dir.Scale(t))
-			e.mouseWorldPosition.Y = ground
 		}
 	}
+	e.mouseWorldPosition.Y = ground
 
 	switch e.Tool {
 	case TOOL_FLOOR:
@@ -156,14 +156,17 @@ func (e *Editor) Draw() {
 	BeginMode3D(e.GetCamera(), func() {
 		rl.DrawGrid(3, 3)
 
-		for pos, chunk := range e.world.chunks {
-			worldPos := ChunkToWorld(pos, LocalPos{0, 0, 0})
+		for pos, chunk := range e.world.Chunks {
 			for y := range min(ChunkHeight, int(e.Position.Y)+1) {
+				worldPos := ChunkToWorld(pos, LocalPos{0, y, 0})
 				rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 			}
 		}
 
-		// rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.1, 0.1, 0.1, rl.Red)
+		rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
+		rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+		rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
+		rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
 
 		switch e.Tool {
 		case TOOL_FLOOR:

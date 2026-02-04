@@ -87,7 +87,7 @@ func (m *Model) Cube(from, to vec3.Value, tileX int, tileY int) {
 
 		normal := t[1].Subtract(t[0]).CrossProduct(t[2].Subtract(t[0])).Normalize()
 
-		uvOrigin := vec2.XY(float64(tileX), float64(tileY))
+		uvOrigin := vec2.XY(float64(tileX), m.tiles-float64(tileY)-1)
 		uvs := [3]vec2.Value{}
 
 		for i := range uvs {
