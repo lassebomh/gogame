@@ -18,12 +18,6 @@ func Start() {
 
 	LoadGame("./save.gob")
 
-	// chunk.Cells[0][0][0].Faces[FaceDown].Type = FaceSolid
-	// chunk.Cells[0][0][0].Faces[FaceWest].Type = FaceSolid
-	// chunk.Cells[0][0][0].Faces[FaceNorth].Type = FaceSolid
-	// chunk.Cells[0][0][0].Faces[FaceEast].Type = FaceSolid
-	// chunk.Cells[0][0][0].Faces[FaceSouth].Type = FaceSolid
-
 	t0 := rl.GetTime()
 
 	for !rl.WindowShouldClose() {
@@ -57,6 +51,8 @@ func Start() {
 		} else {
 			game.Draw()
 		}
+
+		rl.DrawFPS(10, 10)
 
 		rl.EndDrawing()
 		t0 = t1

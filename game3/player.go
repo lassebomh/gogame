@@ -3,6 +3,7 @@ package game3
 import (
 	"game/vec2"
 	"game/vec3"
+	"image/color"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -121,6 +122,8 @@ func (p *Player) Update() {
 	// 	cell.LastSeenPlayer = g.Time
 	// }
 
+	p.UpdateView()
+
 }
 
 func SpawnNewPlayer(world *World) {
@@ -153,6 +156,10 @@ func (p *Player) Spawn(world *World) {
 	p.shape.SetFriction(0)
 	p.shape.Filter.Group = GroupPlayer
 	p.body = body
+
+	if !rl.IsRenderTextureValid(p.viewTexture) {
+		p.viewTexture = rl.LoadRenderTexture(16*40, 16*40)
+	}
 }
 
 // func (p *Player) ToSave() PlayerSave {
@@ -189,39 +196,38 @@ func (p *Player) Draw() {
 	rl.DrawSphere(p.Position.Add(vec3.Y(p.Radius)).Raylib(), float32(p.Radius), rl.Red)
 }
 
-// func (p *Player) UpdateView() {
-// 	BeginTextureMode(p.ViewTexture, func() {
-// 		camera := Camera3D{
-// 			Position:   g.Player.Position3D().Add(Y.Scale(5)),
-// 			Target:     g.Player.Position3D().AddXYZ(0, 0, 0.0001),
-// 			Fovy:       20,
-// 			Projection: rl.CameraOrthographic,
-// 			Up:         Y,
-// 		}
-// 		BeginMode3D(camera, func() {
-// 			rl.ClearBackground(color.RGBA{})
+func (p *Player) UpdateView() {
+	BeginTextureMode(p.viewTexture, func() {
+		camera := Camera3D{
+			Position:   p.Position.Add(vec3.Y(5)),
+			Target:     p.Position.AddXYZ(0, 0, 0.0001),
+			Fovy:       20,
+			Projection: rl.CameraOrthographic,
+			Up:         vec3.Y(1),
+		}
+		BeginMode3D(camera, func() {
+			rl.ClearBackground(color.RGBA{})
 
-// 			playerPos := p.Position3D()
+			// for x := float64(-camera.Fovy); x <= camera.Fovy+1; x++ {
+			// 	for z := float64(-camera.Fovy); z <= camera.Fovy+1; z++ {
+			// 		cell, chunk := p.world.GetCell(p.Position.AddXYZ(x, 0, z))
+			// 		cellPosition := ChunkToWorld(chunk.Position, LocalPos{int(x), 0, int(z)})
+			// 		pos := vec3.XYZ(cell.Position.X+0.5, p.Position.Y-0.5, cell.Position.Z+0.5)
+			// 		seen := float64(0)
+			// 		if cell.LastSeenPlayer != 0 {
+			// 			seen = Clamp((5-(game.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
+			// 		}
+			// 		rl.DrawCube(pos.Raylib(), 1, 0, 1, vec3.X(seen).ToColor())
+			// 	}
+			// }
 
-// 			for x := float64(-camera.Fovy); x <= camera.Fovy+1; x++ {
-// 				for z := float64(-camera.Fovy); z <= camera.Fovy+1; z++ {
-// 					cell := g.Level.GetCell(playerPos.AddXYZ(x, 0, z))
-// 					pos := vec3.XYZ(cell.Position.X+0.5, p.Y-0.5, cell.Position.Z+0.5)
-// 					seen := float64(0)
-// 					if cell.LastSeenPlayer != 0 {
-// 						seen = Clamp((5-(g.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
-// 					}
-// 					rl.DrawCube(pos.Raylib(), 1, 0, 1, X.Scale(seen).ToColor())
-// 				}
-// 			}
+			a := p.visibilityVerts[0]
+			for i, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
+				c := p.visibilityVerts[i+1]
 
-// 			a := p.visibilityVerts[0]
-// 			for i, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
-// 				c := p.visibilityVerts[i+1]
+				rl.DrawTriangle3D(a.Raylib(), b.Raylib(), c.Raylib(), color.RGBA{0, 255, 0, 255})
+			}
+		})
+	})
 
-// 				rl.DrawTriangle3D(a.Raylib(), b.Raylib(), c.Raylib(), color.RGBA{0, 255, 0, 255})
-// 			}
-// 		})
-// 	})
-
-// }
+}

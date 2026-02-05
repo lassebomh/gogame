@@ -11,7 +11,7 @@ in vec2 fragTexCoord;
 in vec3 fragNormal;
 
 uniform vec4 colDiffuse;
-uniform vec4 uvClamp;
+// uniform vec4 uvClamp;
 uniform sampler2D texture0;
 
 uniform bool fullBright;
@@ -37,6 +37,24 @@ uniform Light lights[MAX_LIGHTS];
 uniform vec4 ambient;
 uniform vec3 viewPos;
 
+float dither8(float brightness) {
+    // 4x4 Bayer Matrix
+    const mat4 bayer = mat4(
+         0.0,  8.0,  2.0, 10.0,
+        12.0,  4.0, 14.0,  6.0,
+         3.0, 11.0,  1.0,  9.0,
+        15.0,  7.0, 13.0,  5.0
+    ) / 16.0;
+
+    // Determine grid position (0-3)
+    int x = int(mod(gl_FragCoord.x, 4.0));
+    int y = int(mod(gl_FragCoord.y, 4.0));
+
+    // Look up threshold. GLSL mat4 is [column][row]
+    float threshold = bayer[x][y];
+
+    return (brightness > threshold ? 1.0 : 0.0) * brightness;
+}
 
 vec3 rgb2lab(vec3 c)
 {
@@ -142,8 +160,7 @@ void main()
   
   float dither = (fract(sin(dot(gl_FragCoord.xy/8, vec2(12.9898, 78.233))) * 43758.5453))*2-1;
   
-  vec2 uv = uvClamp.xy + fragTexCoord * (uvClamp.zw - uvClamp.xy);
-  vec4 texelColor = texture(texture0, uv);
+  vec4 texelColor = texture(texture0, fragTexCoord);
   
   if (fullBright) {
     finalColor = texelColor * colDiffuse;
@@ -220,7 +237,11 @@ void main()
   } else {
     finalColor += texelColor*colDiffuse*clamp(inView * viewDither * 2, 0.08, 0.2);    
   }
-  
+
+
+  if (floor(playerPosition.y) != playerPosition.y) {
+    finalColor.w = dither8(1-(fragPosition.y - playerPosition.y));
+  }
   
   vec3 lab = rgb2lab(finalColor.xyz);
   

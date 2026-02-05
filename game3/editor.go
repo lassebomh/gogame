@@ -161,6 +161,7 @@ func (e *Editor) GetCamera() Camera3D {
 }
 
 func (e *Editor) Draw() {
+	e.world.shader.FullBright.Set(1)
 	rl.ClearBackground(rl.DarkGray)
 
 	BeginMode3D(e.GetCamera(), func() {
@@ -191,6 +192,7 @@ func (e *Editor) Draw() {
 		})
 
 	})
+	e.world.shader.FullBright.Set(0)
 
 	switch e.Tool {
 	case TOOL_FLOOR:

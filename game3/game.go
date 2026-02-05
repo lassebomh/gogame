@@ -5,6 +5,7 @@ import (
 	"game/vec2"
 	"game/vec3"
 	"log"
+	"math"
 	"os"
 	"time"
 
@@ -116,6 +117,9 @@ type World struct {
 	MousePosition     vec2.Value
 	MouseRayOrigin    vec3.Value
 	MouseRayDirection vec3.Value
+
+	renderTexture rl.RenderTexture2D
+	shader        *MainShader
 }
 
 func (w *World) Upsert(worldType WorldType) *World {
@@ -129,6 +133,9 @@ func (w *World) Upsert(worldType WorldType) *World {
 		game.Station = w
 	}
 	w.space = cp.NewSpace()
+	w.shader = NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs")
+	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
+	w.renderTexture = rl.LoadRenderTexture(int32(renderWidth/4), int32(renderHeight/4))
 
 	if w.Chunks == nil {
 		w.Chunks = make(map[ChunkPos]*Chunk)
@@ -151,6 +158,12 @@ func (w *World) Update(dt time.Duration) {
 		w.TimePhysicsAccumulator -= PhysicsTickrate
 	}
 
+	mousePos := rl.GetMousePosition()
+	mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
+
+	w.MouseRayOrigin = vec3.FromRaylib(mouseRay.Position)
+	w.MouseRayDirection = vec3.FromRaylib(mouseRay.Direction)
+
 	if w.Player != nil {
 
 		w.Player.Update()
@@ -169,31 +182,69 @@ func (w *World) Update(dt time.Duration) {
 }
 
 func (w *World) Draw() {
-	rl.ClearBackground(rl.Black)
-	BeginMode3D(w.Camera, func() {
+	BeginTextureMode(w.renderTexture, func() {
 
-		targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
+		rl.ClearBackground(rl.Black)
+		BeginMode3D(w.Camera, func() {
 
-		for dx := -1; dx <= 1; dx++ {
-			for dz := -1; dz <= 1; dz++ {
-				chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
+			w.shader.Ambient.Set(1, 1, 1, 0.05)
+			if w.Player != nil {
+				w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
+				w.shader.PlayerPosition.SetVec3(w.Player.Position)
+				w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.5)), w.Player.lookPosition.Add(vec3.Y(0.5)), 35, 40, rl.White, 1.5)
+			}
 
-				chunk, ok := w.Chunks[chunkPos]
+			w.shader.UpdateValues()
 
-				if ok {
-					for y := 0; y < targetLocalPos.Y+1; y++ {
-						worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
-						rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
+			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
+
+			maxY := targetLocalPos.Y
+
+			if w.Camera.Target.Y-math.Trunc(w.Camera.Target.Y) > 0.1 {
+				maxY++
+			}
+
+			for y := 0; y <= maxY; y++ {
+				// above := true
+				// if above {
+				// 	rl.BeginBlendMode(rl.BlendAlpha)
+				// }
+
+				for dx := -1; dx <= 1; dx++ {
+					for dz := -1; dz <= 1; dz++ {
+						chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
+
+						chunk, ok := w.Chunks[chunkPos]
+
+						if ok {
+							worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
+
+							rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
+						}
 					}
 				}
+
+				// if above {
+				// 	rl.EndBlendMode()
+				// }
 			}
-		}
 
-		if w.Player != nil {
-			w.Player.Draw()
-		}
+			if w.Player != nil {
+				w.Player.Draw()
+			}
 
+		})
 	})
+
+	rl.DrawTexturePro(
+		w.renderTexture.Texture,
+		rl.Rectangle{X: 0, Y: 0, Width: float32(w.renderTexture.Texture.Width), Height: -float32(w.renderTexture.Texture.Height)},
+		rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetRenderWidth()), Height: float32(rl.GetRenderHeight())},
+		rl.Vector2{X: 0, Y: 0},
+		0,
+		rl.White,
+	)
+
 }
 
 func (w *World) GetCell(pos vec3.Value) (*Cell, *Chunk) {

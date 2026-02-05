@@ -95,6 +95,7 @@ func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 
 	edit.Export()
 	mdl := rl.LoadModel(path)
+	mdl.Materials.Shader = c.world.shader.shader
 
 	os.Remove(path)
 

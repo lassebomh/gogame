@@ -51,6 +51,9 @@ func (u *UniformVec2) Set(x, y float64) {
 func (u *UniformVec3) Set(x, y, z float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z)}, rl.ShaderUniformVec3)
 }
+func (u *UniformVec3) SetVec3(v vec3.Value) {
+	u.Set(v.X, v.Y, v.Z)
+}
 func (u *UniformVec4) Set(x, y, z, w float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z), float32(w)}, rl.ShaderUniformVec4)
 }
