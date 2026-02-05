@@ -15,11 +15,7 @@ import (
 var game *Game
 
 type Game struct {
-	TimeStep               time.Duration
-	Time                   time.Duration
-	TimePhysicsAccumulator time.Duration
-
-	space *cp.Space
+	Time time.Duration
 
 	Earth   *World
 	Station *World
@@ -45,30 +41,21 @@ func LoadGame(path string) {
 		log.Println("Save not found.")
 	}
 
-	game.space = cp.NewSpace()
-
 	game.Earth.Upsert(WorldEarth)
 	game.Station.Upsert(WorldStation)
 
 	if game.Station.Player != nil {
-		player := NewPlayer(game.Station.Player)
-		player.MoveToWorld(game.Station)
+		game.Station.Player.Spawn(game.Station)
+	} else if game.Earth.Player != nil {
+		game.Earth.Player.Spawn(game.Earth)
 	} else {
-		player := NewPlayer(game.Earth.Player)
-		player.MoveToWorld(game.Earth)
+		SpawnNewPlayer(game.Earth)
 	}
 }
 
 func (g *Game) Update(dt time.Duration) {
-	g.TimeStep = dt
 	g.Time += dt
-	g.TimePhysicsAccumulator += dt
-
-	for g.TimePhysicsAccumulator >= PhysicsTickrate {
-		g.space.Step(PhysicsTickrate.Seconds())
-		g.TimePhysicsAccumulator -= PhysicsTickrate
-	}
-	g.Earth.Update()
+	g.Earth.Update(dt)
 }
 
 func (g *Game) Draw() {
@@ -114,8 +101,12 @@ const (
 
 // Seperate levels for station and world?
 type World struct {
+	TimeStep               time.Duration
+	TimePhysicsAccumulator time.Duration
+
 	Type   WorldType
 	Chunks map[ChunkPos]*Chunk
+	space  *cp.Space
 
 	Player *Player
 	Camera Camera3D
@@ -137,11 +128,13 @@ func (w *World) Upsert(worldType WorldType) *World {
 	} else {
 		game.Station = w
 	}
+	w.space = cp.NewSpace()
 
 	if w.Chunks == nil {
 		w.Chunks = make(map[ChunkPos]*Chunk)
 	}
 	for _, chunk := range w.Chunks {
+		chunk.world = w
 		chunk.Reload()
 	}
 	w.Editor.Upsert(w)
@@ -149,7 +142,15 @@ func (w *World) Upsert(worldType WorldType) *World {
 	return w
 }
 
-func (w *World) Update() {
+func (w *World) Update(dt time.Duration) {
+	w.TimeStep = dt
+	w.TimePhysicsAccumulator += dt
+
+	for w.TimePhysicsAccumulator >= PhysicsTickrate {
+		w.space.Step(PhysicsTickrate.Seconds())
+		w.TimePhysicsAccumulator -= PhysicsTickrate
+	}
+
 	if w.Player != nil {
 
 		w.Player.Update()
@@ -203,6 +204,7 @@ func (w *World) GetCell(pos vec3.Value) (*Cell, *Chunk) {
 	if !ok {
 		chunk = &Chunk{
 			Position: cpos,
+			world:    w,
 		}
 		w.Chunks[cpos] = chunk
 		chunk.Reload()

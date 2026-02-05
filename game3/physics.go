@@ -144,7 +144,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 	}
 
 	if y > groundY {
-		yVelocity -= game.TimeStep.Seconds() / 5
+		yVelocity -= w.TimeStep.Seconds() / 5
 	}
 
 	if y+yVelocity < groundY {

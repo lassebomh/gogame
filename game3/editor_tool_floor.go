@@ -10,8 +10,9 @@ import (
 )
 
 type ToolFloor struct {
-	CellPos vec3.Value
-	Paste   Face
+	CellPos      vec3.Value
+	Paste        Face
+	PastingCells map[vec3.Value]bool
 }
 
 func (t *ToolFloor) Update(e *Editor) {
@@ -29,7 +30,11 @@ func (t *ToolFloor) Update(e *Editor) {
 	}
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
-		cellRef, _ := e.world.GetCell(t.CellPos)
+		if t.PastingCells == nil {
+			t.PastingCells = map[vec3.Value]bool{}
+		}
+
+		t.PastingCells[t.CellPos] = true
 
 		if math.Abs(fx) > math.Abs(fz) {
 			if fx < 0 {
@@ -47,26 +52,34 @@ func (t *ToolFloor) Update(e *Editor) {
 			}
 		}
 
-		cellRef.Faces[FaceDown] = t.Paste
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
-		_, chunk := e.world.GetCell(t.CellPos)
-		chunk.Reload()
+		chunks := make(map[*Chunk]bool, 0)
+		for pos, _ := range t.PastingCells {
+			cell, chunk := e.world.GetCell(pos)
+			cell.Faces[FaceDown] = t.Paste
+			chunks[chunk] = true
+		}
+		for chunk, _ := range chunks {
+			chunk.Reload()
+		}
+		t.PastingCells = nil
 	}
 }
 
 func (t *ToolFloor) Draw3D(e *Editor) {
-	cellPos := (t.CellPos.Add(vec3.XYZ(0.5, 0.5-WallWidth, 0.5)))
+	aa, bb := FaceSolidMeshes[FaceDown].GetAABB()
+	center := aa.Lerp(bb, 0.5)
+	size := bb.Subtract(aa)
 
-	col := rl.White
-	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
-		col = color.RGBA{255, 0, 0, 255}
+	if t.PastingCells != nil {
+		for pos, _ := range t.PastingCells {
+			rl.DrawCubeWiresV(pos.Add(center).Raylib(), size.Raylib(), color.RGBA{255, 0, 0, 255})
+		}
+	} else {
+		rl.DrawCubeWiresV(t.CellPos.Add(center).Raylib(), size.Raylib(), rl.White)
 	}
-	rl.SetLineWidth(3)
-
-	rl.DrawCubeWires(cellPos.Subtract(vec3.Y(FloorWidth*2)).Raylib(), 1, FloorWidth, 1, col)
-	rl.SetLineWidth(1)
 }
 
 func (t *ToolFloor) DrawHUD(e *Editor) {

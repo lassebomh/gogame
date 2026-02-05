@@ -2,8 +2,9 @@ package game3
 
 import (
 	"fmt"
-	"game/model"
+	. "game/model"
 	"game/vec3"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -15,50 +16,82 @@ const (
 	WallWidth  = 0.2
 )
 
-var FaceSolidPoint = []vec3.Value{
-	vec3.XYZ(0, 0, 0),
-	vec3.XYZ(1, -FloorWidth, 1),
+var FaceSolidMeshes [5]Mesh
+var FaceStairMeshes [5]Mesh
 
-	vec3.XYZ(1, 0, 0),
-	vec3.XYZ(1-WallWidth, 1, 1),
+func init() {
+	wall := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-1, -0.5, -0.5).Scale(WallWidth, 1, 1).TranslateXYZ(0.5, 0, 0))
 
-	vec3.XYZ(0, 0, 1),
-	vec3.XYZ(1, 1, 1-WallWidth),
+	for i := range FaceDown {
+		angle := math.Pi * 2 * (float64(i) / 4)
+		mat := vec3.NewMatrix().RotateY(angle).TranslateXYZ(0.5, 0.5, 0.5)
+		mesh := wall.Transform(mat)
+		FaceSolidMeshes[i] = mesh
+	}
 
-	vec3.XYZ(0, 0, 0),
-	vec3.XYZ(WallWidth, 1, 1),
+	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0, 0.5))
+	FaceSolidMeshes[FaceDown] = floor
 
-	vec3.XYZ(0, 0, 0),
-	vec3.XYZ(1, 1, WallWidth),
+	stair := NewMesh()
+	steps := 4.
+	baseStep := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-0.5, 0, 0).Scale(1, 1/steps, 1))
+
+	for i := 0.; i < steps; i += 1 {
+		y := i / steps
+		mat := vec3.NewMatrix().Scale(1, 1, 1-y).TranslateXYZ(0, y, -0.5)
+		stair.Combine(baseStep.Transform(mat))
+	}
+
+	for i := range FaceDown {
+		angle := math.Pi * 2 * (float64(i+1) / 4)
+		mat := vec3.NewMatrix().TranslateXYZ(0, 0, 0).RotateY(angle).TranslateXYZ(0.5, 0, 0.5)
+		mesh := stair.Transform(mat)
+		FaceStairMeshes[i] = mesh
+	}
+
 }
 
 func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", rl.GetRandomValue(0, 1000)))
 	os.Remove(path)
-	edit := model.NewModel(5, path, "./chunks/chunk.mtl", "Material")
-
-	// aa := vec3.XYZ(0.1, 0.1, 0.1)
-	// bb := aa.Scale(2)
-	// edit.Cube(aa, bb, 1, 0)
-	// edit.Cube(aa.Add(vec3.X(0.5)), bb.Add(vec3.X(0.5)), 2, 0)
-	// edit.Cube(aa.Add(vec3.Y(0.5)), bb.Add(vec3.Y(0.5)), 3, 0)
-	// edit.Cube(aa.Add(vec3.Z(0.5)), bb.Add(vec3.Z(0.5)), 4, 0)
+	edit := NewModel(5, path, "./chunks/chunk.mtl", "Material")
 
 	for x := range ChunkWidth {
 		for z := range ChunkWidth {
 			cell := &c.Cells[y][x][z]
 			pos := vec3.XYZ(float64(x), 0, float64(z))
+			transform := vec3.MatrixTranslate(pos)
 
-			for i := range cell.Faces {
-				if cell.Faces[i].Type != FaceSolid {
-					continue
+			for i, face := range cell.Faces {
+				faceDir := FaceDirection(i)
+
+				switch face.Type {
+				case FaceSolid:
+					if faceDir == FaceDown {
+						edit.AddMesh(FaceSolidMeshes[i].Transform(transform), 5, 5)
+					} else {
+						edit.AddMesh(FaceSolidMeshes[i].Transform(transform), 3, 4)
+					}
+				case FaceStair:
+					edit.AddMesh(FaceStairMeshes[face.Direction].Transform(transform), 3, 4)
 				}
-				aa := pos.Add(FaceSolidPoint[i*2])
-				bb := pos.Add(FaceSolidPoint[i*2+1])
-				edit.Cube(aa, bb, 0, 2)
 			}
 		}
 	}
+
+	// stair := NewMesh()
+	// steps := 4.
+	// baseStep := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-0.5, 0, 0).Scale(1, 1/steps, 1))
+
+	// for i := 0.; i < steps; i += 1 {
+	// 	y := i / steps
+	// 	mat := vec3.NewMatrix().Scale(1, 1, 1-y).TranslateXYZ(0, y, -0.5)
+	// 	stair.Combine(baseStep.Transform(mat))
+	// }
+
+	// // 1, 0.75, 0.5, 0.25
+
+	// edit.AddMesh(stair, 4, 2)
 
 	edit.Export()
 	mdl := rl.LoadModel(path)

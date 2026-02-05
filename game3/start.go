@@ -10,7 +10,7 @@ import (
 
 func Start() {
 	rl.SetConfigFlags(rl.FlagVsyncHint)
-	rl.SetTraceLogLevel(rl.LogWarning)
+	rl.SetTraceLogLevel(rl.LogError)
 	rl.SetTargetFPS(144)
 	rl.InitWindow(1600, 800, "raylib")
 	rl.SetWindowPosition(0, 0)

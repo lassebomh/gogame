@@ -90,7 +90,7 @@ func (p *Player) Update() {
 		dir := vec2.XY(math.Cos(angle), math.Sin(angle))
 		to := from.Add(dir.Scale(VISIBILITY_DISTANCE))
 
-		result := game.space.SegmentQueryFirst(
+		result := p.world.space.SegmentQueryFirst(
 			from.Chipmunk(),
 			to.Chipmunk(),
 			0,
@@ -123,39 +123,36 @@ func (p *Player) Update() {
 
 }
 
-func NewPlayer(save *Player) *Player {
-
+func SpawnNewPlayer(world *World) {
 	p := &Player{
-		Radius:      0.25,
-		Position:    vec3.XYZ(0, 0, 0),
-		viewTexture: rl.LoadRenderTexture(16*40, 16*40),
+		Radius:   0.25,
+		Position: vec3.XYZ(0, 0, 0),
 	}
-
-	if save != nil {
-		p.Position = save.Position
-		p.YVelocity = save.YVelocity
-		// p.Radius
-	}
-
-	mass := p.Radius * p.Radius * 4
-	body := game.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, vec2.XY(2, 2).Chipmunk())))
-	body.SetPosition(vec2.XY(0, 0).Chipmunk())
-	p.shape = game.space.AddShape(cp.NewCircle(body, p.Radius, cp.Vector{}))
-	p.shape.SetElasticity(0)
-	p.shape.SetFriction(0)
-	// p.shape.Filter.Group = GroupPlayer
-
-	p.body = body
-
-	return p
+	p.Spawn(world)
 }
 
-func (p *Player) MoveToWorld(world *World) {
+func (p *Player) Spawn(world *World) {
 	if p.world != nil {
 		p.world.Player = nil
 	}
+	if p.shape != nil {
+		p.world.space.RemoveShape(p.shape)
+	}
+	if p.body != nil {
+		p.world.space.RemoveBody(p.body)
+	}
+
 	world.Player = p
 	p.world = world
+
+	mass := p.Radius * p.Radius * 4
+	body := p.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, vec2.XY(2, 2).Chipmunk())))
+	body.SetPosition(vec2.XY(0, 0).Chipmunk())
+	p.shape = p.world.space.AddShape(cp.NewCircle(body, p.Radius, cp.Vector{}))
+	p.shape.SetElasticity(0)
+	p.shape.SetFriction(0)
+	p.shape.Filter.Group = GroupPlayer
+	p.body = body
 }
 
 // func (p *Player) ToSave() PlayerSave {

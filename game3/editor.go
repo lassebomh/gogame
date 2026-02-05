@@ -7,6 +7,7 @@ import (
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
 )
 
 type Editor struct {
@@ -26,7 +27,7 @@ type Editor struct {
 
 	Tool      Tool
 	ToolFloor ToolFloor
-	// ToolWall  ToolWall
+	ToolWall  ToolWall
 
 	world *World
 }
@@ -35,7 +36,7 @@ type Tool = int32
 
 const (
 	TOOL_FLOOR = Tool(iota)
-	TOOL_WALLS
+	TOOL_WALL
 	TOOL_PLAY
 )
 
@@ -61,19 +62,19 @@ func (e *Editor) Update(timeStep time.Duration) {
 	forward := vec3.XZ(math.Cos(e.Yaw), math.Sin(e.Yaw))
 	right := forward.RotateByAxisAngle(vec3.Y(-1), rl.Pi/2)
 
-	movement := vec3.Zero
+	targetVelocity := vec3.Zero
 
 	if rl.IsKeyDown(rl.KeyW) {
-		movement = movement.Add(forward)
+		targetVelocity = targetVelocity.Add(forward)
 	}
 	if rl.IsKeyDown(rl.KeyS) {
-		movement = movement.Subtract(forward)
+		targetVelocity = targetVelocity.Subtract(forward)
 	}
 	if rl.IsKeyDown(rl.KeyD) {
-		movement = movement.Add(right)
+		targetVelocity = targetVelocity.Add(right)
 	}
 	if rl.IsKeyDown(rl.KeyA) {
-		movement = movement.Subtract(right)
+		targetVelocity = targetVelocity.Subtract(right)
 	}
 	if rl.IsKeyPressed(rl.KeyQ) {
 		e.Position.Y -= 1
@@ -86,16 +87,16 @@ func (e *Editor) Update(timeStep time.Duration) {
 
 	e.ScrollYVelocity += float64(rl.GetMouseWheelMoveV().Y)
 	e.ScrollYVelocity *= friction
-	e.ScrollY += e.ScrollYVelocity
+	e.ScrollY += e.ScrollYVelocity * timeStep.Seconds() * 120
 
 	e.Scale = math.Pow(2, -e.ScrollY/50)
 
-	if movement.Length() > 0 {
-		movement = movement.Normalize().Scale(e.Scale / 1000)
-		e.PositionVelocity = e.PositionVelocity.Add(movement)
+	if targetVelocity.Length() > 0 {
+		targetVelocity = targetVelocity.Normalize().Scale(e.Scale * timeStep.Seconds() * 1.5)
+
 	}
 
-	e.PositionVelocity = e.PositionVelocity.Scale(friction)
+	e.PositionVelocity = e.PositionVelocity.Lerp(targetVelocity, 1.0-friction)
 	e.Position = e.Position.Add(e.PositionVelocity)
 
 	currentMousePos := vec2.FromRaylib(rl.GetMousePosition())
@@ -130,9 +131,18 @@ func (e *Editor) Update(timeStep time.Duration) {
 	}
 	e.mouseWorldPosition.Y = ground
 
+	if rl.IsKeyPressed(rl.KeyOne) {
+		e.Tool = TOOL_FLOOR
+	}
+	if rl.IsKeyPressed(rl.KeyTwo) {
+		e.Tool = TOOL_WALL
+	}
+
 	switch e.Tool {
 	case TOOL_FLOOR:
 		e.ToolFloor.Update(e)
+	case TOOL_WALL:
+		e.ToolWall.Update(e)
 	}
 }
 
@@ -163,20 +173,30 @@ func (e *Editor) Draw() {
 			}
 		}
 
-		rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
-		rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
-		rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
-		rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
+		BeginOverlayMode(func() {
+			rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
 
-		switch e.Tool {
-		case TOOL_FLOOR:
-			e.ToolFloor.Draw3D(e)
-		}
+			phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
+			cp.DrawSpace(e.world.space, &phys)
+
+			switch e.Tool {
+			case TOOL_FLOOR:
+				e.ToolFloor.Draw3D(e)
+			case TOOL_WALL:
+				e.ToolWall.Draw3D(e)
+			}
+		})
+
 	})
 
 	switch e.Tool {
 	case TOOL_FLOOR:
 		e.ToolFloor.DrawHUD(e)
+	case TOOL_WALL:
+		e.ToolWall.DrawHUD(e)
 	}
 
 }
