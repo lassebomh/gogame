@@ -154,12 +154,10 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 
 	y += yVelocity
 
-	if y-groundY > 0.9 {
-		nextCell, _ := w.GetCell(pos.Add(vec3.Y(1)))
+	nextCell, _ := w.GetCell(pos.Add(vec3.Y(0.1)))
 
-		if nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair {
-			y = math.Ceil(y)
-		}
+	if nextCell != cell && nextCell.Faces[FaceDown].Type == FaceSolid  {
+		y = math.Ceil(y)
 	}
 
 	shape.Filter.Categories = Category(y, false, true)

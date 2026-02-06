@@ -61,7 +61,7 @@ func (p *Player) Update() {
 
 	p.Position.Y, p.YVelocity = UpdatePhysicsY(p.world, p.shape, p.Position.Y, p.YVelocity)
 
-	// // look position
+	// look position
 	if math.Abs(p.world.MouseRayDirection.Y) >= 1e-6 {
 		t := (p.Position.Y - p.world.MouseRayOrigin.Y) / p.world.MouseRayDirection.Y
 

@@ -11,9 +11,9 @@ import (
 func Start() {
 	rl.SetConfigFlags(rl.FlagVsyncHint)
 	rl.SetTraceLogLevel(rl.LogError)
-	rl.SetTargetFPS(144)
-	rl.InitWindow(1600, 800, "raylib")
-	rl.SetWindowPosition(0, 0)
+	rl.SetTargetFPS(60)
+	rl.InitWindow(1900, 1100, "raylib")
+	rl.SetWindowPosition(0, 10)
 	defer rl.CloseWindow()
 
 	LoadGame("./save.gob")
@@ -26,13 +26,14 @@ func Start() {
 
 		if rl.IsKeyPressed(rl.KeyTab) {
 
-			if game.activeEditor == game.Earth.Editor {
+		switch game.activeEditor {
+			case game.Earth.Editor:
 				game.activeEditor = game.Station.Editor
 				fmt.Println("edit station")
-			} else if game.activeEditor == game.Station.Editor {
+			case game.Station.Editor:
 				game.activeEditor = nil
 				fmt.Println("disable editor")
-			} else if game.activeEditor == nil {
+			case nil:
 				game.activeEditor = game.Earth.Editor
 				fmt.Println("edit earth")
 			}
