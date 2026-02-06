@@ -13,6 +13,7 @@ in vec3 fragNormal;
 uniform vec4 colDiffuse;
 // uniform vec4 uvClamp;
 uniform sampler2D texture0;
+uniform float visibility;
 
 uniform bool fullBright;
 uniform sampler2D shadowMap;
@@ -54,6 +55,28 @@ float dither8(float brightness) {
     float threshold = bayer[x][y];
 
     return (brightness > threshold ? 1.0 : 0.0) * brightness;
+}
+
+float dither8x8(float value) {
+    // 8x8 Bayer matrix
+    int[64] bayerMatrix = int[](
+         0, 32,  8, 40,  2, 34, 10, 42,
+        48, 16, 56, 24, 50, 18, 58, 26,
+        12, 44,  4, 36, 14, 46,  6, 38,
+        60, 28, 52, 20, 62, 30, 54, 22,
+         3, 35, 11, 43,  1, 33,  9, 41,
+        51, 19, 59, 27, 49, 17, 57, 25,
+        15, 47,  7, 39, 13, 45,  5, 37,
+        63, 31, 55, 23, 61, 29, 53, 21
+    );
+    
+    int x = int(gl_FragCoord.x) % 8;
+    int y = int(gl_FragCoord.y) % 8;
+    float threshold = float(bayerMatrix[y * 8 + x]) / 64.0;
+    
+    
+    
+    return value > threshold ? ceil(value * 4) / 4 : 0;
 }
 
 vec3 rgb2lab(vec3 c)
@@ -235,14 +258,11 @@ void main()
     finalColor += texelColor*colDiffuse*clamp(objectViewDither * objectInView * 2, 0.08, 0.2);
     finalColor.w = objectViewDither;
   } else {
-    finalColor += texelColor*colDiffuse*clamp(inView * viewDither * 2, 0.08, 0.2);    
+    finalColor += texelColor*colDiffuse*clamp(dither8x8(inView) * 2, 0.08, 0.2);    
   }
 
 
-  if (floor(playerPosition.y) != playerPosition.y) {
-    finalColor.w = dither8(1-(fragPosition.y - playerPosition.y));
-  }
-  
+  finalColor.w = dither8x8(visibility);
   vec3 lab = rgb2lab(finalColor.xyz);
   
   lab.x = floor((lab.x) * 25.0 + dither / 2.0) / 25.0;
@@ -253,6 +273,5 @@ void main()
     lab2rgb(lab.xyz),
     finalColor.w
   );
-  // finalColor.rgb *= inView;
 }
 

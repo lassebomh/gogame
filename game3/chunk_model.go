@@ -29,7 +29,7 @@ func init() {
 		FaceSolidMeshes[i] = mesh
 	}
 
-	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0, 0.5))
+	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0.01, 0.5))
 	FaceSolidMeshes[FaceDown] = floor
 
 	stair := NewMesh()

@@ -139,12 +139,17 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 		case FaceSouth:
 			groundY += 1 - z
 		}
+		
+		
 	case FaceNone:
 		groundY = 0
 	}
 
 	if y > groundY {
 		yVelocity -= w.TimeStep.Seconds() / 5
+	}
+	if y - 0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
+		yVelocity *= 5;
 	}
 
 	if y+yVelocity < groundY {

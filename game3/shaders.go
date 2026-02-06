@@ -28,6 +28,7 @@ type MainShader struct {
 
 	PlayerPosition UniformVec3 `glsl:"playerPosition"`
 	// PlayerViewResolution UniformVec2 `glsl:"iResolution"`
+	Visibility  UniformFloat               `glsl:"visibility"`
 
 	HideOutsideView  UniformInt               `glsl:"hideOutsideView"`
 	FullBright       UniformInt               `glsl:"fullBright"`

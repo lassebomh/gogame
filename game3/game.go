@@ -168,14 +168,14 @@ func (w *World) Update(dt time.Duration) {
 
 		w.Player.Update()
 
-		cameraDistance := 5.
-		cameraDirection := vec3.XYZ(0, -5, 1).Normalize()
+		cameraDistance := 8.
+		cameraDirection := vec3.XYZ(0, -5, 1.5).Normalize()
 
 		w.Camera = Camera3D{
 			Position:   w.Player.Position.Subtract(cameraDirection.Scale(cameraDistance)),
 			Target:     w.Player.Position,
 			Up:         vec3.Y(1),
-			Fovy:       60,
+			Fovy:       45,
 			Projection: rl.CameraPerspective,
 		}
 	}
@@ -186,6 +186,7 @@ func (w *World) Draw() {
 
 		rl.ClearBackground(rl.Black)
 		BeginMode3D(w.Camera, func() {
+			w.shader.Visibility.Set(1)
 
 			w.shader.Ambient.Set(1, 1, 1, 0.05)
 			if w.Player != nil {
@@ -193,6 +194,8 @@ func (w *World) Draw() {
 				w.shader.PlayerPosition.SetVec3(w.Player.Position)
 				w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.5)), w.Player.lookPosition.Add(vec3.Y(0.5)), 35, 40, rl.White, 1.5)
 			}
+			
+			w.shader.LightDirectional(vec3.Y(-1), rl.White, 0)
 
 			w.shader.UpdateValues()
 
@@ -205,10 +208,11 @@ func (w *World) Draw() {
 			}
 
 			for y := 0; y <= maxY; y++ {
-				// above := true
-				// if above {
-				// 	rl.BeginBlendMode(rl.BlendAlpha)
-				// }
+				
+				visibility := w.Player.Position.Y - float64(y-1)
+				
+				w.shader.Visibility.Set(visibility)
+				
 
 				for dx := -1; dx <= 1; dx++ {
 					for dz := -1; dz <= 1; dz++ {
