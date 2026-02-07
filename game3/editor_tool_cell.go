@@ -56,15 +56,12 @@ func (t *ToolCell) Update(e *Editor) {
 		for pos, _ := range t.pastingCells {
 			cell, chunk := e.world.Get(pos)
 
+			face := &cell.Faces[t.FaceDirection]
 			if t.Delete {
-				for i := range cell.Faces {
-					face := &cell.Faces[i]
-					face.ModelType = 0
-					face.Rotation = 0
-					face.Type = 0
-				}
+				face.ModelType = 0
+				face.Rotation = 0
+				face.Type = 0
 			} else {
-				face := &cell.Faces[t.FaceDirection]
 				face.ModelType = t.FaceModelType
 				face.Rotation = t.FaceRotation
 				face.Type = t.FaceType
@@ -72,7 +69,8 @@ func (t *ToolCell) Update(e *Editor) {
 			chunks[chunk] = true
 		}
 		for chunk, _ := range chunks {
-			chunk.Reload()
+			chunk.ReloadBodies()
+			chunk.ReloadModel(int(e.mouseCellPos.Y))
 		}
 		t.pastingCells = nil
 	}

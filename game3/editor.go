@@ -225,6 +225,11 @@ func (e *Editor) Draw() {
 			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), vec3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
 			rl.DrawSphere(e.PositionSoft.Raylib(), float32(e.Scale/400), color.RGBA{0, 255, 0, 255})
 
+			for cpos, _ := range e.world.Chunks {
+
+				rl.DrawCubeWires(vec3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, 0, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
+			}
+
 			switch e.Tool {
 			case TOOL_FLOOR:
 				e.ToolFloor.Draw3D(e)

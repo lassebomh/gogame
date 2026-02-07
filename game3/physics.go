@@ -148,7 +148,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 		yVelocity -= w.TimeStep.Seconds() / 5
 	}
 	if y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
-		yVelocity *= 5
+		yVelocity *= 10
 	}
 
 	if y+yVelocity < groundY {
@@ -160,7 +160,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 
 	nextCell, _ := w.Get(pos.Add(vec3.Y(0.1)))
 
-	if nextCell != cell && nextCell.Faces[FaceDown].Type == FaceSolid {
+	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
 		y = math.Ceil(y)
 	}
 
@@ -180,7 +180,7 @@ const (
 
 func Category(y float64, level bool, entity bool) uint {
 	category := uint(0)
-	yCategory := uint(1 << uint(math.Floor(y)))
+	yCategory := uint(1 << uint(math.Floor(y+0.4)))
 
 	if level {
 		category |= yCategory

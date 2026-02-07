@@ -109,7 +109,7 @@ func init() {
 	FaceSolidMeshes[FaceDown] = floor
 
 	stair := NewMesh()
-	steps := 4.
+	steps := 5.
 	baseStep := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-0.5, 0, 0).Scale(1, 1/steps, 1))
 
 	for i := 0.; i < steps; i += 1 {

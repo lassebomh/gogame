@@ -63,7 +63,8 @@ type Chunk struct {
 	body *cp.Body
 }
 
-func (c *Chunk) Reload() {
+func (c *Chunk) ReloadBodies() {
+
 	if c.body == nil {
 		c.body = c.world.space.AddBody(cp.NewStaticBody())
 	} else {
@@ -79,11 +80,6 @@ func (c *Chunk) Reload() {
 	}
 
 	for y := range ChunkHeight {
-		if rl.IsModelValid(c.models[y]) {
-			rl.UnloadModel(c.models[y])
-		}
-		c.models[y] = GenerateChunkYModel(c, y)
-
 		for x := range ChunkWidth {
 			for z := range ChunkWidth {
 				cell := &c.Cells[y][x][z]
@@ -109,9 +105,22 @@ func (c *Chunk) Reload() {
 				}
 			}
 		}
-
 	}
+}
 
+func (c *Chunk) ReloadModel(y int) {
+	if rl.IsModelValid(c.models[y]) {
+		rl.UnloadModel(c.models[y])
+	}
+	c.models[y] = GenerateChunkYModel(c, y)
+}
+
+func (c *Chunk) Reload() {
+	c.ReloadBodies()
+
+	for y := range ChunkHeight {
+		c.ReloadModel(y)
+	}
 }
 
 type FaceType int32
