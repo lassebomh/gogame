@@ -238,6 +238,8 @@ func (g *Game) Draw() {
 		rl.ClearBackground(color.RGBA{})
 
 		BeginMode3D(g.Camera, func() {
+			g.MainShader.FullBright.Set(1)
+			g.MainShader.Visibility.Set(1)
 
 			g.MainShader.ShadowMap.Set(g.Player.ViewTexture.Texture)
 			g.MainShader.PlayerPosition.SetVec3(g.Player.Position3D())

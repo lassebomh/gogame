@@ -38,20 +38,30 @@ func (t *ToolFloor) Update(e *Editor) {
 
 		if math.Abs(fx) > math.Abs(fz) {
 			if fx < 0 {
-				t.Paste.Direction = FaceEast
+				t.Paste.Rotation = FaceEast
 			}
 			if fx >= 0 {
-				t.Paste.Direction = FaceWest
+				t.Paste.Rotation = FaceWest
 			}
 		} else {
 			if fz > 0 {
-				t.Paste.Direction = FaceNorth
+				t.Paste.Rotation = FaceNorth
 			}
 			if fz <= 0 {
-				t.Paste.Direction = FaceSouth
+				t.Paste.Rotation = FaceSouth
 			}
 		}
 
+	}
+
+	if rl.IsKeyPressed(rl.KeyZ) {
+		t.Paste.Type = FaceNone
+	}
+	if rl.IsKeyPressed(rl.KeyX) {
+		t.Paste.Type = FaceSolid
+	}
+	if rl.IsKeyPressed(rl.KeyC) {
+		t.Paste.Type = FaceStair
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
@@ -73,12 +83,27 @@ func (t *ToolFloor) Draw3D(e *Editor) {
 	center := aa.Lerp(bb, 0.5)
 	size := bb.Subtract(aa)
 
+	var col color.RGBA
+	switch t.Paste.Type {
+	case FaceNone:
+		col = color.RGBA{255, 0, 0, 255}
+	case FaceSolid:
+		col = color.RGBA{255, 255, 255, 255}
+	case FaceStair:
+		col = color.RGBA{0, 255, 0, 255}
+	}
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		col.A = 255
+	} else {
+		col.A = 200
+	}
+
 	if t.PastingCells != nil {
 		for pos, _ := range t.PastingCells {
-			rl.DrawCubeWiresV(pos.Add(center).Raylib(), size.Raylib(), color.RGBA{255, 0, 0, 255})
+			rl.DrawCubeWiresV(pos.Add(center).Raylib(), size.Raylib(), col)
 		}
 	} else {
-		rl.DrawCubeWiresV(t.CellPos.Add(center).Raylib(), size.Raylib(), rl.White)
+		rl.DrawCubeWiresV(t.CellPos.Add(center).Raylib(), size.Raylib(), col)
 	}
 }
 
@@ -97,7 +122,7 @@ func (t *ToolFloor) DrawHUD(e *Editor) {
 		t.Paste.Type = FaceStair
 	}
 
-	line.Break(size)
+	line.BreakEx(size)
 
 	// for y := range g.Tileset.Tiles {
 	// 	for x := range g.Tileset.Tiles {

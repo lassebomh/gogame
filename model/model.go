@@ -134,32 +134,7 @@ func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int) {
 
 	fx, tx := aa.X, bb.X
 	fz, tz := aa.Z, bb.Z
-	fy, ty := aa.Y, bb.Y
-
-	for _, t := range mesh.vertices {
-		for _, v := range t {
-			if fx > v.X {
-				fx = v.X
-			}
-			if tx < v.X {
-				tx = v.X
-			}
-
-			if fy > v.Y {
-				fy = v.Y
-			}
-			if ty < v.Y {
-				ty = v.Y
-			}
-
-			if fz > v.Z {
-				fz = v.Z
-			}
-			if tz < v.Z {
-				tz = v.Z
-			}
-		}
-	}
+	fy, _ := aa.Y, bb.Y
 
 	for _, t := range mesh.vertices {
 		normal := t[1].Subtract(t[0]).CrossProduct(t[2].Subtract(t[0])).Normalize()
@@ -167,8 +142,7 @@ func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int) {
 		uvOrigin := vec2.XY(float64(tileX-1), m.tiles-float64(tileY-1)-1)
 		uvs := [3]vec2.Value{}
 
-		for i := range uvs {
-			var uv vec2.Value
+		for i, uv := range uvs {
 
 			if normal.Z == 1 || normal.Y == 1 {
 				uv.X += t[i].X - fx
@@ -198,87 +172,6 @@ func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int) {
 		m.generator.AddTriangle(t[0], t[1], t[2], uvs[0], uvs[1], uvs[2], normal)
 	}
 }
-
-// func (m *Model) Cube(from, to vec3.Value, tileX int, tileY int) {
-// 	mesh := NewCube(from, to)
-// 	m.AddMesh(mesh, tileX, tileY)
-
-// 	// fx, tx := from.X, to.X
-// 	// fy, ty := from.Y, to.Y
-// 	// fz, tz := from.Z, to.Z
-
-// 	// if fx > tx {
-// 	// 	fx, tx = tx, fx
-// 	// }
-// 	// if fy > ty {
-// 	// 	fy, ty = ty, fy
-// 	// }
-// 	// if fz > tz {
-// 	// 	fz, tz = tz, fz
-// 	// }
-
-// 	// for ti := range 12 {
-// 	// 	t := UnitCube[ti]
-
-// 	// 	for pi := range 3 {
-// 	// 		p := &t[pi]
-
-// 	// 		if p.X == 0 {
-// 	// 			p.X = fx
-// 	// 		} else {
-// 	// 			p.X = tx
-// 	// 		}
-
-// 	// 		if p.Y == 0 {
-// 	// 			p.Y = fy
-// 	// 		} else {
-// 	// 			p.Y = ty
-// 	// 		}
-
-// 	// 		if p.Z == 0 {
-// 	// 			p.Z = fz
-// 	// 		} else {
-// 	// 			p.Z = tz
-// 	// 		}
-// 	// 	}
-
-// 	// 	normal := t[1].Subtract(t[0]).CrossProduct(t[2].Subtract(t[0])).Normalize()
-
-// 	// 	uvOrigin := vec2.XY(float64(tileX), m.tiles-float64(tileY)-1)
-// 	// 	uvs := [3]vec2.Value{}
-
-// 	// 	for i := range uvs {
-// 	// 		var uv vec2.Value
-
-// 	// 		if normal.Z == 1 || normal.Y == 1 {
-// 	// 			uv.X += t[i].X - fx
-// 	// 		}
-// 	// 		if normal.Y == -1 || normal.Z == -1 {
-// 	// 			uv.X += tx - t[i].X
-// 	// 		}
-// 	// 		if normal.X == 1 {
-// 	// 			uv.X += tz - t[i].Z
-// 	// 		}
-// 	// 		if normal.X == -1 {
-// 	// 			uv.X += t[i].Z - fz
-// 	// 		}
-// 	// 		if normal.Y == 0 {
-// 	// 			uv.Y += t[i].Y - fy
-// 	// 		}
-// 	// 		if normal.Y == 1 {
-// 	// 			uv.Y += tz - t[i].Z
-// 	// 		}
-// 	// 		if normal.Y == -1 {
-// 	// 			uv.Y += t[i].Z - fz
-// 	// 		}
-
-// 	// 		uvs[i] = uvOrigin.Add(uv).Scale(1 / m.tiles)
-// 	// 	}
-
-// 	// 	m.generator.AddTriangle(t[0], t[1], t[2], uvs[0], uvs[1], uvs[2], normal)
-// 	// }
-
-// }
 
 func (m *Model) Export() {
 

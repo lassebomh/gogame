@@ -20,8 +20,6 @@ type Game struct {
 
 	Earth   *World
 	Station *World
-
-	activeEditor *Editor
 }
 
 func LoadGame(path string) {
@@ -112,7 +110,8 @@ type World struct {
 	Player *Player
 	Camera Camera3D
 
-	Editor *Editor
+	EditorActive bool
+	Editor       *Editor
 
 	MousePosition     vec2.Value
 	MouseRayOrigin    vec3.Value
@@ -169,7 +168,7 @@ func (w *World) Update(dt time.Duration) {
 		w.Player.Update()
 
 		cameraDistance := 8.
-		cameraDirection := vec3.XYZ(0, -5, 1.5).Normalize()
+		cameraDirection := vec3.XYZ(0, -5, 0.5).Normalize()
 
 		w.Camera = Camera3D{
 			Position:   w.Player.Position.Subtract(cameraDirection.Scale(cameraDistance)),
@@ -194,8 +193,8 @@ func (w *World) Draw() {
 				w.shader.PlayerPosition.SetVec3(w.Player.Position)
 				w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.5)), w.Player.lookPosition.Add(vec3.Y(0.5)), 35, 40, rl.White, 1.5)
 			}
-			
-			w.shader.LightDirectional(vec3.Y(-1), rl.White, 0)
+
+			w.shader.LightDirectional(vec3.XYZ(0.3, -1, 0), rl.White, 1)
 
 			w.shader.UpdateValues()
 
@@ -208,11 +207,10 @@ func (w *World) Draw() {
 			}
 
 			for y := 0; y <= maxY; y++ {
-				
+
 				visibility := w.Player.Position.Y - float64(y-1)
-				
+
 				w.shader.Visibility.Set(visibility)
-				
 
 				for dx := -1; dx <= 1; dx++ {
 					for dz := -1; dz <= 1; dz++ {
@@ -243,7 +241,7 @@ func (w *World) Draw() {
 	rl.DrawTexturePro(
 		w.renderTexture.Texture,
 		rl.Rectangle{X: 0, Y: 0, Width: float32(w.renderTexture.Texture.Width), Height: -float32(w.renderTexture.Texture.Height)},
-		rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetRenderWidth()), Height: float32(rl.GetRenderHeight())},
+		rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetScreenWidth()), Height: float32(rl.GetScreenHeight())},
 		rl.Vector2{X: 0, Y: 0},
 		0,
 		rl.White,

@@ -1,7 +1,6 @@
 package game3
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -11,8 +10,8 @@ import (
 func Start() {
 	rl.SetConfigFlags(rl.FlagVsyncHint)
 	rl.SetTraceLogLevel(rl.LogError)
-	rl.SetTargetFPS(60)
-	rl.InitWindow(1900, 1100, "raylib")
+	rl.SetTargetFPS(144)
+	rl.InitWindow(1800, 900, "raylib")
 	rl.SetWindowPosition(0, 10)
 	defer rl.CloseWindow()
 
@@ -24,31 +23,41 @@ func Start() {
 		t1 := rl.GetTime()
 		dt := time.Duration((t1 - t0) * float64(time.Second))
 
-		if rl.IsKeyPressed(rl.KeyTab) {
+		var ActiveEditor *Editor
 
-		switch game.activeEditor {
-			case game.Earth.Editor:
-				game.activeEditor = game.Station.Editor
-				fmt.Println("edit station")
-			case game.Station.Editor:
-				game.activeEditor = nil
-				fmt.Println("disable editor")
-			case nil:
-				game.activeEditor = game.Earth.Editor
-				fmt.Println("edit earth")
+		if game.Earth.EditorActive {
+			if rl.IsKeyPressed(rl.KeyTab) {
+				game.Earth.EditorActive = false
+				game.Station.EditorActive = true
+			} else {
+				ActiveEditor = game.Earth.Editor
 			}
+		} else if game.Station.EditorActive {
+			if rl.IsKeyPressed(rl.KeyTab) {
+				game.Earth.EditorActive = false
+				game.Station.EditorActive = false
+
+			} else {
+				ActiveEditor = game.Station.Editor
+			}
+		} else {
+			if rl.IsKeyPressed(rl.KeyTab) {
+				game.Earth.EditorActive = true
+				game.Station.EditorActive = false
+			}
+			ActiveEditor = nil
 		}
 
-		if game.activeEditor != nil {
-			game.activeEditor.Update(dt)
+		if ActiveEditor != nil {
+			ActiveEditor.Update(dt)
 		} else {
 			game.Update(dt)
 		}
 
 		rl.BeginDrawing()
 
-		if game.activeEditor != nil {
-			game.activeEditor.Draw()
+		if ActiveEditor != nil {
+			ActiveEditor.Draw()
 		} else {
 			game.Draw()
 		}

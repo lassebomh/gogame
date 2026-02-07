@@ -134,7 +134,8 @@ const (
 
 type Face struct {
 	Type      FaceType
-	Direction FaceDirection
+	Rotation  FaceDirection
+	ModelType FaceModelType
 
 	body  *cp.Body
 	shape *cp.Shape

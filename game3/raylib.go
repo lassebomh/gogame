@@ -197,7 +197,11 @@ func (l *LineLayout) Next(width float64) rl.Rectangle {
 	return rect
 }
 
-func (l *LineLayout) Break(height float64) {
+func (l *LineLayout) Break() {
+	l.Width = 0
+	l.Y += l.Height
+}
+func (l *LineLayout) BreakEx(height float64) {
 	l.Width = 0
 	l.Y += l.Height
 	l.Height = height

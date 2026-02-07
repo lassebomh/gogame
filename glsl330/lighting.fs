@@ -54,6 +54,7 @@ float dither8(float brightness) {
     // Look up threshold. GLSL mat4 is [column][row]
     float threshold = bayer[x][y];
 
+    
     return (brightness > threshold ? 1.0 : 0.0) * brightness;
 }
 
@@ -73,8 +74,6 @@ float dither8x8(float value) {
     int x = int(gl_FragCoord.x) % 8;
     int y = int(gl_FragCoord.y) % 8;
     float threshold = float(bayerMatrix[y * 8 + x]) / 64.0;
-    
-    
     
     return value > threshold ? ceil(value * 4) / 4 : 0;
 }

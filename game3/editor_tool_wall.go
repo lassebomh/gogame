@@ -39,6 +39,16 @@ func (t *ToolWall) Update(e *Editor) {
 		t.PastingCells[t.CellPos] = true
 	}
 
+	if rl.IsKeyPressed(rl.KeyZ) {
+		t.Paste.Type = FaceNone
+	}
+	if rl.IsKeyPressed(rl.KeyX) {
+		t.Paste.Type = FaceSolid
+	}
+	if rl.IsKeyPressed(rl.KeyC) {
+		t.Paste.Type = FaceDoor
+	}
+
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
 		chunks := make(map[*Chunk]bool, 0)
 		for pos, _ := range t.PastingCells {
@@ -84,12 +94,27 @@ func (t *ToolWall) Draw3D(e *Editor) {
 	center := aa.Lerp(bb, 0.5)
 	size := bb.Subtract(aa)
 
+	var col color.RGBA
+	switch t.Paste.Type {
+	case FaceNone:
+		col = color.RGBA{255, 0, 0, 255}
+	case FaceSolid:
+		col = color.RGBA{255, 255, 255, 255}
+	case FaceDoor:
+		col = color.RGBA{0, 255, 0, 255}
+	}
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		col.A = 255
+	} else {
+		col.A = 200
+	}
+
 	if t.PastingCells != nil {
 		for pos, _ := range t.PastingCells {
-			rl.DrawCubeWiresV(pos.Add(center).Raylib(), size.Raylib(), color.RGBA{255, 0, 0, 255})
+			rl.DrawCubeWiresV(pos.Add(center).Raylib(), size.Raylib(), col)
 		}
 	} else {
-		rl.DrawCubeWiresV(t.CellPos.Add(center).Raylib(), size.Raylib(), rl.White)
+		rl.DrawCubeWiresV(t.CellPos.Add(center).Raylib(), size.Raylib(), col)
 	}
 }
 
@@ -108,7 +133,7 @@ func (t *ToolWall) DrawHUD(e *Editor) {
 		t.Paste.Type = FaceDoor
 	}
 
-	line.Break(size)
+	line.BreakEx(size)
 
 	// for y := range g.Tileset.Tiles {
 	// 	for x := range g.Tileset.Tiles {
