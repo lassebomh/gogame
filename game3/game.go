@@ -216,12 +216,10 @@ func (w *World) Draw() {
 				for dx := -1; dx <= 1; dx++ {
 					for dz := -1; dz <= 1; dz++ {
 						chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
-
 						chunk, ok := w.Chunks[chunkPos]
 
 						if ok {
 							worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
-
 							rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 						}
 					}
