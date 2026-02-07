@@ -54,13 +54,17 @@ func (t *ToolCell) Update(e *Editor) {
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
 		chunks := make(map[*Chunk]bool, 0)
 		for pos, _ := range t.pastingCells {
-			cell, chunk := e.world.GetCell(pos)
-			face := &cell.Faces[t.FaceDirection]
+			cell, chunk := e.world.Get(pos)
+
 			if t.Delete {
-				face.ModelType = 0
-				face.Rotation = 0
-				face.Type = 0
+				for i := range cell.Faces {
+					face := &cell.Faces[i]
+					face.ModelType = 0
+					face.Rotation = 0
+					face.Type = 0
+				}
 			} else {
+				face := &cell.Faces[t.FaceDirection]
 				face.ModelType = t.FaceModelType
 				face.Rotation = t.FaceRotation
 				face.Type = t.FaceType
@@ -76,9 +80,9 @@ func (t *ToolCell) Update(e *Editor) {
 	if !rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		if t.FaceDirection != FaceDown {
 			t.FaceDirection = e.mouseCellDirection
-		} else {
-			t.FaceRotation = e.mouseCellDirection
 		}
+		t.FaceRotation = e.mouseCellDirection
+
 	}
 
 }

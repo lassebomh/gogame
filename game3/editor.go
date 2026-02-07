@@ -1,6 +1,7 @@
 package game3
 
 import (
+	"fmt"
 	"game/vec2"
 	"game/vec3"
 	"image/color"
@@ -213,10 +214,10 @@ func (e *Editor) Draw() {
 		}
 
 		BeginOverlayMode(func() {
-			// rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
+			rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
+			rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
 
 			// phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
 			// cp.DrawSpace(e.world.space, &phys)
@@ -236,6 +237,12 @@ func (e *Editor) Draw() {
 
 	})
 	e.world.shader.FullBright.Set(0)
+
+	cpos, lpos := WorldToChunk(e.mouseWorldPosition)
+
+	rl.DrawText(fmt.Sprintf("%.1f %.1f %.1f", e.mouseWorldPosition.X, e.mouseWorldPosition.Y, e.mouseWorldPosition.Z), 10, 40, 20, rl.White)
+	rl.DrawText(fmt.Sprintf("%+v", cpos), 10, 60, 20, rl.White)
+	rl.DrawText(fmt.Sprintf("%+v", lpos), 10, 80, 20, rl.White)
 
 	switch e.Tool {
 	case TOOL_FLOOR:

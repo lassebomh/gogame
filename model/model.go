@@ -128,42 +128,53 @@ func NewModel(tiles int, path string, matPath string, matName string) *Model {
 	}
 }
 
-func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int) {
+func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int, rotation int) {
 
-	aa, bb := mesh.GetAABB()
+	aa, _ := mesh.GetAABB()
 
-	fx, tx := aa.X, bb.X
-	fz, tz := aa.Z, bb.Z
-	fy, _ := aa.Y, bb.Y
+	// fx, tx := aa.X, bb.X
+	// fz, tz := aa.Z, bb.Z
+	// fy, _ := aa.Y, bb.Y
 
 	for _, t := range mesh.vertices {
-		normal := t[1].Subtract(t[0]).CrossProduct(t[2].Subtract(t[0])).Normalize()
+		a, b, c := t[0], t[1], t[2]
+		normal := b.Subtract(a).CrossProduct(c.Subtract(a)).Normalize()
 
 		uvOrigin := vec2.XY(float64(tileX-1), m.tiles-float64(tileY-1)-1)
-		uvs := [3]vec2.Value{}
+		uvs := [3]vec2.Value{{0, 0}, {0, 1}, {1, 0}}
 
 		for i, uv := range uvs {
+			vp := t[i].Subtract(aa)
+			absN := normal.Abs()
 
-			if normal.Z == 1 || normal.Y == 1 {
-				uv.X += t[i].X - fx
+			u, v := 0., 0.
+
+			if absN.X > absN.Y && absN.X > absN.Z {
+				u, v = vp.Z, vp.Y
+			} else if absN.Y > absN.X && absN.Y > absN.Z {
+				u, v = vp.X, vp.Z
+			} else {
+				u, v = vp.X, vp.Y
 			}
-			if normal.Y == -1 || normal.Z == -1 {
-				uv.X += tx - t[i].X
-			}
-			if normal.X == 1 {
-				uv.X += tz - t[i].Z
-			}
-			if normal.X == -1 {
-				uv.X += t[i].Z - fz
-			}
-			if normal.Y == 0 {
-				uv.Y += t[i].Y - fy
-			}
-			if normal.Y == 1 {
-				uv.Y += tz - t[i].Z
-			}
-			if normal.Y == -1 {
-				uv.Y += t[i].Z - fz
+
+			uv.X = u
+			uv.Y = v
+
+			if normal.Y != 0 {
+				switch rotation {
+				case 2:
+					uv.X = 1 - u
+					uv.Y = v
+				case 3:
+					uv.X = 1 - v
+					uv.Y = 1 - u
+				case 0:
+					uv.X = u
+					uv.Y = 1 - v
+				case 1:
+					uv.X = v
+					uv.Y = u
+				}
 			}
 
 			uvs[i] = uvOrigin.Add(uv).Scale(1 / m.tiles)

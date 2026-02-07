@@ -27,7 +27,7 @@ func (t *ToolWall) Update(e *Editor) {
 	t.CellPos = vec3.XYZ(ix, e.mouseWorldPosition.Y, iz)
 
 	if rl.IsMouseButtonDown(rl.MouseButtonMiddle) {
-		cellRef, _ := e.world.GetCell(t.CellPos)
+		cellRef, _ := e.world.Get(t.CellPos)
 		t.Paste = cellRef.Faces[t.FaceIndex]
 	}
 
@@ -52,7 +52,7 @@ func (t *ToolWall) Update(e *Editor) {
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
 		chunks := make(map[*Chunk]bool, 0)
 		for pos, _ := range t.PastingCells {
-			cell, chunk := e.world.GetCell(pos)
+			cell, chunk := e.world.Get(pos)
 			cell.Faces[t.FaceIndex] = t.Paste
 			chunks[chunk] = true
 		}

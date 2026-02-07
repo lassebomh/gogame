@@ -120,7 +120,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 	bodyPosition := shape.Body().Position()
 	pos := vec3.XYZ(bodyPosition.X, y, bodyPosition.Y)
 
-	cell, _ := w.GetCell(pos)
+	cell, _ := w.Get(pos)
 
 	groundY := math.Floor(y)
 
@@ -158,7 +158,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 
 	y += yVelocity
 
-	nextCell, _ := w.GetCell(pos.Add(vec3.Y(0.1)))
+	nextCell, _ := w.Get(pos.Add(vec3.Y(0.1)))
 
 	if nextCell != cell && nextCell.Faces[FaceDown].Type == FaceSolid {
 		y = math.Ceil(y)

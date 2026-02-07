@@ -75,7 +75,13 @@ float dither8x8(float value) {
     int y = int(gl_FragCoord.y) % 8;
     float threshold = float(bayerMatrix[y * 8 + x]) / 64.0;
     
-    return value > threshold ? ceil(value * 4) / 4 : 0;
+    float v = value;// ceil(value * 4) / 4;
+    
+    if (value >= 0.5) {
+      return value > threshold ? v : 0;
+    } else {
+      return value > threshold ? 1-v : 0;
+    }
 }
 
 vec3 rgb2lab(vec3 c)
@@ -152,12 +158,10 @@ void main()
   
   float inView = clamp(viewSample / 6 +clamp(5-distance(fragPosition.xyz * vec3(1, 0, 1), playerPosition * vec3(1, 0, 1))*5, 0, 1), 0, 1);
   
-  
-  float viewDither = 0;
-  
-  if (inView != 0 && (inView == 1 || (int(gl_FragCoord.x + gl_FragCoord.y)&1) == 0)) {
-    viewDither = 1;
-  }
+  // float viewDither = 0;
+  // if (inView != 0 && (inView == 1 || (int(gl_FragCoord.x + gl_FragCoord.y)&1) == 0)) {
+  //   viewDither = 1;
+  // }
   
   float objectInView = 0;
 
@@ -257,7 +261,7 @@ void main()
     finalColor += texelColor*colDiffuse*clamp(objectViewDither * objectInView * 2, 0.08, 0.2);
     finalColor.w = objectViewDither;
   } else {
-    finalColor += texelColor*colDiffuse*clamp(dither8x8(inView) * 2, 0.08, 0.2);    
+    finalColor += texelColor*colDiffuse*clamp(dither8x8(inView), 0.01, 0.2);    
   }
 
 

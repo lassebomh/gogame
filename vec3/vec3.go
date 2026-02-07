@@ -249,6 +249,11 @@ func (v Value) Negate() Value {
 	return XYZ(-v.X, -v.Y, -v.Z)
 }
 
+// Vector3Negate - Negate provided vector (invert direction)
+func (v Value) Abs() Value {
+	return XYZ(math.Abs(v.X), math.Abs(v.Y), math.Abs(v.Z))
+}
+
 // Vector3Divide - Divide vector by vector
 func (v1 Value) Divide(v2 Value) Value {
 	return XYZ(v1.X/v2.X, v1.Y/v2.Y, v1.Z/v2.Z)

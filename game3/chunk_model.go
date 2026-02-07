@@ -49,8 +49,16 @@ var FaceModels = []FaceModel{
 	{
 		Id:            face_model_sidewalk,
 		Name:          "floor sidewalk",
+		TileX:         8,
+		TileY:         6,
+		FaceDirection: FaceDown,
+		FaceType:      FaceSolid,
+	},
+	{
+		Id:            face_model_road,
+		Name:          "floor road",
 		TileX:         6,
-		TileY:         2,
+		TileY:         6,
 		FaceDirection: FaceDown,
 		FaceType:      FaceSolid,
 	},
@@ -127,6 +135,7 @@ func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 	for x := range ChunkWidth {
 		for z := range ChunkWidth {
 			cell := &c.Cells[y][x][z]
+			worldPos := ChunkToWorld(c.Position, LocalPos{x, y, z})
 			transform := vec3.MatrixTranslateXYZ(float64(x), 0, float64(z))
 
 			for i, face := range cell.Faces {
@@ -158,14 +167,71 @@ func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 				mesh = mesh.Transform(faceTransform)
 
 				faceModel := FaceModelsMap[face.ModelType]
-				edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY)
 
-				// switch face.ModelType {
-				// case face_model_debug:
-				// 	edit.AddMesh(mesh, 3, 1)
-				// case face_model_wall_brick:
-				// 	edit.AddMesh(mesh, 3, 1)
-				// }
+				rotation := 0
+
+				switch face.Rotation {
+				case FaceDown:
+				case FaceWest:
+					rotation = 0
+				case FaceNorth:
+					rotation = 1
+				case FaceEast:
+					rotation = 2
+				case FaceSouth:
+					rotation = 3
+				}
+
+				if face.Type == FaceStair {
+					rotation = (rotation + 1) % 4
+				}
+
+				switch faceModel.Id {
+				case face_model_sidewalk:
+					{
+						up := c.world.GetCell(worldPos.Add(vec3.Z(1))).Faces[FaceDown].ModelType
+						down := c.world.GetCell(worldPos.Add(vec3.Z(-1))).Faces[FaceDown].ModelType
+						left := c.world.GetCell(worldPos.Add(vec3.X(1))).Faces[FaceDown].ModelType
+						right := c.world.GetCell(worldPos.Add(vec3.X(-1))).Faces[FaceDown].ModelType
+
+						tileX := faceModel.TileX
+						tileY := faceModel.TileY
+
+						if left == face_model_sidewalk || right == face_model_sidewalk {
+							rotation = 0
+						}
+
+						if up == face_model_sidewalk || down == face_model_sidewalk {
+							rotation = 1
+						}
+
+						if up == face_model_road && left == face_model_road && down != face_model_road && right != face_model_road {
+							tileX = 7
+							rotation = 2
+						}
+
+						if up == face_model_road && right == face_model_road && down != face_model_road && left != face_model_road {
+							tileX = 7
+							rotation = 3
+						}
+
+						if right == face_model_road && down == face_model_road && left != face_model_road && up != face_model_road {
+							tileX = 7
+							rotation = 0
+						}
+
+						if left == face_model_road && down == face_model_road && right != face_model_road && up != face_model_road {
+							tileX = 7
+							rotation = 1
+						}
+
+						edit.AddMesh(mesh, tileX, tileY, rotation)
+					}
+
+				default:
+					edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rotation)
+				}
+
 			}
 		}
 	}

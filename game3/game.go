@@ -132,6 +132,7 @@ func (w *World) Upsert(worldType WorldType) *World {
 		game.Station = w
 	}
 	w.space = cp.NewSpace()
+	w.space.SetCollisionSlop(0.01)
 	w.shader = NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs")
 	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
 	w.renderTexture = rl.LoadRenderTexture(int32(renderWidth/4), int32(renderHeight/4))
@@ -249,7 +250,7 @@ func (w *World) Draw() {
 
 }
 
-func (w *World) GetCell(pos vec3.Value) (*Cell, *Chunk) {
+func (w *World) Get(pos vec3.Value) (*Cell, *Chunk) {
 	cpos, lpos := WorldToChunk(pos)
 
 	chunk, ok := w.Chunks[cpos]
@@ -266,4 +267,10 @@ func (w *World) GetCell(pos vec3.Value) (*Cell, *Chunk) {
 	cell := &chunk.Cells[lpos.Y][lpos.X][lpos.Z]
 
 	return cell, chunk
+}
+
+func (w *World) GetCell(pos vec3.Value) *Cell {
+	cell, _ := w.Get(pos)
+	return cell
+
 }
