@@ -112,7 +112,6 @@ func (m *Monster) Update() {
 		if m.world.Player != nil {
 
 			arm.path = FindPath(m.world, tip.Position, m.world.Player.Position)
-			fmt.Println(arm.path)
 
 			if len(arm.path) >= 3 {
 				arm.tipTarget = arm.path[1].Lerp(arm.path[2], 0.5)
@@ -124,7 +123,7 @@ func (m *Monster) Update() {
 			currentDir := cp.ForAngle(tip.body.Angle())
 			relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
 			tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
-			tip.body.SetForce(delta.Normalize().Scale(50 * tip.body.Mass()).Chipmunk())
+			tip.body.SetForce(delta.Normalize().Scale(150 * tip.body.Mass()).Chipmunk())
 
 		}
 		// // }
@@ -133,6 +132,27 @@ func (m *Monster) Update() {
 			segment.Position, segment.YVelocity = UpdatePhysicsY(m.world, segment.shape, segment.Position, segment.YVelocity)
 		}
 	}
+
+	// arms := len(m.arms)
+
+	// for i, arm := range m.arms {
+	// 	angle := (float64(i) / float64(arms)) * math.Pi * 2
+
+	// 	segment := arm.segments[0]
+
+	// 	target := segment.Position.AddXYZ(
+	// 		math.Cos(angle),
+	// 		0,
+	// 		math.Sin(angle),
+	// 	)
+
+	// 	delta := target.Subtract(segment.Position)
+	// 	currentDir := cp.ForAngle(segment.body.Angle())
+	// 	relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
+	// 	segment.body.SetTorque(relativeAngle * segment.body.Moment() * 120)
+
+	// 	// segment.body.SetTorque((angle - segment.body.Angle()) * segment.body.Moment() * 120)
+	// }
 
 }
 
@@ -253,7 +273,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 2 {
+	for range 5 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -263,12 +283,12 @@ func (m *Monster) Spawn(world *World) *Monster {
 		prevBody := m.body
 		prevPosition := m.Position
 
-		for i := range 18 {
+		for i := range 12 {
 
 			segment := &MonsterArmSegment{
 				// Length: m.Radius * 1,
 				Length: m.Radius * 0.6,
-				Width:  (m.Radius * 1.5) / (1 + float64(i)/7),
+				Width:  (m.Radius * 1.5) / (1 + float64(i)/5),
 			}
 			arm.segments = append(arm.segments, segment)
 
@@ -288,30 +308,10 @@ func (m *Monster) Spawn(world *World) *Monster {
 			constraint := m.world.space.AddConstraint(cp.NewPivotJoint(prevBody, segment.body, prevPosition.Chipmunk()))
 			constraint.SetMaxForce(math.Inf(1))
 
-			// restLength := -0.05 // The distance the spring wants to return to
-			// stiffness := 500.   // How "snappy" the rubber band is
-			// damping := 0.       // 2.0 * math.Sqrt(stiffness*mass)
-
-			// fmt.Printf("%+v\n", prevPosition)
-
-			// pivotA := vec3.X(segment.Length * 0.5)
-			// pivotB := vec3.X(-segment.Length * 0.5)
-
-			// if i == 0 {
-			// 	pivotA = vec3.Zero
-			// }
-
-			// constraint := m.world.space.AddConstraint(
-			// 	cp.NewDampedSpring(prevBody, segment.body, pivotA.Chipmunk(), pivotB.Chipmunk(), restLength, stiffness, damping),
-			// )
-
-			// constraint.SetErrorBias(math.Pow(1.0-0.1, 60.0))
-			// constraint.SetMaxForce(math.Inf(1))
-
 			if i != 0 {
 				rotaryLimitAngle := rl.Pi / 2.5
 				rotaryLimit := m.world.space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, segment.body, -rotaryLimitAngle, rotaryLimitAngle))
-				rotaryLimit.SetMaxForce(1e12)
+				rotaryLimit.SetMaxForce(math.Inf(1))
 				stiffness := 5.0 * segment.body.Moment()
 				damping := 2 * math.Sqrt(stiffness*segment.body.Moment())
 				m.world.space.AddConstraint(cp.NewDampedRotarySpring(prevBody, segment.body, 0, stiffness, damping))

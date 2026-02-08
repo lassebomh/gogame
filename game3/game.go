@@ -272,16 +272,16 @@ func (w *World) Draw() {
 				if w.Monster != nil {
 					w.Monster.Draw()
 
-					BeginOverlayMode(func() {
-						for _, arm := range w.Monster.arms {
-							if len(arm.path) >= 2 {
-								for i := range arm.path[:len(arm.path)-1] {
-									rl.DrawLine3D(arm.path[i].Raylib(), arm.path[i+1].Raylib(), rl.Yellow)
-								}
-							}
+					// BeginOverlayMode(func() {
+					// 	for _, arm := range w.Monster.arms {
+					// 		if len(arm.path) >= 2 {
+					// 			for i := range arm.path[:len(arm.path)-1] {
+					// 				rl.DrawLine3D(arm.path[i].Raylib(), arm.path[i+1].Raylib(), rl.Yellow)
+					// 			}
+					// 		}
 
-						}
-					})
+					// 	}
+					// })
 				}
 
 			})

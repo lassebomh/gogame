@@ -103,9 +103,9 @@ func (p *PathPoint) PathNeighbors() []astar.Pather {
 			continue
 		}
 
-		if next.Cell.Faces[FaceDown].Type == FaceStair {
-			continue
-		}
+		// if next.Cell.Faces[FaceDown].Type == FaceStair {
+		// 	continue
+		// }
 		// if next.Cell.Faces[FaceDown].Type == FaceStair && next.Cell.Faces[FaceDown].Rotation != FACE {
 		// 	continue
 		// }
@@ -139,7 +139,7 @@ func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) []vec3.Value
 	startPos = startPos.Map(math.Floor)
 	endPos = endPos.Map(math.Floor)
 
-	fmt.Println("FROM", startPos, "TO", endPos)
+	// fmt.Println("FROM", startPos, "TO", endPos)
 
 	points := map[vec3.Value]*PathPoint{}
 
