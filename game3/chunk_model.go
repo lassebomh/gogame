@@ -127,10 +127,12 @@ func init() {
 
 }
 
-func GenerateChunkYModel(c *Chunk, y int) rl.Model {
-	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", rl.GetRandomValue(0, 1000)))
+func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
+	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", rl.GetRandomValue(0, 2147483647)))
 	os.Remove(path)
 	edit := NewModel(15, path, "./chunks/chunk.mtl", "Material")
+
+	touched := false
 
 	for x := range ChunkWidth {
 		for z := range ChunkWidth {
@@ -232,8 +234,13 @@ func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 					edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rotation)
 				}
 
+				touched = true
 			}
 		}
+	}
+
+	if !touched {
+		return rl.Model{}, false
 	}
 
 	edit.Export()
@@ -242,5 +249,5 @@ func GenerateChunkYModel(c *Chunk, y int) rl.Model {
 
 	os.Remove(path)
 
-	return mdl
+	return mdl, true
 }

@@ -36,7 +36,7 @@ func LoadGame(path string) {
 		}
 	}
 
-	if err == nil {
+	if err != nil {
 		log.Println("Save not found.")
 	}
 
@@ -217,8 +217,9 @@ func (w *World) Draw() {
 					for dz := -1; dz <= 1; dz++ {
 						chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
 						chunk, ok := w.Chunks[chunkPos]
+						mdl := chunk.models[y]
 
-						if ok {
+						if ok && rl.IsModelValid(mdl) {
 							worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
 							rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 						}

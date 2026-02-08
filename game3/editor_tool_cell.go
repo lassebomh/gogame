@@ -25,14 +25,14 @@ type ToolCell struct {
 
 func (t *ToolCell) Update(e *Editor) {
 
-	// ix := math.Floor(e.mouseWorldPosition.X)
-	// iz := math.Floor(e.mouseWorldPosition.Z)
-	// fx := e.mouseWorldPosition.X - ix - 0.5
-	// fz := e.mouseWorldPosition.Z - iz - 0.5
+	if rl.IsMouseButtonPressed(rl.MouseMiddleButton) {
+		face := e.world.GetCell(e.mouseCellPos).Faces[t.FaceDirection]
 
-	// t.CellPos = vec3.XYZ(ix, e.mouseWorldPosition.Y, iz)
-
-	// if !rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		faceModel := FaceModelsMap[face.ModelType]
+		t.FaceModelType = faceModel.Id
+		t.FaceType = faceModel.FaceType
+		t.FaceDirection = faceModel.FaceDirection
+	}
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		if t.pastingCells == nil {

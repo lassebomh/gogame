@@ -112,7 +112,7 @@ func (c *Chunk) ReloadModel(y int) {
 	if rl.IsModelValid(c.models[y]) {
 		rl.UnloadModel(c.models[y])
 	}
-	c.models[y] = GenerateChunkYModel(c, y)
+	c.models[y], _ = GenerateChunkYModel(c, y)
 }
 
 func (c *Chunk) Reload() {
