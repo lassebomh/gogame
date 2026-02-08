@@ -55,11 +55,7 @@ func (p *Player) Update() {
 	newVelocity := p.body.Velocity().Lerp(force, 0.1)
 	p.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
-	bodyPosition := p.body.Position()
-	p.Position.X = bodyPosition.X
-	p.Position.Z = bodyPosition.Y
-
-	p.Position.Y, p.YVelocity = UpdatePhysicsY(p.world, p.shape, p.Position.Y, p.YVelocity)
+	p.Position, p.YVelocity = UpdatePhysicsY(p.world, p.shape, p.Position, p.YVelocity)
 
 	// look position
 	if math.Abs(p.world.MouseRayDirection.Y) >= 1e-6 {
@@ -150,7 +146,7 @@ func (p *Player) Spawn(world *World) {
 
 	mass := p.Radius * p.Radius * 4
 	body := p.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, vec2.XY(2, 2).Chipmunk())))
-	body.SetPosition(vec2.XY(0, 0).Chipmunk())
+	body.SetPosition(p.Position.Chipmunk())
 	p.shape = p.world.space.AddShape(cp.NewCircle(body, p.Radius, cp.Vector{}))
 	p.shape.SetElasticity(0)
 	p.shape.SetFriction(0)
@@ -161,36 +157,6 @@ func (p *Player) Spawn(world *World) {
 		p.viewTexture = rl.LoadRenderTexture(16*40, 16*40)
 	}
 }
-
-// func (p *Player) ToSave() PlayerSave {
-// 	return PlayerSave{
-// 		Position: Vec2FromCP(p.body.Position()),
-// 		Y:        p.Y,
-// 	}
-// }
-
-// func (save PlayerSave) Load() *Player {
-// 	p := &Player{
-// 		Radius:      0.25,
-// 		Y:           save.Y,
-// 		body:        nil,
-// 		ViewTexture: rl.LoadRenderTexture(16*40, 16*40),
-// 	}
-
-// 	mass := p.Radius * p.Radius * 4
-// 	body := g.Space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, Vec2{2, 2}.CP())))
-// 	body.SetPosition(save.Position.CP())
-// 	p.shape = g.Space.AddShape(cp.NewCircle(body, p.Radius, Vec2{}.CP()))
-// 	p.shape.SetElasticity(0)
-// 	p.shape.SetFriction(0)
-// 	p.shape.Filter.Group = GroupPlayer
-
-// 	p.body = body
-
-// 	g.Player = p
-
-// 	return p
-// }
 
 func (p *Player) Draw() {
 	rl.DrawSphere(p.Position.Add(vec3.Y(p.Radius)).Raylib(), float32(p.Radius), rl.Red)

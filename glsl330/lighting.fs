@@ -143,9 +143,11 @@ vec3 lab2rgb(vec3 c)
 
 void main()
 {
+  
+  // sample tile
   float seenBefore = texture(shadowMap, (((fragPosition.xyz - playerPosition).xz) / (20) + 0.5) * vec2(-1, 1)).r;
   
-  
+  // sample player shadow map
   float viewSample = 0;
   for (float x = -2; x <= 2; x++) {
     for (float y = -2; y <= 2; y++) {
@@ -156,7 +158,8 @@ void main()
   }
   
   
-  float inView = clamp(viewSample / 6 +clamp(5-distance(fragPosition.xyz * vec3(1, 0, 1), playerPosition * vec3(1, 0, 1))*5, 0, 1), 0, 1);
+  float closeToPlayer = clamp(5-distance(fragPosition.xyz * vec3(1, 0, 1), playerPosition * vec3(1, 0, 1))*5, 0, 1);
+  float inView = clamp(viewSample / 6 + closeToPlayer, 0, 1);
   
   // float viewDither = 0;
   // if (inView != 0 && (inView == 1 || (int(gl_FragCoord.x + gl_FragCoord.y)&1) == 0)) {
@@ -175,14 +178,6 @@ void main()
   
   objectInView += clamp(5-distance(fragPosition.xyz * vec3(1, 0, 1), playerPosition * vec3(1, 0, 1))*5, 0, 1);
   objectInView = clamp(objectInView, 0, 1);
-  
-  float objectViewDither = 0;
-  // float objectViewDither = objectInView;
-  
-  if (objectInView != 0 && (objectInView == 1 || (int(gl_FragCoord.x + gl_FragCoord.y)&1) == 0)) {
-    objectViewDither = 1;
-  }
-  
   
   float dither = (fract(sin(dot(gl_FragCoord.xy/8, vec2(12.9898, 78.233))) * 43758.5453))*2-1;
   
@@ -258,14 +253,13 @@ void main()
   // }
 
   if (hideOutsideView) {
-    finalColor += texelColor*colDiffuse*clamp(objectViewDither * objectInView * 2, 0.08, 0.2);
-    finalColor.w = objectViewDither;
+    finalColor += texelColor*colDiffuse*clamp(objectInView, 0.08, 0.2);
+    finalColor.w = dither8x8(objectInView);
   } else {
     finalColor += texelColor*colDiffuse*clamp(dither8x8(inView), 0.01, 0.2);    
+    finalColor.w = dither8x8(visibility);
   }
-
-
-  finalColor.w = dither8x8(visibility);
+  
   vec3 lab = rgb2lab(finalColor.xyz);
   
   lab.x = floor((lab.x) * 25.0 + dither / 2.0) / 25.0;

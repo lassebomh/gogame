@@ -5,6 +5,7 @@ import (
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
 )
 
 type Value struct {
@@ -50,6 +51,9 @@ func (v Value) Map(fn func(v float64) float64) Value {
 
 func (v Value) Raylib() rl.Vector3 {
 	return rl.Vector3{float32(v.X), float32(v.Y), float32(v.Z)}
+}
+func (v Value) Chipmunk() cp.Vector {
+	return cp.Vector{v.X, v.Z}
 }
 
 func FromRaylib(v rl.Vector3) Value {
@@ -683,6 +687,15 @@ func NewMatrix() Matrix {
 		0.0, 1.0, 0.0, 0.0,
 		0.0, 0.0, 1.0, 0.0,
 		0.0, 0.0, 0.0, 1.0)
+}
+
+func (mat Matrix) Raylib() rl.Matrix {
+	return rl.Matrix{
+		M0: float32(mat.M0), M4: float32(mat.M4), M8: float32(mat.M8), M12: float32(mat.M12),
+		M1: float32(mat.M1), M5: float32(mat.M5), M9: float32(mat.M9), M13: float32(mat.M13),
+		M2: float32(mat.M2), M6: float32(mat.M6), M10: float32(mat.M10), M14: float32(mat.M14),
+		M3: float32(mat.M3), M7: float32(mat.M7), M11: float32(mat.M11), M15: float32(mat.M15),
+	}
 }
 
 // MatrixNormalize - Normalize provided matrix

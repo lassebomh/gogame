@@ -76,7 +76,7 @@ func (d *PhysicsDrawer) DrawPolygon(count int, verts []cp.Vector, radius float64
 }
 
 func (d *PhysicsDrawer) DrawDot(size float64, pos cp.Vector, fill cp.FColor, data interface{}) {
-	rl.DrawSphere(d.cv3(pos, 0), float32(size)/100, fColorToRaylib(fill))
+	rl.DrawSphere(d.cv3(pos, 0), float32(size)/200, fColorToRaylib(fill))
 }
 
 func (d *PhysicsDrawer) Flags() uint {
@@ -116,13 +116,14 @@ func fColorToRaylib(c cp.FColor) rl.Color {
 	}
 }
 
-func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (float64, float64) {
-	bodyPosition := shape.Body().Position()
-	pos := vec3.XYZ(bodyPosition.X, y, bodyPosition.Y)
+func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64) (vec3.Value, float64) {
+	bodyPos := shape.Body().Position()
+	pos.X = bodyPos.X
+	pos.Z = bodyPos.Y
 
 	cell, _ := w.Get(pos)
 
-	groundY := math.Floor(y)
+	groundY := math.Floor(pos.Y)
 
 	switch cell.Faces[FaceDown].Type {
 	case FaceStair:
@@ -144,33 +145,33 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, y float64, yVelocity float64) (fl
 		groundY = 0
 	}
 
-	if y > groundY {
+	if pos.Y > groundY {
 		yVelocity -= w.TimeStep.Seconds() / 5
 	}
-	if y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
+	if pos.Y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
 		yVelocity *= 10
 	}
 
-	if y+yVelocity < groundY {
-		y = groundY
+	if pos.Y+yVelocity < groundY {
+		pos.Y = groundY
 		yVelocity = 0
 	}
 
-	y += yVelocity
+	pos.Y += yVelocity
 
 	nextCell, _ := w.Get(pos.Add(vec3.Y(0.1)))
 
 	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
-		y = math.Ceil(y)
+		pos.Y = math.Ceil(pos.Y)
 	}
 
-	shape.Filter.Categories = Category(y, false, true)
-	shape.Filter.Mask = Category(y, true, true)
+	shape.Filter.Categories = Category(pos.Y, false, true)
+	shape.Filter.Mask = Category(pos.Y, true, true)
 
-	return y, yVelocity
+	return pos, yVelocity
 }
 
-const PhysicsTickrate = time.Second / 60
+const PhysicsTickrate = time.Second / 144
 
 const (
 	GroupStatic = uint(1 << iota)

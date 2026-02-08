@@ -1,6 +1,7 @@
 package vec2
 
 import (
+	"game/vec3"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -27,10 +28,23 @@ func All(v float64) Value {
 func (v Value) Chipmunk() cp.Vector {
 	return cp.Vector{v.X, v.Y}
 }
+func (v Value) To3D() vec3.Value {
+	return vec3.Value{v.X, 0, v.Y}
+}
 
 func FromRaylib(v rl.Vector2) Value {
 	return Value{float64(v.X), float64(v.Y)}
 }
+func FromChipmunk(v cp.Vector) Value {
+	return Value{v.X, v.Y}
+}
+func FromRadians(radians float64) Value {
+	return Value{
+		math.Cos(radians),
+		math.Sin(radians),
+	}
+}
+
 func (v Value) Raylib() rl.Vector2 {
 	return rl.Vector2{float32(v.X), float32(v.Y)}
 }

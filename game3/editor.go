@@ -32,10 +32,8 @@ type Editor struct {
 	mouseCellPos       vec3.Value
 	mouseCellDirection FaceDirection
 
-	Tool      Tool
-	ToolFloor ToolFloor
-	ToolWall  ToolWall
-	ToolCell  ToolCell
+	Tool     Tool
+	ToolCell ToolCell
 
 	world *World
 }
@@ -191,10 +189,6 @@ func (e *Editor) Update(timeStep time.Duration) {
 	}
 
 	switch e.Tool {
-	case TOOL_FLOOR:
-		e.ToolFloor.Update(e)
-	case TOOL_WALL:
-		e.ToolWall.Update(e)
 	case TOOL_CELL:
 		e.ToolCell.Update(e)
 	}
@@ -211,6 +205,13 @@ func (e *Editor) Draw() {
 				worldPos := ChunkToWorld(pos, LocalPos{0, y, 0})
 				rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 			}
+		}
+
+		if e.world.Player != nil && e.world.Player.Position.Y <= e.Position.Y {
+			e.world.Player.Draw()
+		}
+		if e.world.Monster != nil && e.world.Monster.Position.Y <= e.Position.Y {
+			e.world.Monster.Draw()
 		}
 
 		BeginOverlayMode(func() {
@@ -231,10 +232,6 @@ func (e *Editor) Draw() {
 			}
 
 			switch e.Tool {
-			case TOOL_FLOOR:
-				e.ToolFloor.Draw3D(e)
-			case TOOL_WALL:
-				e.ToolWall.Draw3D(e)
 			case TOOL_CELL:
 				e.ToolCell.Draw3D(e)
 			}
@@ -250,10 +247,6 @@ func (e *Editor) Draw() {
 	rl.DrawText(fmt.Sprintf("%+v", lpos), 10, 80, 20, rl.White)
 
 	switch e.Tool {
-	case TOOL_FLOOR:
-		e.ToolFloor.DrawHUD(e)
-	case TOOL_WALL:
-		e.ToolWall.DrawHUD(e)
 	case TOOL_CELL:
 		e.ToolCell.DrawHUD(e)
 	}

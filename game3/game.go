@@ -50,6 +50,14 @@ func LoadGame(path string) {
 	} else {
 		SpawnNewPlayer(game.Earth)
 	}
+
+	if game.Station.Monster != nil {
+		game.Station.Monster.Spawn(game.Station)
+	} else if game.Earth.Monster != nil {
+		game.Earth.Monster.Spawn(game.Earth)
+	} else {
+		SpawnNewMonster(game.Earth)
+	}
 }
 
 func (g *Game) Update(dt time.Duration) {
@@ -60,21 +68,6 @@ func (g *Game) Update(dt time.Duration) {
 func (g *Game) Draw() {
 	g.Earth.Draw()
 }
-
-// func LoadSaveFromFile(path string, g *Game) error {
-// 	file, err := os.Open(path)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-
-// 	decoder := gob.NewDecoder(file)
-// 	if err := decoder.Decode(game); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func (g *Game) WriteToFile(path string) error {
 	file, err := os.Create(path)
@@ -98,7 +91,6 @@ const (
 	WorldStation
 )
 
-// Seperate levels for station and world?
 type World struct {
 	TimeStep               time.Duration
 	TimePhysicsAccumulator time.Duration
@@ -107,8 +99,9 @@ type World struct {
 	Chunks map[ChunkPos]*Chunk
 	space  *cp.Space
 
-	Player *Player
-	Camera Camera3D
+	Player  *Player
+	Monster *Monster
+	Camera  Camera3D
 
 	EditorActive bool
 	Editor       *Editor
@@ -171,13 +164,19 @@ func (w *World) Update(dt time.Duration) {
 		cameraDistance := 8.
 		cameraDirection := vec3.XYZ(0, -5, 0.5).Normalize()
 
+		w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
+
 		w.Camera = Camera3D{
-			Position:   w.Player.Position.Subtract(cameraDirection.Scale(cameraDistance)),
-			Target:     w.Player.Position,
+			Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
+			Target:     w.Camera.Target,
 			Up:         vec3.Y(1),
 			Fovy:       45,
 			Projection: rl.CameraPerspective,
 		}
+	}
+
+	if w.Monster != nil {
+		w.Monster.Update()
 	}
 }
 
@@ -188,7 +187,6 @@ func (w *World) Draw() {
 		BeginMode3D(w.Camera, func() {
 			w.shader.Visibility.Set(1)
 
-			w.shader.Ambient.Set(1, 1, 1, 0.05)
 			if w.Player != nil {
 				w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
 				w.shader.PlayerPosition.SetVec3(w.Player.Position)
@@ -217,22 +215,24 @@ func (w *World) Draw() {
 					for dz := -1; dz <= 1; dz++ {
 						chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
 						chunk, ok := w.Chunks[chunkPos]
-						mdl := chunk.models[y]
-
-						if ok && rl.IsModelValid(mdl) {
-							worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
-							rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
+						if !ok {
+							continue
 						}
+
+						if !rl.IsModelValid(chunk.models[y]) {
+							continue
+						}
+						worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
+						rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 					}
 				}
-
-				// if above {
-				// 	rl.EndBlendMode()
-				// }
 			}
 
 			if w.Player != nil {
 				w.Player.Draw()
+			}
+			if w.Monster != nil {
+				w.Monster.Draw()
 			}
 
 		})
