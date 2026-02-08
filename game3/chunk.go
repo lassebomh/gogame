@@ -35,12 +35,23 @@ type LocalPos struct {
 }
 
 func WorldToChunk(v vec3.Value) (ChunkPos, LocalPos) {
-	xi := math.Floor(v.X / float64(ChunkWidth))
-	zi := math.Floor(v.Z / float64(ChunkWidth))
-	xf := v.X - xi*ChunkWidth
-	zf := v.Z - zi*ChunkWidth
-	chunkPos := ChunkPos{X: int(xi), Z: int(zi)}
-	localPos := LocalPos{X: int(xf), Y: int(v.Y), Z: int(zf)}
+
+	v.X = math.Round(v.X*1e8) / 1e8
+	v.Y = math.Round(v.Y*1e8) / 1e8
+	v.Z = math.Round(v.Z*1e8) / 1e8
+
+	cx := math.Floor(v.X / float64(ChunkWidth))
+	cz := math.Floor(v.Z / float64(ChunkWidth))
+	lx := v.X - cx*ChunkWidth
+	lz := v.Z - cz*ChunkWidth
+
+	// cx := math.Floor(v.X / ChunkWidth)
+	// cz := math.Mod(math.Mod(v.X*ChunkWidth, 1)+1, 1) / ChunkWidth
+	// lx := math.Floor(v.Z / ChunkWidth)
+	// lz := math.Mod(math.Mod(v.Z*ChunkWidth, 1)+1, 1) / ChunkWidth
+
+	chunkPos := ChunkPos{X: int(cx), Z: int(cz)}
+	localPos := LocalPos{X: int(lx), Y: int(v.Y), Z: int(lz)}
 	return chunkPos, localPos
 }
 

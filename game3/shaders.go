@@ -93,3 +93,21 @@ func (m *MainShader) UpdateValues() {
 	}
 	m.LightI = -1
 }
+
+type PlanetShader struct {
+	shader rl.Shader
+
+	Channel0   UniformTexture `glsl:"iChannel0"`
+	Channel1   UniformTexture `glsl:"iChannel1"`
+	Time       UniformFloat   `glsl:"iTime"`
+	Fov        UniformFloat   `glsl:"iFov"`
+	Resolution UniformVec2    `glsl:"iResolution"`
+}
+
+func (p *PlanetShader) GetRaylibShader() rl.Shader {
+	return p.shader
+}
+
+func (p *PlanetShader) SetRaylibShader(shader rl.Shader) {
+	p.shader = shader
+}

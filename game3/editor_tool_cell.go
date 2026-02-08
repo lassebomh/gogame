@@ -26,7 +26,7 @@ type ToolCell struct {
 func (t *ToolCell) Update(e *Editor) {
 
 	if rl.IsMouseButtonPressed(rl.MouseMiddleButton) {
-		face := e.world.GetCell(e.mouseCellPos).Faces[t.FaceDirection]
+		face := e.world.UpsertCell(e.mouseCellPos).Faces[t.FaceDirection]
 
 		faceModel := FaceModelsMap[face.ModelType]
 		t.FaceModelType = faceModel.Id
@@ -54,7 +54,7 @@ func (t *ToolCell) Update(e *Editor) {
 	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
 		chunks := make(map[*Chunk]bool, 0)
 		for pos, _ := range t.pastingCells {
-			cell, chunk := e.world.Get(pos)
+			cell, chunk := e.world.UpsertCellChunk(pos)
 
 			face := &cell.Faces[t.FaceDirection]
 			if t.Delete {

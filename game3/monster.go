@@ -1,6 +1,7 @@
 package game3
 
 import (
+	"fmt"
 	"game/vec2"
 	"game/vec3"
 	"image/color"
@@ -29,6 +30,7 @@ type Monster struct {
 type MonsterArm struct {
 	segments  []*MonsterArmSegment
 	tipTarget vec3.Value
+	path      []vec3.Value
 }
 
 type MonsterArmSegment struct {
@@ -73,28 +75,19 @@ func (m *Monster) Update() {
 	m.Position, m.YVelocity = UpdatePhysicsY(m.world, m.shape, m.Position, m.YVelocity)
 
 	for _, arm := range m.arms {
-
 		tip := arm.segments[len(arm.segments)-1]
 
-		totalCurlAngle := 0.0
 		curlAngles := make([]float64, len(arm.segments)-2)
-
 		for i, segment := range arm.segments[:len(arm.segments)-2] {
 			a := segment.body.Position()
 			b := arm.segments[i+1].Position.Chipmunk()
 			c := arm.segments[i+2].Position.Chipmunk()
 			v1 := b.Sub(a)
 			v2 := c.Sub(b)
-			cross := v1.Cross(v2)
-			dot := v1.Dot(v2)
 
-			angle := math.Atan2(cross, dot)
-			totalCurlAngle += angle
+			angle := math.Atan2(v1.Cross(v2), v1.Dot(v2))
+			arm.segments[i].body.SetTorque(angle * tip.body.Moment() * 200)
 			curlAngles[i] = angle
-		}
-		for i, angle := range curlAngles {
-			segment := arm.segments[i]
-			segment.body.SetTorque(angle * tip.body.Moment() * 500)
 		}
 
 		// // if !p.PathFinder.Idle && len(p.PathFinder.Path) >= 2 && p.PathFinder.PathLength > 3 {
@@ -116,15 +109,25 @@ func (m *Monster) Update() {
 		// // 	}
 
 		// // } else {
-		arm.tipTarget = m.world.Player.Position
+		if m.world.Player != nil {
+
+			arm.path = FindPath(m.world, tip.Position, m.world.Player.Position)
+			fmt.Println(arm.path)
+
+			if len(arm.path) >= 3 {
+				arm.tipTarget = arm.path[1].Lerp(arm.path[2], 0.5)
+
+			} else {
+				arm.tipTarget = m.world.Player.Position
+			}
+			delta := arm.tipTarget.Subtract(tip.Position)
+			currentDir := cp.ForAngle(tip.body.Angle())
+			relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
+			tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
+			tip.body.SetForce(delta.Normalize().Scale(50 * tip.body.Mass()).Chipmunk())
+
+		}
 		// // }
-
-		delta := arm.tipTarget.Subtract(tip.Position)
-		currentDir := cp.ForAngle(tip.body.Angle())
-		relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
-
-		tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
-		tip.body.SetForce(delta.Normalize().Scale(50 * tip.body.Mass()).Chipmunk())
 
 		for _, segment := range arm.segments {
 			segment.Position, segment.YVelocity = UpdatePhysicsY(m.world, segment.shape, segment.Position, segment.YVelocity)
@@ -134,7 +137,8 @@ func (m *Monster) Update() {
 }
 
 func (m *Monster) Draw() {
-	m.world.shader.HideOutsideView.Set(1)
+	m.world.shader.Visibility.Set(1)
+	// m.world.shader.HideOutsideView.Set(1)
 	col := color.RGBA{40, 40, 40, 255}
 
 	rl.DrawModelEx(m.bodyModel, m.Position.Add(vec3.Y(m.Radius)).Raylib(), vec3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), vec3.Fill(m.Radius).Raylib(), col)
@@ -178,7 +182,7 @@ func (m *Monster) Draw() {
 			mat := (vec3.NewMatrix().RotateY(
 				-math.Pi/2,
 			).Scale(
-				segment.Width, segment.Width, from.Distance(to)*0.95,
+				segment.Width, segment.Width, from.Distance(to)*0.9,
 			).RotateZ(
 				segment.body.AngularVelocity() / 20,
 			).RotateX(
@@ -195,7 +199,7 @@ func (m *Monster) Draw() {
 		}
 	}
 
-	m.world.shader.HideOutsideView.Set(0)
+	// m.world.shader.HideOutsideView.Set(0)
 }
 
 func SpawnNewMonster(world *World) {
@@ -212,6 +216,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	}
 	m.world = world
 	m.world.Monster = m
+	m.Position = vec3.XYZ(0, 0, -5)
 
 	if !rl.IsModelValid(m.bodyModel) {
 		m.bodyModel = rl.LoadModel("./models/monster/monster_body.glb")
@@ -228,7 +233,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 		}
 	}
 
-	m.Radius = 0.3
+	m.Radius = 0.4
 	// if p.PathFinder == nil {
 	// 	p.PathFinder = NewPathFinder(g.Level)
 	// }
@@ -248,7 +253,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 5 {
+	for range 2 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -258,11 +263,12 @@ func (m *Monster) Spawn(world *World) *Monster {
 		prevBody := m.body
 		prevPosition := m.Position
 
-		for i := range 12 {
+		for i := range 18 {
 
 			segment := &MonsterArmSegment{
+				// Length: m.Radius * 1,
 				Length: m.Radius * 0.6,
-				Width:  (m.Radius * 1.5) / (1 + float64(i)/5),
+				Width:  (m.Radius * 1.5) / (1 + float64(i)/7),
 			}
 			arm.segments = append(arm.segments, segment)
 
@@ -273,15 +279,37 @@ func (m *Monster) Spawn(world *World) *Monster {
 			segment.body.SetPosition(position.Subtract(vec3.X(segment.Length * 0.5)).Chipmunk())
 
 			segment.shape = m.world.space.AddShape(cp.NewBox(segment.body, segment.Length, segment.Width, 0))
-			segment.shape.SetElasticity(0.)
-			segment.shape.SetFriction(0.1)
+			segment.shape.SetElasticity(0.5)
+			segment.shape.SetFriction(0.5)
 			segment.shape.Filter.Group = GroupMonster
 
+			fmt.Printf("%+v\n", prevBody.UserData)
+
 			constraint := m.world.space.AddConstraint(cp.NewPivotJoint(prevBody, segment.body, prevPosition.Chipmunk()))
-			constraint.SetMaxForce(1e12)
+			constraint.SetMaxForce(math.Inf(1))
+
+			// restLength := -0.05 // The distance the spring wants to return to
+			// stiffness := 500.   // How "snappy" the rubber band is
+			// damping := 0.       // 2.0 * math.Sqrt(stiffness*mass)
+
+			// fmt.Printf("%+v\n", prevPosition)
+
+			// pivotA := vec3.X(segment.Length * 0.5)
+			// pivotB := vec3.X(-segment.Length * 0.5)
+
+			// if i == 0 {
+			// 	pivotA = vec3.Zero
+			// }
+
+			// constraint := m.world.space.AddConstraint(
+			// 	cp.NewDampedSpring(prevBody, segment.body, pivotA.Chipmunk(), pivotB.Chipmunk(), restLength, stiffness, damping),
+			// )
+
+			// constraint.SetErrorBias(math.Pow(1.0-0.1, 60.0))
+			// constraint.SetMaxForce(math.Inf(1))
 
 			if i != 0 {
-				rotaryLimitAngle := rl.Pi / 3
+				rotaryLimitAngle := rl.Pi / 2.5
 				rotaryLimit := m.world.space.AddConstraint(cp.NewRotaryLimitJoint(prevBody, segment.body, -rotaryLimitAngle, rotaryLimitAngle))
 				rotaryLimit.SetMaxForce(1e12)
 				stiffness := 5.0 * segment.body.Moment()
@@ -293,13 +321,13 @@ func (m *Monster) Spawn(world *World) *Monster {
 			prevBody = segment.body
 		}
 
-		for i, segment := range arm.segments {
-			f := float64(i)
-			angle := f / 2
-			pos := m.Position.Add(vec3.XZ(math.Cos(f+math.Pi/2), math.Sin(f+math.Pi/2)).Scale(0.25))
-			segment.body.SetAngle(-angle)
-			segment.body.SetPosition(pos.Chipmunk())
-		}
+		// for i, segment := range arm.segments {
+		// 	f := float64(i)
+		// 	angle := f / 2
+		// 	pos := m.Position.Add(vec3.XZ(math.Cos(f+math.Pi/2), math.Sin(f+math.Pi/2)).Scale(0.25))
+		// 	segment.body.SetAngle(-angle)
+		// 	segment.body.SetPosition(pos.Chipmunk())
+		// }
 	}
 
 	return m

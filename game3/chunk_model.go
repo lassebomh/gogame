@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	WallWidth  = 0.125
+	WallWidth  = 0.25
 	FloorWidth = 0.1
 )
 
@@ -191,10 +191,10 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 				switch faceModel.Id {
 				case face_model_sidewalk:
 					{
-						up := c.world.GetCell(worldPos.Add(vec3.Z(1))).Faces[FaceDown].ModelType
-						down := c.world.GetCell(worldPos.Add(vec3.Z(-1))).Faces[FaceDown].ModelType
-						left := c.world.GetCell(worldPos.Add(vec3.X(1))).Faces[FaceDown].ModelType
-						right := c.world.GetCell(worldPos.Add(vec3.X(-1))).Faces[FaceDown].ModelType
+						up := c.world.UpsertCell(worldPos.Add(vec3.Z(1))).Faces[FaceDown].ModelType
+						down := c.world.UpsertCell(worldPos.Add(vec3.Z(-1))).Faces[FaceDown].ModelType
+						left := c.world.UpsertCell(worldPos.Add(vec3.X(1))).Faces[FaceDown].ModelType
+						right := c.world.UpsertCell(worldPos.Add(vec3.X(-1))).Faces[FaceDown].ModelType
 
 						tileX := faceModel.TileX
 						tileY := faceModel.TileY

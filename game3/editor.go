@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -245,10 +246,32 @@ func (e *Editor) Draw() {
 	rl.DrawText(fmt.Sprintf("%.1f %.1f %.1f", e.mouseWorldPosition.X, e.mouseWorldPosition.Y, e.mouseWorldPosition.Z), 10, 40, 20, rl.White)
 	rl.DrawText(fmt.Sprintf("%+v", cpos), 10, 60, 20, rl.White)
 	rl.DrawText(fmt.Sprintf("%+v", lpos), 10, 80, 20, rl.White)
+	cell, ok := e.world.GetCell(e.mouseCellPos)
+
+	if ok {
+		y := int32(100)
+
+		for i, face := range cell.Faces {
+
+			rl.DrawText(fmt.Sprintf("%+v %+v", FaceDirection(i), face), 10, y, 20, rl.White)
+
+			y += 20
+		}
+	}
 
 	switch e.Tool {
 	case TOOL_CELL:
 		e.ToolCell.DrawHUD(e)
 	}
 
+	if raygui.Button(rl.NewRectangle(20, 20, 100, 20), "TP Player") {
+		player := game.Earth.Player
+		if player == nil {
+			player = game.Station.Player
+		}
+
+		player.Spawn(e.world)
+		player.body.SetPosition(e.Position.Chipmunk())
+		player.Update()
+	}
 }

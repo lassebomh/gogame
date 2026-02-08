@@ -62,6 +62,7 @@ func (u *UniformVec4) SetColor(color color.RGBA) {
 }
 func (u *UniformTexture) Set(texture rl.Texture2D) {
 	rl.SetShaderValueTexture(u.shader, u.location, texture)
+	// rl.EnableTexture(texture.ID)
 }
 func (u *UniformMat4) Set(mat rl.Matrix) {
 	rl.SetShaderValueMatrix(u.shader, u.location, mat)

@@ -121,7 +121,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64
 	pos.X = bodyPos.X
 	pos.Z = bodyPos.Y
 
-	cell, _ := w.Get(pos)
+	cell, _ := w.UpsertCellChunk(pos)
 
 	groundY := math.Floor(pos.Y)
 
@@ -159,7 +159,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64
 
 	pos.Y += yVelocity
 
-	nextCell, _ := w.Get(pos.Add(vec3.Y(0.1)))
+	nextCell, _ := w.UpsertCellChunk(pos.Add(vec3.Y(0.1)))
 
 	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
 		pos.Y = math.Ceil(pos.Y)
@@ -171,7 +171,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64
 	return pos, yVelocity
 }
 
-const PhysicsTickrate = time.Second / 144
+const PhysicsTickrate = time.Second / 60
 
 const (
 	GroupStatic = uint(1 << iota)
