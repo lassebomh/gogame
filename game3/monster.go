@@ -46,15 +46,6 @@ type MonsterArmSegment struct {
 }
 
 func (m *Monster) Update() {
-	force := cp.Vector{}
-
-	forceMag := force.Length()
-
-	if forceMag != 0 {
-		force = force.Normalize().Mult(m.body.Mass() * 60)
-	}
-
-	m.body.SetForce(force)
 
 	newVelocity := vec2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()*4))
 	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
@@ -83,8 +74,8 @@ func (m *Monster) Update() {
 			arm.path, length = FindPath(m.world, tip.Position, m.world.Player.Position)
 			speed := 70.
 			
-			if length < 3 {
-				speed = 150
+			if length < 4 {
+				speed = 180
 			}
 
 			if len(arm.path) >= 3 {
@@ -124,7 +115,7 @@ func (m *Monster) Update() {
 func (m *Monster) Draw() {
 	m.world.shader.Visibility.Set(1)
 	// m.world.shader.HideOutsideView.Set(1)
-	col := color.RGBA{40, 40, 40, 255}
+	col := color.RGBA{50, 50, 50, 255}
 
 	rl.DrawModelEx(m.bodyModel, m.Position.Add(vec3.Y(m.Radius)).Raylib(), vec3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), vec3.Fill(m.Radius).Raylib(), col)
 
@@ -208,6 +199,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 		mats := m.bodyModel.GetMaterials()
 		for i := range mats {
 			mats[i].Shader = m.world.shader.shader
+			mats[i].GetMap(rl.MapDiffuse).Texture = world.planetOrganicTexture
 		}
 	}
 	if !rl.IsModelValid(m.segmentModel) {
@@ -215,10 +207,11 @@ func (m *Monster) Spawn(world *World) *Monster {
 		mats := m.segmentModel.GetMaterials()
 		for i := range mats {
 			mats[i].Shader = m.world.shader.shader
+			mats[i].GetMap(rl.MapDiffuse).Texture = world.planetOrganicTexture
 		}
 	}
 
-	m.Radius = 0.25
+	m.Radius = 0.3
 	// if p.PathFinder == nil {
 	// 	p.PathFinder = NewPathFinder(g.Level)
 	// }
@@ -238,7 +231,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 4 {
+	for range 3 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -257,7 +250,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 			}
 			arm.segments = append(arm.segments, segment)
 
-			mass := segment.Length * segment.Width * 1.5
+			mass := segment.Length * segment.Width * 0.5
 
 			segment.body = m.world.space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
 			position := prevPosition.Add(vec3.X(segment.Length))

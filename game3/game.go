@@ -134,11 +134,12 @@ func (w *World) Upsert(worldType WorldType) *World {
 		w = &World{}
 	}
 	w.Type = worldType
+	w.planetOrganicTexture = rl.LoadTexture("./models/organic.png")
+	
 	if w.Type == WorldEarth {
 		game.Earth = w
 	} else {
 		game.Station = w
-		w.planetOrganicTexture = rl.LoadTexture("./models/organic.png")
 		w.planetTexture = rl.LoadTexture("./models/earth_elevation.png")
 		w.planetShader = NewShader(&PlanetShader{}, "", "./glsl330/planet2.fs")
 	}
