@@ -46,20 +46,7 @@ type MonsterArmSegment struct {
 }
 
 func (m *Monster) Update() {
-
-	// p.PathFinder.SetPosition(p.Position3D())
-	// p.PathFinder.SetTarget(g.Player.Position3D())
-
 	force := cp.Vector{}
-
-	// if !p.PathFinder.Idle && len(p.PathFinder.Path) >= 2 {
-	// 	a := p.PathFinder.Path[0]
-	// 	b := p.PathFinder.Path[1]
-
-	// 	force3D := b.Lerp(a, 0.5).Subtract(monsterPos)
-	// 	force.X = force3D.X
-	// 	force.Y = force3D.Z
-	// }
 
 	forceMag := force.Length()
 
@@ -74,7 +61,7 @@ func (m *Monster) Update() {
 
 	m.Position, m.YVelocity = UpdatePhysicsY(m.world, m.shape, m.Position, m.YVelocity)
 
-	for _, arm := range m.arms {
+	for i, arm := range m.arms {
 		tip := arm.segments[len(arm.segments)-1]
 
 		curlAngles := make([]float64, len(arm.segments)-2)
@@ -90,70 +77,48 @@ func (m *Monster) Update() {
 			curlAngles[i] = angle
 		}
 
-		// // if !p.PathFinder.Idle && len(p.PathFinder.Path) >= 2 && p.PathFinder.PathLength > 3 {
-		// // 	closestI := 0
-		// // 	closestDistance := math.Inf(1)
-
-		// // 	for i, point := range p.PathFinder.Path[:len(p.PathFinder.Path)-1] {
-		// // 		distance := point.Distance(tip.Position3D())
-		// // 		if distance < closestDistance {
-		// // 			closestDistance = distance
-		// // 			closestI = i
-		// // 		}
-		// // 	}
-
-		// // 	if closestDistance > 3 {
-		// // 		arm.tipTarget = p.PathFinder.Path[closestI]
-		// // 	} else {
-		// // 		arm.tipTarget = p.PathFinder.Path[closestI].Lerp(p.PathFinder.Path[closestI+1], 1)
-		// // 	}
-
-		// // } else {
 		if m.world.Player != nil {
 
-			arm.path = FindPath(m.world, tip.Position, m.world.Player.Position)
+			var length float64
+			arm.path, length = FindPath(m.world, tip.Position, m.world.Player.Position)
+			speed := 70.
+			
+			if length < 3 {
+				speed = 150
+			}
 
 			if len(arm.path) >= 3 {
 				arm.tipTarget = arm.path[1].Lerp(arm.path[2], 0.5)
 
 			} else {
-				arm.tipTarget = m.world.Player.Position
+				
+				entangleTarget := m.world.Player.Position
+				
+				playerDist := entangleTarget.Distance(tip.Position)
+				
+				dir := entangleTarget.Subtract(tip.Position).Normalize().RotateByAxisAngle(vec3.Y(-1), math.Pi/2)
+				if i%2 == 0 {
+					dir = dir.Negate()
+				}
+
+				entangleTarget = entangleTarget.Add(dir.Scale(math.Sqrt(playerDist*m.world.Player.Radius) + m.world.Player.Radius))
+				
+
+				// arm.tipTarget = m.world.Player.Position
+				arm.tipTarget = entangleTarget
 			}
 			delta := arm.tipTarget.Subtract(tip.Position)
 			currentDir := cp.ForAngle(tip.body.Angle())
 			relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
 			tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
-			tip.body.SetForce(delta.Normalize().Scale(150 * tip.body.Mass()).Chipmunk())
+			tip.body.SetForce(delta.Normalize().Scale(speed * tip.body.Mass()).Chipmunk())
 
 		}
-		// // }
 
 		for _, segment := range arm.segments {
 			segment.Position, segment.YVelocity = UpdatePhysicsY(m.world, segment.shape, segment.Position, segment.YVelocity)
 		}
 	}
-
-	// arms := len(m.arms)
-
-	// for i, arm := range m.arms {
-	// 	angle := (float64(i) / float64(arms)) * math.Pi * 2
-
-	// 	segment := arm.segments[0]
-
-	// 	target := segment.Position.AddXYZ(
-	// 		math.Cos(angle),
-	// 		0,
-	// 		math.Sin(angle),
-	// 	)
-
-	// 	delta := target.Subtract(segment.Position)
-	// 	currentDir := cp.ForAngle(segment.body.Angle())
-	// 	relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
-	// 	segment.body.SetTorque(relativeAngle * segment.body.Moment() * 120)
-
-	// 	// segment.body.SetTorque((angle - segment.body.Angle()) * segment.body.Moment() * 120)
-	// }
-
 }
 
 func (m *Monster) Draw() {
@@ -253,7 +218,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 		}
 	}
 
-	m.Radius = 0.4
+	m.Radius = 0.25
 	// if p.PathFinder == nil {
 	// 	p.PathFinder = NewPathFinder(g.Level)
 	// }
@@ -273,7 +238,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 5 {
+	for range 4 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -287,7 +252,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 			segment := &MonsterArmSegment{
 				// Length: m.Radius * 1,
-				Length: m.Radius * 0.6,
+				Length: m.Radius * 0.7,
 				Width:  (m.Radius * 1.5) / (1 + float64(i)/5),
 			}
 			arm.segments = append(arm.segments, segment)

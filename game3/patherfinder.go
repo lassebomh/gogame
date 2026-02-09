@@ -135,7 +135,7 @@ func (p *PathPoint) PathEstimatedCost(to astar.Pather) float64 {
 	return p.Position.Distance(other.Position)
 }
 
-func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) []vec3.Value {
+func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) ([]vec3.Value, float64) {
 	startPos = startPos.Map(math.Floor)
 	endPos = endPos.Map(math.Floor)
 
@@ -159,12 +159,12 @@ func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) []vec3.Value
 	}
 	points[endPos] = end
 
-	pathers, _, found := astar.Path(end, start)
+	pathers, length, found := astar.Path(end, start)
 
 	if !found {
 		p, ok := points[endPos]
 		fmt.Println(p.Position, ok)
-		return []vec3.Value{}
+		return []vec3.Value{}, 0
 	}
 
 	path := make([]vec3.Value, len(pathers))
@@ -173,5 +173,5 @@ func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) []vec3.Value
 		path[i] = p.(*PathPoint).Position.AddXYZ(0.5, 0, 0.5)
 	}
 
-	return path
+	return path, length
 }
