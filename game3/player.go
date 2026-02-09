@@ -12,7 +12,7 @@ import (
 
 const VISIBILITY_VERTS = 240
 const VISIBILITY_CONE_RADIANS = math.Pi / 3
-const VISIBILITY_DISTANCE = 8
+const VISIBILITY_DISTANCE = 10
 
 type Player struct {
 	world *World
@@ -49,7 +49,14 @@ func (p *Player) Update() {
 	forceMag := force.Length()
 
 	if forceMag != 0 {
-		force = force.Normalize().Mult(4)
+		force = force.Normalize()
+	}
+
+	if rl.IsKeyDown(rl.KeyLeftShift) {
+		force = force.Mult(5)
+	} else {
+		force = force.Mult(3)
+
 	}
 
 	newVelocity := p.body.Velocity().Lerp(force, 0.1)
@@ -124,7 +131,7 @@ func (p *Player) Update() {
 
 func SpawnNewPlayer(world *World) {
 	p := &Player{
-		Radius:   0.25,
+		Radius:   0.1,
 		Position: vec3.XYZ(0, 0, 0),
 	}
 	p.Spawn(world)
@@ -143,6 +150,7 @@ func (p *Player) Spawn(world *World) {
 
 	world.Player = p
 	p.world = world
+	p.Radius = 0.2
 
 	mass := p.Radius * p.Radius * 4
 	body := p.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, vec2.XY(2, 2).Chipmunk())))

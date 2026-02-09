@@ -15,7 +15,7 @@ const (
 	LIGHT_SPOT
 )
 
-const MAX_LIGHTS = 4
+const MAX_LIGHTS = 8
 
 type MainShader struct {
 	shader rl.Shader
@@ -30,8 +30,8 @@ type MainShader struct {
 	// PlayerViewResolution UniformVec2 `glsl:"iResolution"`
 	Visibility UniformFloat `glsl:"visibility"`
 
-	HideOutsideView UniformInt `glsl:"hideOutsideView"`
-	FullBright      UniformInt `glsl:"fullBright"`
+	HideOutsideView UniformFloat `glsl:"hideOutsideView"`
+	FullBright      UniformInt   `glsl:"fullBright"`
 	// Ambient          UniformVec4              `glsl:"ambient"`
 
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`
@@ -86,7 +86,7 @@ func (m *MainShader) LightPoint(position vec3.Value, color rl.Color, strength fl
 
 }
 
-func (m *MainShader) UpdateValues() {
+func (m *MainShader) UpdateLights() {
 
 	for i := m.LightI + 1; i < MAX_LIGHTS; i++ {
 		m.LightEnabled[i].Set(0)

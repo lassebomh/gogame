@@ -55,6 +55,14 @@ var FaceModels = []FaceModel{
 		FaceType:      FaceSolid,
 	},
 	{
+		Id:            face_model_sidewalk_lightpole,
+		Name:          "floor sidewalk light pole",
+		TileX:         8,
+		TileY:         6,
+		FaceDirection: FaceDown,
+		FaceType:      FaceSolid,
+	},
+	{
 		Id:            face_model_road,
 		Name:          "floor road",
 		TileX:         6,
@@ -83,12 +91,13 @@ var FaceModels = []FaceModel{
 var FaceModelsMap = make(map[FaceModelType]FaceModel)
 
 var (
-	face_model_debug             = FaceModelType(0)
-	face_model_wall_brick        = FaceModelType(1)
-	face_model_sidewalk          = FaceModelType(2)
-	face_model_road              = FaceModelType(3)
-	face_model_floor_light_tiles = FaceModelType(4)
-	face_model_stair_metal       = FaceModelType(5)
+	face_model_debug              = FaceModelType(0)
+	face_model_wall_brick         = FaceModelType(1)
+	face_model_sidewalk           = FaceModelType(2)
+	face_model_sidewalk_lightpole = FaceModelType(6)
+	face_model_road               = FaceModelType(3)
+	face_model_floor_light_tiles  = FaceModelType(4)
+	face_model_stair_metal        = FaceModelType(5)
 )
 
 func init() {
@@ -105,7 +114,7 @@ func init() {
 		FaceSolidMeshes[i] = mesh
 	}
 
-	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0.002, 0.5))
+	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0.01, 0.5))
 	FaceSolidMeshes[FaceDown] = floor
 
 	stair := NewMesh()
@@ -138,7 +147,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 		for z := range ChunkWidth {
 			cell := &c.Cells[y][x][z]
 			worldPos := ChunkToWorld(c.Position, LocalPos{x, y, z})
-			transform := vec3.MatrixTranslateXYZ(float64(x), 0, float64(z))
+			translate := vec3.MatrixTranslateXYZ(float64(x), 0, float64(z))
 
 			for i, face := range cell.Faces {
 				if face.Type == FaceNone {
@@ -147,7 +156,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 
 				var mesh Mesh
 
-				faceTransform := transform
+				faceTransform := translate
 
 				switch FaceDirection(i) {
 				case FaceWest:
@@ -189,6 +198,36 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 				}
 
 				switch faceModel.Id {
+				case face_model_sidewalk_lightpole:
+					{
+						tileX := faceModel.TileX
+						tileY := faceModel.TileY
+						rotation := (rotation + 1) % 4
+
+						polePart := UnitCube.Transform(
+							vec3.NewMatrix().
+								TranslateXYZ(-0.5, 0, -0.5).
+								Scale(0.08, 1, 0.08).
+								RotateY(math.Pi/4).
+								TranslateXYZ(0.5, 0, 0.5).
+								Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
+						).Transform(translate)
+
+						edit.AddMesh(polePart, 3, 4, 0)
+						edit.AddMesh(polePart.Transform(vec3.MatrixTranslateXYZ(0, 1, 0)), 3, 4, 0)
+						edit.AddMesh(polePart.Transform(vec3.MatrixTranslateXYZ(0, 2, 0)), 3, 4, 0)
+
+						poleHead := UnitCube.Transform(vec3.NewMatrix().
+							TranslateXYZ(-0.5, -0.5, -0.1).
+							Scale(0.15, 0.1, 0.35).
+							RotateY((math.Pi*2.)*float64(rotation)/4).
+							TranslateXYZ(0.5, 3, 0.5).
+							Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
+						).Transform(translate)
+
+						edit.AddMesh(poleHead, 3, 4, 0)
+						edit.AddMesh(mesh, tileX, tileY, rotation)
+					}
 				case face_model_sidewalk:
 					{
 						up := c.world.UpsertCell(worldPos.Add(vec3.Z(1))).Faces[FaceDown].ModelType
@@ -199,14 +238,18 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 						tileX := faceModel.TileX
 						tileY := faceModel.TileY
 
-						if left == face_model_sidewalk || right == face_model_sidewalk {
+						if left == face_model_sidewalk || left == face_model_sidewalk_lightpole {
 							rotation = 0
 						}
-
-						if up == face_model_sidewalk || down == face_model_sidewalk {
+						if right == face_model_sidewalk || right == face_model_sidewalk_lightpole {
+							rotation = 2
+						}
+						if down == face_model_sidewalk || down == face_model_sidewalk_lightpole {
+							rotation = 3
+						}
+						if up == face_model_sidewalk || up == face_model_sidewalk_lightpole {
 							rotation = 1
 						}
-
 						if up == face_model_road && left == face_model_road && down != face_model_road && right != face_model_road {
 							tileX = 7
 							rotation = 2
@@ -250,4 +293,22 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 	os.Remove(path)
 
 	return mdl, true
+}
+
+func (c *Chunk) UpdateLights() {
+
+	for y := range ChunkHeight {
+		for x := range ChunkWidth {
+			for z := range ChunkWidth {
+				cell := &c.Cells[y][x][z]
+				worldPos := ChunkToWorld(c.Position, LocalPos{x, y, z})
+				to := worldPos.AddXYZ(0.5, 0, 0.5).Add(FaceForward[FaceOpposite[cell.Faces[FaceDown].Rotation]].Scale(0.7))
+				from := to.AddXYZ(0, 3, 0)
+
+				if cell.Faces[FaceDown].ModelType == face_model_sidewalk_lightpole {
+					c.world.shader.LightSpot(from, to, 5, 25, rl.NewColor(253, 249, 100, 255), 0.4)
+				}
+			}
+		}
+	}
 }

@@ -56,6 +56,10 @@ func (v Value) Chipmunk() cp.Vector {
 	return cp.Vector{v.X, v.Z}
 }
 
+func FromChipmunk(v cp.Vector) Value {
+	return XYZ(v.X, 0, v.Y)
+}
+
 func FromRaylib(v rl.Vector3) Value {
 	return Value{float64(v.X), float64(v.Y), float64(v.Z)}
 }

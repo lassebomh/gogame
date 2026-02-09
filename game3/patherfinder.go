@@ -1,124 +1,140 @@
 package game3
 
 import (
-	"fmt"
 	"game/vec3"
+	"image/color"
 	"math"
 
 	"github.com/beefsack/go-astar"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 var lock = 0
 
 type PathPoint struct {
 	Position vec3.Value
+	Center   vec3.Value
 	Cell     *Cell
 	world    *World
 	points   map[vec3.Value]*PathPoint
 }
 
-var FACE_DIRECTION = []vec3.Value{
-	vec3.X(-1),
-	vec3.Z(1),
-	vec3.X(1),
-	vec3.Z(-1),
-	vec3.Y(1),
-}
-
-var FACE_OPPOSITE = []FaceDirection{
-	FaceEast,
-	FaceSouth,
-	FaceWest,
-	FaceNorth,
-	-1,
-}
-
-func (p *PathPoint) GetPoint(pos vec3.Value) (*PathPoint, bool) {
+func (p *PathPoint) GetPoint(pos vec3.Value) *PathPoint {
 
 	point, ok := p.points[pos]
 	if ok {
-		// fmt.Println("exists!", pos)
-		return point, true
+		return point
 	}
 
 	cell, ok := p.world.GetCell(pos)
-	if ok {
-		// fmt.Println("new", pos)
-		point := &PathPoint{
-			world:    p.world,
-			Position: pos,
-			Cell:     cell,
-			points:   p.points,
-		}
-		p.points[pos] = point
-
-		// time.Sleep(100 * time.Millisecond)
-		return point, true
+	if !ok {
+		return nil
 	}
 
-	// fmt.Println("empty", pos)
+	if cell.Faces[FaceDown].Type == FaceNone && pos.Y > 0 {
+		pos = pos.SubtractXYZ(0, 1, 0)
 
-	return nil, false
+		point, ok = p.points[pos]
+		if ok {
+			return point
+		}
+
+		cell, ok = p.world.GetCell(pos)
+		if !ok {
+			return nil
+		}
+	}
+
+	if cell.Faces[FaceDown].Type == FaceNone {
+		return nil
+	}
+
+	point = &PathPoint{
+		world:    p.world,
+		Position: pos,
+		Center:   pos.AddXYZ(0.5, 0.5, 0.5),
+		Cell:     cell,
+		points:   p.points,
+	}
+	p.points[pos] = point
+
+	return point
 }
 
 func (p *PathPoint) PathNeighbors() []astar.Pather {
 
 	switch p.Cell.Faces[FaceDown].Type {
 	case FaceNone:
-		return []astar.Pather{}
+		if p.Position.Y == 0 {
+			return []astar.Pather{}
+		}
+
+		below := p.GetPoint(p.Position.Subtract(vec3.Y(1)))
+		if below != nil && below.Cell.Faces[FaceDown].Type == FaceStair {
+			return below.PathNeighbors()
+		} else {
+			return []astar.Pather{}
+		}
+
 	case FaceStair:
-		return []astar.Pather{}
-		// prevPos := p.Position.Add(FACE_DIRECTION[p.Cell.Faces[FaceDown].Rotation])
-		// nextPos := p.Position.Add(FACE_DIRECTION[FACE_OPPOSITE[p.Cell.Faces[FaceDown].Rotation]]).Add(vec3.Y(1))
+		stairDir := p.Cell.Faces[FaceDown].Rotation
+		nextPos := p.Position.Add(FaceForward[stairDir]).Add(vec3.Y(1))
+		prevPos := p.Position.Add(FaceForward[FaceOpposite[stairDir]])
 
-		// out := make([]astar.Pather, 0, 2)
+		out := make([]astar.Pather, 0, 2)
 
-		// prevCell, ok := p.GetPoint(prevPos)
-		// if ok {
-		// 	out = append(out, prevCell)
-		// }
+		prevCell := p.GetPoint(prevPos)
+		if prevCell != nil {
+			out = append(out, prevCell)
+		}
 
-		// nextCell, ok := p.GetPoint(nextPos)
-		// if ok {
-		// 	out = append(out, nextCell)
-		// }
-		// return out
+		nextCell := p.GetPoint(nextPos)
+		if nextCell != nil {
+			out = append(out, nextCell)
+		}
+		return out
 	}
 
 	neighbors := make([]astar.Pather, 0)
 
-	for FACE := range FaceDown {
-		face := &p.Cell.Faces[FACE]
+	for i := range FaceDown {
+		face := &p.Cell.Faces[i]
 
 		if face.Type == FaceSolid {
 			continue
 		}
 
-		next, ok := p.GetPoint(p.Position.Add(FACE_DIRECTION[FACE]))
-		if !ok {
+		nextPos := p.Position.Add(FaceForward[i])
+
+		next := p.GetPoint(nextPos)
+		if next == nil {
+			continue
+		}
+		nextFaces := next.Cell.Faces
+
+		if nextFaces[FaceOpposite[i]].Type == FaceSolid {
 			continue
 		}
 
-		if next.Cell.Faces[FACE_OPPOSITE[FACE]].Type == FaceSolid {
+		if nextFaces[FaceDown].Type == FaceSolid || (nextFaces[FaceDown].Type == FaceStair && nextFaces[FaceDown].Rotation == i) {
+			neighbors = append(neighbors, next)
 			continue
 		}
 
-		// if next.Cell.Faces[FaceDown].Type == FaceStair {
-		// 	continue
-		// }
-		// if next.Cell.Faces[FaceDown].Type == FaceStair && next.Cell.Faces[FaceDown].Rotation != FACE {
-		// 	continue
-		// }
-		neighbors = append(neighbors, next)
+		if p.Position.Y == 0 {
+			continue
+		}
 
-		// if p.Position.Y > 0 {
-		// 	nextBelow, ok := p.GetPoint(p.Position.Add(FACE_DIRECTION[FACE]).Subtract(vec3.Y(1)))
+		nextBelow := p.GetPoint(nextPos.Subtract(vec3.Y(1)))
+		if nextBelow == nil {
+			continue
+		}
 
-		// 	if ok && nextBelow.Cell.Faces[FaceDown].Type == FaceStair { //  && nextBelow.Cell.Faces[FaceDown].Rotation == FACE_OPPOSITE[FACE] {
-		// 		neighbors = append(neighbors, nextBelow)
-		// 	}
-		// }
+		if nextBelow.Cell.Faces[FaceDown].Type != FaceStair || nextBelow.Cell.Faces[FaceDown].Rotation != FaceOpposite[i] {
+			continue
+		}
 
+		neighbors = append(neighbors, nextBelow)
 	}
 
 	return neighbors
@@ -127,51 +143,85 @@ func (p *PathPoint) PathNeighbors() []astar.Pather {
 
 func (p *PathPoint) PathNeighborCost(to astar.Pather) float64 {
 	other := to.(*PathPoint)
-	return p.Position.Distance(other.Position)
+	return p.Center.Distance(other.Center)
 }
 
 func (p *PathPoint) PathEstimatedCost(to astar.Pather) float64 {
 	other := to.(*PathPoint)
-	return p.Position.Distance(other.Position)
+	return p.Center.Distance(other.Center)
 }
 
-func FindPath(world *World, startPos vec3.Value, endPos vec3.Value) ([]vec3.Value, float64) {
-	startPos = startPos.Map(math.Floor)
+func NewPathPoint(world *World, pos vec3.Value) *PathPoint {
+	pos = pos.Map(math.Floor)
+
+	var cell *Cell
+	var ok bool
+
+	for i := pos.Y; i >= 0; i-- {
+		pos.Y = i
+
+		cell, ok = world.GetCell(pos)
+		if ok && cell.Faces[FaceDown].Type != FaceNone {
+			start := &PathPoint{
+				Position: pos,
+				Center:   pos.AddXYZ(0.5, 0.5, 0.5),
+				world:    world,
+				Cell:     cell,
+				points:   map[vec3.Value]*PathPoint{},
+			}
+			start.points[pos] = start
+			return start
+		}
+	}
+
+	return nil
+}
+
+func (p *PathPoint) GetNeighborPathPoints() []*PathPoint {
+	pathers := p.PathNeighbors()
+	points := make([]*PathPoint, 0)
+	for _, pather := range pathers {
+		points = append(points, pather.(*PathPoint))
+	}
+	return points
+}
+
+func (p *PathPoint) FindPath(endPos vec3.Value) ([]*PathPoint, float64) {
+	if p == nil {
+		return []*PathPoint{}, 0
+	}
 	endPos = endPos.Map(math.Floor)
 
-	// fmt.Println("FROM", startPos, "TO", endPos)
-
-	points := map[vec3.Value]*PathPoint{}
-
-	start := &PathPoint{
-		Position: startPos,
-		world:    world,
-		Cell:     world.UpsertCell(startPos),
-		points:   points,
+	end := p.GetPoint(endPos)
+	if end == nil {
+		return []*PathPoint{}, 0
 	}
-	points[startPos] = start
 
-	end := &PathPoint{
-		Position: endPos,
-		world:    world,
-		Cell:     world.UpsertCell(endPos),
-		points:   points,
-	}
-	points[endPos] = end
-
-	pathers, length, found := astar.Path(end, start)
+	pathers, length, found := astar.Path(end, p)
 
 	if !found {
-		p, ok := points[endPos]
-		fmt.Println(p.Position, ok)
-		return []vec3.Value{}, 0
+		return []*PathPoint{}, 0
 	}
 
-	path := make([]vec3.Value, len(pathers))
+	path := make([]*PathPoint, len(pathers))
 
 	for i, p := range pathers {
-		path[i] = p.(*PathPoint).Position.AddXYZ(0.5, 0, 0.5)
+		path[i] = p.(*PathPoint)
 	}
 
 	return path, length
+}
+
+func (p *PathPoint) Draw() {
+	rl.DrawSphere(p.Center.Raylib(), 0.05, color.RGBA{255, 255, 0, 30})
+}
+
+func DrawPath(pathPoints []*PathPoint) {
+	for i, p := range pathPoints {
+		if i != 0 {
+			prev := pathPoints[i-1]
+			rl.DrawLine3D(p.Center.Raylib(), prev.Center.Raylib(), color.RGBA{255, 255, 0, 128})
+		}
+		p.Draw()
+	}
 }

@@ -54,13 +54,16 @@ func Start() {
 			game.Update(dt)
 		}
 
-		if ActiveEditor != nil {
-			rl.BeginDrawing()
-			ActiveEditor.Draw()
-			rl.EndDrawing()
-		} else {
-			game.Draw()
-		}
+		BeginDrawing(func() {
+			if ActiveEditor != nil {
+
+				ActiveEditor.Draw()
+
+			} else {
+				game.Draw()
+			}
+			rl.DrawFPS(0, 0)
+		})
 
 		t0 = t1
 	}

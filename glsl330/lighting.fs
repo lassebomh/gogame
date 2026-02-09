@@ -1,6 +1,6 @@
 #version 330
 
-#define MAX_LIGHTS        4
+#define MAX_LIGHTS        8
 #define LIGHT_DIRECTIONAL 0
 #define LIGHT_POINT       1
 #define LIGHT_SPOT        2
@@ -18,7 +18,7 @@ uniform float visibility;
 uniform bool fullBright;
 uniform sampler2D shadowMap;
 uniform vec3 playerPosition;
-uniform bool hideOutsideView;
+uniform float hideOutsideView;
 
 out vec4 finalColor;
 
@@ -230,33 +230,21 @@ void main()
       
 
       float NdotL = max(dot(normal, light), 0.0);
-      lightDot += (lights[i].color.rgb * NdotL * intensity * lights[i].strength) * inView;
+      lightDot += (lights[i].color.rgb * NdotL * intensity * lights[i].strength) * (i == 0 ? inView : 1);
 
       if (NdotL > 1.0) {
-        specular += (pow(max(0.0, dot(viewD, reflect(-light, normal))), 16.0) * intensity) * inView;
+        specular += (pow(max(0.0, dot(viewD, reflect(-light, normal))), 16.0) * intensity) * (i == 0 ? inView : 1);
       }
     }
   }
   
-  
   finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
-  // finalColor += texelColor*colDiffuse*clamp((inView), clamp(seenBefore, 0.01, 0.2), .35);
-  
-  // finalColor *= seenBefore;
-  // finalColor.w = 1;
-  
-  // if (seenBefore > 0 || inView > 0) {
-  // } else {
-  //   finalColor = vec4(0, 0, 0, 1);
-  //   finalColor = (texelColor*((colDiffuse+vec4(specular, 1.0))*vec4(lightDot, 1.0)));
-  //   // finalColor += texelColor*colDiffuse*0.01;
-  // }
 
-  if (hideOutsideView) {
+  if (hideOutsideView > 0) {
     finalColor += texelColor*colDiffuse*clamp(objectInView, 0.08, 0.2);
-    finalColor.w = dither8x8(objectInView);
+    finalColor.w = dither8x8(objectInView+visibility);
   } else {
-    finalColor += texelColor*colDiffuse*clamp(dither8x8(inView), 0.01, 0.2);    
+    finalColor += texelColor*colDiffuse*clamp(dither8x8(inView), 0.01, 0.1);    
     finalColor.w = dither8x8(visibility);
   }
   

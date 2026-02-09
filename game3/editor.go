@@ -236,6 +236,22 @@ func (e *Editor) Draw() {
 			case TOOL_CELL:
 				e.ToolCell.Draw3D(e)
 			}
+
+			if e.world.Player != nil {
+				point := NewPathPoint(e.world, e.Position)
+				path, _ := point.FindPath(e.world.Player.Position)
+				DrawPath(path)
+			}
+
+			// for _, neighbor := range point.GetNeighborPathPoints() {
+			// 	neighbor.Draw()
+			// }
+
+			// if e.world.Monster != nil {
+			// 	for _, arm := range e.world.Monster.arms {
+			// 		DrawPathPoints(arm.path)
+			// 	}
+			// }
 		})
 
 	})

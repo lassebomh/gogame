@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"game/vec2"
 	"game/vec3"
+	"image/color"
 	"log"
 	"math"
 	"os"
@@ -135,7 +136,7 @@ func (w *World) Upsert(worldType WorldType) *World {
 	}
 	w.Type = worldType
 	w.planetOrganicTexture = rl.LoadTexture("./models/organic.png")
-	
+
 	if w.Type == WorldEarth {
 		game.Earth = w
 	} else {
@@ -180,8 +181,8 @@ func (w *World) Update(dt time.Duration) {
 
 		w.Player.Update()
 
-		cameraDistance := 8.
-		cameraDirection := vec3.XYZ(0, -5, 0.5).Normalize()
+		cameraDistance := 30.
+		cameraDirection := vec3.XYZ(0, -5, 1).Normalize()
 
 		w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
 
@@ -189,7 +190,7 @@ func (w *World) Update(dt time.Duration) {
 			Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
 			Target:     w.Camera.Target,
 			Up:         vec3.Y(1),
-			Fovy:       45,
+			Fovy:       15,
 			Projection: rl.CameraPerspective,
 		}
 	}
@@ -202,101 +203,100 @@ func (w *World) Update(dt time.Duration) {
 func (w *World) Draw() {
 	w.Player.UpdateView()
 
-	BeginDrawing(func() {
-		BeginTextureMode(w.renderTexture, func() {
+	BeginTextureMode(w.renderTexture, func() {
 
-			rl.ClearBackground(rl.Black)
+		rl.ClearBackground(rl.Black)
 
-			if w.Type == WorldStation {
-				BeginShaderMode(w.planetShader, func() {
-					w.planetShader.Time.Set(game.Day)
-					w.planetShader.Fov.Set(30)
-					w.planetShader.Channel0.Set(w.planetOrganicTexture)
-					w.planetShader.Channel1.Set(w.planetTexture)
-					w.planetShader.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
+		if w.Type == WorldStation {
+			BeginShaderMode(w.planetShader, func() {
+				w.planetShader.Time.Set(game.Day)
+				w.planetShader.Fov.Set(30)
+				w.planetShader.Channel0.Set(w.planetOrganicTexture)
+				w.planetShader.Channel1.Set(w.planetTexture)
+				w.planetShader.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
 
-					rl.DrawRectangle(0, 0, w.renderTexture.Texture.Width, w.renderTexture.Texture.Height, rl.White)
-				})
+				rl.DrawRectangle(0, 0, w.renderTexture.Texture.Width, w.renderTexture.Texture.Height, rl.White)
+			})
+		}
+
+		BeginMode3D(w.Camera, func() {
+			w.shader.Visibility.Set(1)
+
+			if w.Player != nil {
+
+				w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
+				w.shader.PlayerPosition.SetVec3(w.Player.Position)
+				w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.2)), w.Player.lookPosition.Add(vec3.Y(0.2)), 30, 35, rl.White, 1.5)
+			} else {
+				w.shader.LightSpot(vec3.Zero, vec3.One, 0, 1, rl.White, 0)
 			}
 
-			BeginMode3D(w.Camera, func() {
-				w.shader.Visibility.Set(1)
+			w.shader.LightDirectional(vec3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
 
-				if w.Player != nil {
-
-					w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
-					w.shader.PlayerPosition.SetVec3(w.Player.Position)
-					w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.5)), w.Player.lookPosition.Add(vec3.Y(0.5)), 35, 40, rl.White, 1.5)
-				}
-
-				w.shader.LightDirectional(vec3.XYZ(0.3, -1, 0), rl.White, 1)
-
-				w.shader.UpdateValues()
-
-				targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
-
-				maxY := targetLocalPos.Y
-
-				if w.Camera.Target.Y-math.Trunc(w.Camera.Target.Y) > 0.1 {
-					maxY++
-				}
-
-				for y := 0; y <= maxY; y++ {
-
-					visibility := 1.
-					if w.Player != nil {
-						visibility = w.Player.Position.Y - float64(y-1)
-					}
-
-					w.shader.Visibility.Set(visibility)
-
-					for dx := -1; dx <= 1; dx++ {
-						for dz := -1; dz <= 1; dz++ {
-							chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
-							chunk, ok := w.Chunks[chunkPos]
-							if !ok {
-								continue
-							}
-
-							if !rl.IsModelValid(chunk.models[y]) {
-								continue
-							}
-							worldPos := ChunkToWorld(chunkPos, LocalPos{0, y, 0})
-							rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
-						}
+			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
+			chunks := make([]*Chunk, 0, 9)
+			for dx := -1; dx <= 1; dx++ {
+				for dz := -1; dz <= 1; dz++ {
+					chunkPos := ChunkPos{targetChunkPos.X - dx, targetChunkPos.Z - dz}
+					chunk, ok := w.Chunks[chunkPos]
+					if ok {
+						chunks = append(chunks, chunk)
 					}
 				}
+			}
 
+			for _, chunk := range chunks {
+				chunk.UpdateLights()
+			}
+
+			w.shader.UpdateLights()
+
+			maxY := targetLocalPos.Y
+
+			if w.Camera.Target.Y-math.Trunc(w.Camera.Target.Y) > 0.1 {
+				maxY++
+			}
+
+			for y := 0; y <= maxY; y++ {
+
+				visibility := 1.
 				if w.Player != nil {
-					w.Player.Draw()
-				}
-				if w.Monster != nil {
-					w.Monster.Draw()
-
-					// BeginOverlayMode(func() {
-					// 	for _, arm := range w.Monster.arms {
-					// 		if len(arm.path) >= 2 {
-					// 			for i := range arm.path[:len(arm.path)-1] {
-					// 				rl.DrawLine3D(arm.path[i].Raylib(), arm.path[i+1].Raylib(), rl.Yellow)
-					// 			}
-					// 		}
-
-					// 	}
-					// })
+					visibility = w.Player.Position.Y - float64(y-1)
 				}
 
-			})
+				w.shader.Visibility.Set(visibility)
+
+				for _, chunk := range chunks {
+
+					worldPos := ChunkToWorld(chunk.Position, LocalPos{0, y, 0})
+					rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
+				}
+			}
+
+			if w.Player != nil {
+				w.Player.Draw()
+			}
+			if w.Monster != nil {
+				w.Monster.Draw()
+
+				// BeginOverlayMode(func() {
+				// 	for _, arm := range w.Monster.arms {
+				// 		DrawPath(arm.path)
+				// 	}
+				// })
+			}
+
 		})
-
-		rl.DrawTexturePro(
-			w.renderTexture.Texture,
-			rl.Rectangle{X: 0, Y: 0, Width: float32(w.renderTexture.Texture.Width), Height: -float32(w.renderTexture.Texture.Height)},
-			rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetScreenWidth()), Height: float32(rl.GetScreenHeight())},
-			rl.Vector2{X: 0, Y: 0},
-			0,
-			rl.White,
-		)
 	})
+
+	rl.DrawTexturePro(
+		w.renderTexture.Texture,
+		rl.Rectangle{X: 0, Y: 0, Width: float32(w.renderTexture.Texture.Width), Height: -float32(w.renderTexture.Texture.Height)},
+		rl.Rectangle{X: 0, Y: 0, Width: float32(rl.GetScreenWidth()), Height: float32(rl.GetScreenHeight())},
+		rl.Vector2{X: 0, Y: 0},
+		0,
+		rl.White,
+	)
 
 }
 
@@ -326,6 +326,10 @@ func (w *World) UpsertCell(pos vec3.Value) *Cell {
 }
 
 func (w *World) GetCell(pos vec3.Value) (*Cell, bool) {
+	if pos.Y < 0 || pos.Y >= ChunkHeight {
+		return nil, false
+	}
+
 	cpos, lpos := WorldToChunk(pos)
 	chunk, ok := w.Chunks[cpos]
 

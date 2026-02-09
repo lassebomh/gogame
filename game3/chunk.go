@@ -11,11 +11,20 @@ import (
 
 const CHUNKS_PATH = "./chunks/"
 
+const StairBlockerWidth = 0.1
+
 var WALL_VERTS = [4][]cp.Vector{
 	[]cp.Vector{{1, 1}, {1, 0}, {1 - WallWidth, 0}, {1 - WallWidth, 1}},
 	[]cp.Vector{{1, 1}, {0, 1}, {0, 1 - WallWidth}, {1, 1 - WallWidth}},
 	[]cp.Vector{{0, 1}, {0, 0}, {WallWidth, 0}, {WallWidth, 1}},
 	[]cp.Vector{{1, 0}, {0, 0}, {0, WallWidth}, {1, WallWidth}},
+}
+
+var STAIR_VERTS = [4][]cp.Vector{
+	[]cp.Vector{{1, 1}, {1, 0}, {1 - StairBlockerWidth, 0}, {1 - StairBlockerWidth, 1}},
+	[]cp.Vector{{1, 1}, {0, 1}, {0, 1 - StairBlockerWidth}, {1, 1 - StairBlockerWidth}},
+	[]cp.Vector{{0, 1}, {0, 0}, {StairBlockerWidth, 0}, {StairBlockerWidth, 1}},
+	[]cp.Vector{{1, 0}, {0, 0}, {0, StairBlockerWidth}, {1, StairBlockerWidth}},
 }
 
 const (
@@ -102,18 +111,34 @@ func (c *Chunk) ReloadBodies() {
 				for i := range FaceDown {
 					face := &cell.Faces[i]
 
-					if face.Type == FaceSolid {
+					switch face.Type {
+					case FaceSolid:
 						shape := cp.NewPolyShape(c.body, 4, WALL_VERTS[i], transform, 0)
-
 						shape.Filter.Group = GroupStatic
 						shape.Filter.Categories = Category(worldPos.Y, true, false)
 						shape.Filter.Mask = Category(worldPos.Y, true, true)
-
-						face.shape = c.world.space.AddShape(shape)
-					} else {
-						face.shape = nil
+						c.world.space.AddShape(shape)
 					}
 				}
+
+				// down := &cell.Faces[FaceDown]
+				// if down.Type == FaceStair {
+				// 	left := FaceLeft[down.Rotation]
+				// 	right := FaceRight[down.Rotation]
+				// 	for i := range 2 {
+				// 		shape := cp.NewPolyShape(c.body, 4, STAIR_VERTS[left], transform, 0)
+				// 		shape.Filter.Group = GroupStatic
+				// 		shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
+				// 		shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
+				// 		c.world.space.AddShape(shape)
+				// 		shape = cp.NewPolyShape(c.body, 4, STAIR_VERTS[right], transform, 0)
+				// 		shape.Filter.Group = GroupStatic
+				// 		shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
+				// 		shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
+				// 		c.world.space.AddShape(shape)
+				// 	}
+				// }
+
 			}
 		}
 	}
@@ -151,6 +176,37 @@ const (
 	FaceSouth
 	FaceDown
 )
+
+var FaceForward = []vec3.Value{
+	vec3.X(1),
+	vec3.Z(1),
+	vec3.X(-1),
+	vec3.Z(-1),
+	vec3.Y(1),
+}
+
+var FaceOpposite = []FaceDirection{
+	FaceEast,
+	FaceSouth,
+	FaceWest,
+	FaceNorth,
+	-1,
+}
+
+var FaceRight = []FaceDirection{
+	FaceNorth,
+	FaceEast,
+	FaceSouth,
+	FaceWest,
+	FaceDown,
+}
+var FaceLeft = []FaceDirection{
+	FaceSouth,
+	FaceWest,
+	FaceNorth,
+	FaceEast,
+	FaceDown,
+}
 
 type Face struct {
 	Type      FaceType
