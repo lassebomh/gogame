@@ -1,7 +1,7 @@
 package game3
 
 import (
-	"game/vec3"
+	v3 "game/vec3"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -49,7 +49,7 @@ func (m *MainShader) SetRaylibShader(shader rl.Shader) {
 	m.shader = shader
 }
 
-func (m *MainShader) LightDirectional(direction vec3.Value, color rl.Color, strength float64) {
+func (m *MainShader) LightDirectional(direction v3.Value, color rl.Color, strength float64) {
 	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_DIRECTIONAL))
@@ -60,7 +60,7 @@ func (m *MainShader) LightDirectional(direction vec3.Value, color rl.Color, stre
 
 }
 
-func (m *MainShader) LightSpot(position vec3.Value, target vec3.Value, cutoff float64, outerCutOff float64, color rl.Color, strength float64) {
+func (m *MainShader) LightSpot(position v3.Value, target v3.Value, cutoff float64, outerCutOff float64, color rl.Color, strength float64) {
 	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_SPOT))
@@ -73,7 +73,7 @@ func (m *MainShader) LightSpot(position vec3.Value, target vec3.Value, cutoff fl
 
 }
 
-func (m *MainShader) LightPoint(position vec3.Value, color rl.Color, strength float64) {
+func (m *MainShader) LightPoint(position v3.Value, color rl.Color, strength float64) {
 	m.LightI++
 	m.LightEnabled[m.LightI].Set(1)
 	m.LightType[m.LightI].Set(int32(LIGHT_POINT))

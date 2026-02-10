@@ -1,7 +1,7 @@
-package vec2
+package v2
 
 import (
-	"game/vec3"
+	v3 "game/vec3"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -28,8 +28,8 @@ func All(v float64) Value {
 func (v Value) Chipmunk() cp.Vector {
 	return cp.Vector{v.X, v.Y}
 }
-func (v Value) To3D() vec3.Value {
-	return vec3.Value{v.X, 0, v.Y}
+func (v Value) To3D() v3.Value {
+	return v3.Value{v.X, 0, v.Y}
 }
 
 func FromRaylib(v rl.Vector2) Value {

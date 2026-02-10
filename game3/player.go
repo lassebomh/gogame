@@ -1,8 +1,8 @@
 package game3
 
 import (
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 	"math"
 
@@ -17,17 +17,17 @@ const VISIBILITY_DISTANCE = 10
 type Player struct {
 	world *World
 
-	Position vec3.Value
+	Position v3.Value
 	// Y         float64
 	YVelocity float64
 	Radius    float64
 	body      *cp.Body
 	shape     *cp.Shape
 
-	visibilityVerts [VISIBILITY_VERTS]vec3.Value
+	visibilityVerts [VISIBILITY_VERTS]v3.Value
 
 	viewTexture  rl.RenderTexture2D
-	lookPosition vec3.Value
+	lookPosition v3.Value
 }
 
 func (p *Player) Update() {
@@ -83,7 +83,7 @@ func (p *Player) Update() {
 
 	p.visibilityVerts[0] = p.Position
 
-	from := vec2.XY(p.Position.X, p.Position.Z)
+	from := v2.XY(p.Position.X, p.Position.Z)
 
 	for i := range VISIBILITY_VERTS - 1 {
 		f := (float64(i)/float64(VISIBILITY_VERTS-2))*2 - 1
@@ -91,7 +91,7 @@ func (p *Player) Update() {
 		baseAngle := playerAngle
 		angleOffset := f*VISIBILITY_CONE_RADIANS - math.Pi
 		angle := baseAngle - angleOffset
-		dir := vec2.XY(math.Cos(angle), math.Sin(angle))
+		dir := v2.XY(math.Cos(angle), math.Sin(angle))
 		to := from.Add(dir.Scale(VISIBILITY_DISTANCE))
 
 		result := p.world.space.SegmentQueryFirst(
@@ -105,11 +105,11 @@ func (p *Player) Update() {
 			),
 		)
 
-		p.visibilityVerts[i+1] = vec3.XYZ(result.Point.X, p.Position.Y, result.Point.Y)
+		p.visibilityVerts[i+1] = v3.XYZ(result.Point.X, p.Position.Y, result.Point.Y)
 	}
 
 	// update last seen cells
-	cellCoords := map[vec3.Value]bool{}
+	cellCoords := map[v3.Value]bool{}
 
 	a := p.visibilityVerts[0]
 	for _, b := range p.visibilityVerts[:len(p.visibilityVerts)-1] {
@@ -132,7 +132,7 @@ func (p *Player) Update() {
 func SpawnNewPlayer(world *World) {
 	p := &Player{
 		Radius:   0.1,
-		Position: vec3.XYZ(0, 0, 0),
+		Position: v3.XYZ(0, 0, 0),
 	}
 	p.Spawn(world)
 }
@@ -153,7 +153,7 @@ func (p *Player) Spawn(world *World) {
 	p.Radius = 0.2
 
 	mass := p.Radius * p.Radius * 4
-	body := p.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, vec2.XY(2, 2).Chipmunk())))
+	body := p.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, p.Radius, v2.XY(2, 2).Chipmunk())))
 	body.SetPosition(p.Position.Chipmunk())
 	p.shape = p.world.space.AddShape(cp.NewCircle(body, p.Radius, cp.Vector{}))
 	p.shape.SetElasticity(0)
@@ -167,17 +167,17 @@ func (p *Player) Spawn(world *World) {
 }
 
 func (p *Player) Draw() {
-	rl.DrawSphere(p.Position.Add(vec3.Y(p.Radius)).Raylib(), float32(p.Radius), rl.Red)
+	rl.DrawSphere(p.Position.Add(v3.Y(p.Radius)).Raylib(), float32(p.Radius), rl.Red)
 }
 
 func (p *Player) UpdateView() {
 	BeginTextureMode(p.viewTexture, func() {
 		camera := Camera3D{
-			Position:   p.Position.Add(vec3.Y(5)),
+			Position:   p.Position.Add(v3.Y(5)),
 			Target:     p.Position.AddXYZ(0, 0, 0.0001),
 			Fovy:       20,
 			Projection: rl.CameraOrthographic,
-			Up:         vec3.Y(1),
+			Up:         v3.Y(1),
 		}
 		BeginMode3D(camera, func() {
 			rl.ClearBackground(color.RGBA{})
@@ -186,12 +186,12 @@ func (p *Player) UpdateView() {
 			// 	for z := float64(-camera.Fovy); z <= camera.Fovy+1; z++ {
 			// 		cell, chunk := p.world.GetCell(p.Position.AddXYZ(x, 0, z))
 			// 		cellPosition := ChunkToWorld(chunk.Position, LocalPos{int(x), 0, int(z)})
-			// 		pos := vec3.XYZ(cell.Position.X+0.5, p.Position.Y-0.5, cell.Position.Z+0.5)
+			// 		pos := v3.XYZ(cell.Position.X+0.5, p.Position.Y-0.5, cell.Position.Z+0.5)
 			// 		seen := float64(0)
 			// 		if cell.LastSeenPlayer != 0 {
 			// 			seen = Clamp((5-(game.Time-cell.LastSeenPlayer).Seconds())/4, 0, 1)
 			// 		}
-			// 		rl.DrawCube(pos.Raylib(), 1, 0, 1, vec3.X(seen).ToColor())
+			// 		rl.DrawCube(pos.Raylib(), 1, 0, 1, v3.X(seen).ToColor())
 			// 	}
 			// }
 

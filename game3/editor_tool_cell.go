@@ -1,8 +1,8 @@
 package game3
 
 import (
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 
 	"github.com/gen2brain/raylib-go/raygui"
@@ -10,7 +10,7 @@ import (
 )
 
 type ToolCell struct {
-	// CellPos vec3.Value
+	// CellPos v3.Value
 
 	Delete        bool
 	FaceType      FaceType
@@ -18,9 +18,9 @@ type ToolCell struct {
 	FaceModelType FaceModelType
 	FaceDirection FaceDirection
 
-	pastingCells map[vec3.Value]bool
+	pastingCells map[v3.Value]bool
 
-	palletePosition vec2.Value
+	palletePosition v2.Value
 }
 
 func (t *ToolCell) Update(e *Editor) {
@@ -36,7 +36,7 @@ func (t *ToolCell) Update(e *Editor) {
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		if t.pastingCells == nil {
-			t.pastingCells = map[vec3.Value]bool{}
+			t.pastingCells = map[v3.Value]bool{}
 		}
 
 		t.pastingCells[e.mouseCellPos] = true
@@ -46,7 +46,7 @@ func (t *ToolCell) Update(e *Editor) {
 		t.palletePosition = e.mousePosition
 	}
 	if rl.IsKeyReleased(rl.KeyQ) {
-		t.palletePosition = vec2.Zero
+		t.palletePosition = v2.Zero
 	}
 
 	t.Delete = rl.IsKeyDown(rl.KeyX)
@@ -117,7 +117,7 @@ func (t *ToolCell) Draw3D(e *Editor) {
 
 func (t *ToolCell) DrawHUD(e *Editor) {
 
-	if t.palletePosition != vec2.Zero {
+	if t.palletePosition != v2.Zero {
 
 		line := NewLineLayout(t.palletePosition.X, t.palletePosition.Y, 24)
 

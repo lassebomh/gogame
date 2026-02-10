@@ -2,8 +2,8 @@ package game3
 
 import (
 	"fmt"
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 	"log"
 	"reflect"
@@ -51,7 +51,7 @@ func (u *UniformVec2) Set(x, y float64) {
 func (u *UniformVec3) Set(x, y, z float64) {
 	rl.SetShaderValue(u.shader, u.location, []float32{float32(x), float32(y), float32(z)}, rl.ShaderUniformVec3)
 }
-func (u *UniformVec3) SetVec3(v vec3.Value) {
+func (u *UniformVec3) SetVec3(v v3.Value) {
 	u.Set(v.X, v.Y, v.Z)
 }
 func (u *UniformVec4) Set(x, y, z, w float64) {
@@ -153,11 +153,11 @@ func BeginOverlayMode(fn func()) {
 // Camera3D type, defines a camera position/orientation in 3d space
 type Camera3D struct {
 	// Camera position
-	Position vec3.Value
+	Position v3.Value
 	// Camera target it looks-at
-	Target vec3.Value
+	Target v3.Value
 	// Camera up vector (rotation over its axis)
-	Up vec3.Value
+	Up v3.Value
 	// Camera field-of-view apperture in Y (degrees) in perspective, used as near plane width in orthographic
 	Fovy float64
 	// Camera type, controlling projection type, either CameraPerspective or CameraOrthographic.
@@ -168,7 +168,7 @@ func (c Camera3D) Raylib() rl.Camera3D {
 	return rl.Camera3D{
 		Position:   c.Position.Raylib(),
 		Target:     c.Target.Raylib(),
-		Up:         vec3.Y(1).Raylib(),
+		Up:         v3.Y(1).Raylib(),
 		Fovy:       float32(c.Fovy),
 		Projection: c.Projection,
 	}
@@ -208,10 +208,10 @@ func (l *LineLayout) BreakEx(height float64) {
 	l.Height = height
 }
 
-func ScreenToWorld(camera Camera3D, screen vec2.Value, y float64) vec3.Value {
+func ScreenToWorld(camera Camera3D, screen v2.Value, y float64) v3.Value {
 	ray := rl.GetScreenToWorldRay(screen.Raylib(), camera.Raylib())
-	origin := vec3.FromRaylib(ray.Position)
-	direction := vec3.FromRaylib(ray.Direction)
+	origin := v3.FromRaylib(ray.Position)
+	direction := v3.FromRaylib(ray.Direction)
 	hitpos := origin.Add(direction.Scale((y - origin.Y) / direction.Y))
 	hitpos.Y = y
 	return hitpos

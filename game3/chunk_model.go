@@ -3,7 +3,7 @@ package game3
 import (
 	"fmt"
 	. "game/model"
-	"game/vec3"
+	v3 "game/vec3"
 	"math"
 	"os"
 	"path/filepath"
@@ -105,31 +105,31 @@ func init() {
 		FaceModelsMap[faceModel.Id] = faceModel
 	}
 
-	wall := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-1, -0.5, -0.5).Scale(WallWidth, 1, 1).TranslateXYZ(0.5, 0, 0))
+	wall := UnitCube.Transform(v3.NewMatrix().TranslateXYZ(-1, -0.5, -0.5).Scale(WallWidth, 1, 1).TranslateXYZ(0.5, 0, 0))
 
 	for i := range FaceDown {
 		angle := math.Pi * 2 * (float64(i) / 4)
-		mat := vec3.NewMatrix().RotateY(angle).TranslateXYZ(0.5, 0.5, 0.5)
+		mat := v3.NewMatrix().RotateY(angle).TranslateXYZ(0.5, 0.5, 0.5)
 		mesh := wall.Transform(mat)
 		FaceSolidMeshes[i] = mesh
 	}
 
-	floor := wall.Transform(vec3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0.01, 0.5))
+	floor := wall.Transform(v3.NewMatrix().TranslateXYZ(-0.5+WallWidth, 0, 0).RotateZ(math.Pi/2).TranslateXYZ(0.5, 0.01, 0.5))
 	FaceSolidMeshes[FaceDown] = floor
 
 	stair := NewMesh()
 	steps := 5.
-	baseStep := UnitCube.Transform(vec3.NewMatrix().TranslateXYZ(-0.5, 0, 0).Scale(1, 1/steps, 1))
+	baseStep := UnitCube.Transform(v3.NewMatrix().TranslateXYZ(-0.5, 0, 0).Scale(1, 1/steps, 1))
 
 	for i := 0.; i < steps; i += 1 {
 		y := i / steps
-		mat := vec3.NewMatrix().Scale(1, 1, 1-y).TranslateXYZ(0, y, -0.5)
+		mat := v3.NewMatrix().Scale(1, 1, 1-y).TranslateXYZ(0, y, -0.5)
 		stair.Combine(baseStep.Transform(mat))
 	}
 
 	for i := range FaceDown {
 		angle := math.Pi * 2 * (float64(i+1) / 4)
-		mat := vec3.NewMatrix().TranslateXYZ(0, 0, 0).RotateY(angle).TranslateXYZ(0.5, 0, 0.5)
+		mat := v3.NewMatrix().TranslateXYZ(0, 0, 0).RotateY(angle).TranslateXYZ(0.5, 0, 0.5)
 		mesh := stair.Transform(mat)
 		FaceStairMeshes[i] = mesh
 	}
@@ -147,7 +147,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 		for z := range ChunkWidth {
 			cell := &c.Cells[y][x][z]
 			worldPos := ChunkToWorld(c.Position, LocalPos{x, y, z})
-			translate := vec3.MatrixTranslateXYZ(float64(x), 0, float64(z))
+			translate := v3.MatrixTranslateXYZ(float64(x), 0, float64(z))
 
 			for i, face := range cell.Faces {
 				if face.Type == FaceNone {
@@ -205,7 +205,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 						rotation := (rotation + 1) % 4
 
 						polePart := UnitCube.Transform(
-							vec3.NewMatrix().
+							v3.NewMatrix().
 								TranslateXYZ(-0.5, 0, -0.5).
 								Scale(0.08, 1, 0.08).
 								RotateY(math.Pi/4).
@@ -214,10 +214,10 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 						).Transform(translate)
 
 						edit.AddMesh(polePart, 3, 4, 0)
-						edit.AddMesh(polePart.Transform(vec3.MatrixTranslateXYZ(0, 1, 0)), 3, 4, 0)
-						edit.AddMesh(polePart.Transform(vec3.MatrixTranslateXYZ(0, 2, 0)), 3, 4, 0)
+						edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 1, 0)), 3, 4, 0)
+						edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 2, 0)), 3, 4, 0)
 
-						poleHead := UnitCube.Transform(vec3.NewMatrix().
+						poleHead := UnitCube.Transform(v3.NewMatrix().
 							TranslateXYZ(-0.5, -0.5, -0.1).
 							Scale(0.15, 0.1, 0.35).
 							RotateY((math.Pi*2.)*float64(rotation)/4).
@@ -230,10 +230,10 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 					}
 				case face_model_sidewalk:
 					{
-						up := c.world.UpsertCell(worldPos.Add(vec3.Z(1))).Faces[FaceDown].ModelType
-						down := c.world.UpsertCell(worldPos.Add(vec3.Z(-1))).Faces[FaceDown].ModelType
-						left := c.world.UpsertCell(worldPos.Add(vec3.X(1))).Faces[FaceDown].ModelType
-						right := c.world.UpsertCell(worldPos.Add(vec3.X(-1))).Faces[FaceDown].ModelType
+						up := c.world.UpsertCell(worldPos.Add(v3.Z(1))).Faces[FaceDown].ModelType
+						down := c.world.UpsertCell(worldPos.Add(v3.Z(-1))).Faces[FaceDown].ModelType
+						left := c.world.UpsertCell(worldPos.Add(v3.X(1))).Faces[FaceDown].ModelType
+						right := c.world.UpsertCell(worldPos.Add(v3.X(-1))).Faces[FaceDown].ModelType
 
 						tileX := faceModel.TileX
 						tileY := faceModel.TileY

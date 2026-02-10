@@ -2,8 +2,8 @@ package game3
 
 import (
 	"fmt"
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 	"math"
 	"time"
@@ -15,9 +15,9 @@ import (
 type Editor struct {
 	TimeStep time.Duration
 
-	Position     vec3.Value
-	PositionSoft vec3.Value
-	// PositionVelocity vec3.Value
+	Position     v3.Value
+	PositionSoft v3.Value
+	// PositionVelocity v3.Value
 
 	Pitch           float64
 	Yaw             float64
@@ -27,10 +27,10 @@ type Editor struct {
 
 	Camera Camera3D
 
-	mousePosition      vec2.Value
-	mouseWorldPosition vec3.Value
+	mousePosition      v2.Value
+	mouseWorldPosition v3.Value
 
-	mouseCellPos       vec3.Value
+	mouseCellPos       v3.Value
 	mouseCellDirection FaceDirection
 
 	Tool     Tool
@@ -53,7 +53,7 @@ func (e *Editor) Upsert(world *World) {
 		e = &Editor{
 			TimeStep: 0,
 
-			Position: vec3.XYZ(0, 0, 0),
+			Position: v3.XYZ(0, 0, 0),
 			ScrollY:  -30,
 
 			Pitch: -0.8,
@@ -68,10 +68,10 @@ func (e *Editor) Upsert(world *World) {
 func (e *Editor) Update(timeStep time.Duration) {
 	e.TimeStep = timeStep
 
-	forward := vec3.XZ(math.Cos(e.Yaw), math.Sin(e.Yaw))
-	right := forward.RotateByAxisAngle(vec3.Y(-1), rl.Pi/2)
+	forward := v3.XZ(math.Cos(e.Yaw), math.Sin(e.Yaw))
+	right := forward.RotateByAxisAngle(v3.Y(-1), rl.Pi/2)
 
-	targetVelocity := vec3.Zero
+	targetVelocity := v3.Zero
 
 	if rl.IsKeyDown(rl.KeyW) {
 		targetVelocity = targetVelocity.Add(forward)
@@ -113,18 +113,18 @@ func (e *Editor) Update(timeStep time.Duration) {
 	e.PositionSoft = e.PositionSoft.Lerp(e.Position, 1-friction)
 
 	e.Camera = Camera3D{
-		Position: e.PositionSoft.Subtract(vec3.XYZ(
+		Position: e.PositionSoft.Subtract(v3.XYZ(
 			math.Cos(e.Pitch)*math.Cos(e.Yaw),
 			math.Sin(e.Pitch),
 			math.Cos(e.Pitch)*math.Sin(e.Yaw),
 		).Scale(e.Scale)),
 		Target:     e.PositionSoft,
-		Up:         vec3.Y(1),
+		Up:         v3.Y(1),
 		Fovy:       70,
 		Projection: rl.CameraPerspective,
 	}
 
-	currentMousePos := vec2.FromRaylib(rl.GetMousePosition())
+	currentMousePos := v2.FromRaylib(rl.GetMousePosition())
 
 	if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 		mouseMove := (currentMousePos.Subtract(e.mousePosition)).Scale(0.007)
@@ -143,8 +143,8 @@ func (e *Editor) Update(timeStep time.Duration) {
 
 	mouseRay := rl.GetScreenToWorldRay(rl.Vector2{float32(currentMousePos.X), float32(currentMousePos.Y)}, e.Camera.Raylib())
 
-	origin := vec3.FromRaylib(mouseRay.Position)
-	dir := vec3.FromRaylib(mouseRay.Direction)
+	origin := v3.FromRaylib(mouseRay.Position)
+	dir := v3.FromRaylib(mouseRay.Direction)
 	ground := math.Floor(e.Position.Y)
 
 	if math.Abs(dir.Y) >= 1e-6 {
@@ -161,7 +161,7 @@ func (e *Editor) Update(timeStep time.Duration) {
 	fx := e.mouseWorldPosition.X - ix - 0.5
 	fz := e.mouseWorldPosition.Z - iz - 0.5
 
-	e.mouseCellPos = vec3.XYZ(ix, e.mouseWorldPosition.Y, iz)
+	e.mouseCellPos = v3.XYZ(ix, e.mouseWorldPosition.Y, iz)
 
 	if math.Abs(fx) > math.Abs(fz) {
 		if fx < 0 {
@@ -217,19 +217,19 @@ func (e *Editor) Draw() {
 
 		BeginOverlayMode(func() {
 			// rl.DrawCube(e.mouseWorldPosition.Raylib(), 0.05, 0.05, 0.05, rl.Black)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
-			// rl.DrawCube(e.mouseWorldPosition.Add(vec3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
+			// rl.DrawCube(e.mouseWorldPosition.Add(v3.X(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Red)
+			// rl.DrawCube(e.mouseWorldPosition.Add(v3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
+			// rl.DrawCube(e.mouseWorldPosition.Add(v3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
 
 			// phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
 			// cp.DrawSpace(e.world.space, &phys)
 
-			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), vec3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
+			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), v3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
 			rl.DrawSphere(e.PositionSoft.Raylib(), float32(e.Scale/400), color.RGBA{0, 255, 0, 255})
 
 			for cpos, _ := range e.world.Chunks {
 
-				rl.DrawCubeWires(vec3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, 0, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
+				rl.DrawCubeWires(v3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, 0, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
 			}
 
 			switch e.Tool {

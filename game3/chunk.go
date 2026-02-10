@@ -3,7 +3,7 @@ package game3
 import (
 	"math"
 
-	"game/vec3"
+	v3 "game/vec3"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jakecoffman/cp"
@@ -43,7 +43,7 @@ type LocalPos struct {
 	Z int
 }
 
-func WorldToChunk(v vec3.Value) (ChunkPos, LocalPos) {
+func WorldToChunk(v v3.Value) (ChunkPos, LocalPos) {
 
 	v.X = math.Round(v.X*1e8) / 1e8
 	v.Y = math.Round(v.Y*1e8) / 1e8
@@ -64,8 +64,8 @@ func WorldToChunk(v vec3.Value) (ChunkPos, LocalPos) {
 	return chunkPos, localPos
 }
 
-func ChunkToWorld(c ChunkPos, l LocalPos) vec3.Value {
-	return vec3.XYZ(
+func ChunkToWorld(c ChunkPos, l LocalPos) v3.Value {
+	return v3.XYZ(
 		float64(c.X*ChunkWidth)+float64(l.X),
 		float64(l.Y),
 		float64(c.Z*ChunkWidth)+float64(l.Z),
@@ -177,12 +177,12 @@ const (
 	FaceDown
 )
 
-var FaceForward = []vec3.Value{
-	vec3.X(1),
-	vec3.Z(1),
-	vec3.X(-1),
-	vec3.Z(-1),
-	vec3.Y(1),
+var FaceForward = []v3.Value{
+	v3.X(1),
+	v3.Z(1),
+	v3.X(-1),
+	v3.Z(-1),
+	v3.Y(1),
 }
 
 var FaceOpposite = []FaceDirection{

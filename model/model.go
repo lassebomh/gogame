@@ -1,13 +1,13 @@
 package model
 
 import (
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"log"
 	"math"
 )
 
-var UnitCubeVerticies = [12][3]vec3.Value{
+var UnitCubeVerticies = [12][3]v3.Value{
 	// top
 	{{0, 1, 0}, {1, 1, 1}, {1, 1, 0}},
 	{{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
@@ -36,15 +36,15 @@ func init() {
 }
 
 type Mesh struct {
-	vertices [][3]vec3.Value
-	aa       vec3.Value
-	bb       vec3.Value
+	vertices [][3]v3.Value
+	aa       v3.Value
+	bb       v3.Value
 	dirty    bool
 }
 
 func NewMesh() Mesh {
 	return Mesh{
-		vertices: make([][3]vec3.Value, 0),
+		vertices: make([][3]v3.Value, 0),
 		dirty:    true,
 	}
 }
@@ -80,13 +80,13 @@ func (m *Mesh) refreshAABB() {
 		}
 	}
 
-	m.aa = vec3.XYZ(fx, fy, fz)
-	m.bb = vec3.XYZ(tx, ty, tz)
+	m.aa = v3.XYZ(fx, fy, fz)
+	m.bb = v3.XYZ(tx, ty, tz)
 
 	m.dirty = false
 }
 
-func (m Mesh) Transform(mat vec3.Matrix) Mesh {
+func (m Mesh) Transform(mat v3.Matrix) Mesh {
 	m2 := NewMesh()
 	m2.vertices = append(m2.vertices, m.vertices...)
 	for i, t := range m.vertices {
@@ -103,7 +103,7 @@ func (m *Mesh) Combine(o Mesh) {
 	m.dirty = true
 }
 
-func (m *Mesh) GetAABB() (vec3.Value, vec3.Value) {
+func (m *Mesh) GetAABB() (v3.Value, v3.Value) {
 	if m.dirty {
 		m.refreshAABB()
 	}
@@ -140,8 +140,8 @@ func (m *Model) AddMesh(mesh Mesh, tileX int, tileY int, rotation int) {
 		a, b, c := t[0], t[1], t[2]
 		normal := b.Subtract(a).CrossProduct(c.Subtract(a)).Normalize()
 
-		uvOrigin := vec2.XY(float64(tileX-1), m.tiles-float64(tileY-1)-1)
-		uvs := [3]vec2.Value{{0, 0}, {0, 1}, {1, 0}}
+		uvOrigin := v2.XY(float64(tileX-1), m.tiles-float64(tileY-1)-1)
+		uvs := [3]v2.Value{{0, 0}, {0, 1}, {1, 0}}
 
 		for i, uv := range uvs {
 			vp := t[i].Subtract(aa)

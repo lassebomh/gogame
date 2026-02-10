@@ -1,4 +1,4 @@
-package vec3
+package v3
 
 import (
 	"image/color"

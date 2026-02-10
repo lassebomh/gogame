@@ -1,7 +1,7 @@
 package game3
 
 import (
-	"game/vec3"
+	v3 "game/vec3"
 	"math"
 	"time"
 
@@ -118,10 +118,10 @@ func fColorToRaylib(c cp.FColor) rl.Color {
 
 type DynamicPhysicsObject struct {
 	shape    *cp.Shape
-	Position vec3.Value
+	Position v3.Value
 }
 
-func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64) (vec3.Value, float64) {
+func UpdatePhysicsY(w *World, shape *cp.Shape, pos v3.Value, yVelocity float64) (v3.Value, float64) {
 	bodyPos := shape.Body().Position()
 	pos.X = bodyPos.X
 	pos.Z = bodyPos.Y
@@ -164,7 +164,7 @@ func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64
 
 	pos.Y += yVelocity
 
-	nextCell, _ := w.UpsertCellChunk(pos.Add(vec3.Y(0.1)))
+	nextCell, _ := w.UpsertCellChunk(pos.Add(v3.Y(0.1)))
 
 	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
 		pos.Y = math.Ceil(pos.Y)

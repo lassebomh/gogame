@@ -1,7 +1,7 @@
 package game3
 
 import (
-	"game/vec3"
+	v3 "game/vec3"
 	"image/color"
 	"math"
 
@@ -12,14 +12,14 @@ import (
 var lock = 0
 
 type PathPoint struct {
-	Position vec3.Value
-	Center   vec3.Value
+	Position v3.Value
+	Center   v3.Value
 	Cell     *Cell
 	world    *World
-	points   map[vec3.Value]*PathPoint
+	points   map[v3.Value]*PathPoint
 }
 
-func (p *PathPoint) GetPoint(pos vec3.Value) *PathPoint {
+func (p *PathPoint) GetPoint(pos v3.Value) *PathPoint {
 
 	point, ok := p.points[pos]
 	if ok {
@@ -69,7 +69,7 @@ func (p *PathPoint) PathNeighbors() []astar.Pather {
 			return []astar.Pather{}
 		}
 
-		below := p.GetPoint(p.Position.Subtract(vec3.Y(1)))
+		below := p.GetPoint(p.Position.Subtract(v3.Y(1)))
 		if below != nil && below.Cell.Faces[FaceDown].Type == FaceStair {
 			return below.PathNeighbors()
 		} else {
@@ -78,7 +78,7 @@ func (p *PathPoint) PathNeighbors() []astar.Pather {
 
 	case FaceStair:
 		stairDir := p.Cell.Faces[FaceDown].Rotation
-		nextPos := p.Position.Add(FaceForward[stairDir]).Add(vec3.Y(1))
+		nextPos := p.Position.Add(FaceForward[stairDir]).Add(v3.Y(1))
 		prevPos := p.Position.Add(FaceForward[FaceOpposite[stairDir]])
 
 		out := make([]astar.Pather, 0, 2)
@@ -125,7 +125,7 @@ func (p *PathPoint) PathNeighbors() []astar.Pather {
 			continue
 		}
 
-		nextBelow := p.GetPoint(nextPos.Subtract(vec3.Y(1)))
+		nextBelow := p.GetPoint(nextPos.Subtract(v3.Y(1)))
 		if nextBelow == nil {
 			continue
 		}
@@ -151,7 +151,7 @@ func (p *PathPoint) PathEstimatedCost(to astar.Pather) float64 {
 	return p.Center.Distance(other.Center)
 }
 
-func NewPathPoint(world *World, pos vec3.Value) *PathPoint {
+func NewPathPoint(world *World, pos v3.Value) *PathPoint {
 	pos = pos.Map(math.Floor)
 
 	var cell *Cell
@@ -167,7 +167,7 @@ func NewPathPoint(world *World, pos vec3.Value) *PathPoint {
 				Center:   pos.AddXYZ(0.5, 0.5, 0.5),
 				world:    world,
 				Cell:     cell,
-				points:   map[vec3.Value]*PathPoint{},
+				points:   map[v3.Value]*PathPoint{},
 			}
 			start.points[pos] = start
 			return start
@@ -186,7 +186,7 @@ func (p *PathPoint) GetNeighborPathPoints() []*PathPoint {
 	return points
 }
 
-func (p *PathPoint) FindPath(endPos vec3.Value) ([]*PathPoint, float64) {
+func (p *PathPoint) FindPath(endPos v3.Value) ([]*PathPoint, float64) {
 	if p == nil {
 		return []*PathPoint{}, 0
 	}

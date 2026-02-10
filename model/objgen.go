@@ -3,16 +3,16 @@ package model
 import (
 	"bufio"
 	"fmt"
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"os"
 	"path/filepath"
 )
 
 type ObjGenerator struct {
-	Verts       map[vec3.Value]uint
-	VertNormals map[vec3.Value]uint
-	VertUVs     map[vec2.Value]uint
+	Verts       map[v3.Value]uint
+	VertNormals map[v3.Value]uint
+	VertUVs     map[v2.Value]uint
 
 	VertCount       uint
 	VertNormalCount uint
@@ -24,9 +24,9 @@ type ObjGenerator struct {
 func NewModelObject() *ObjGenerator {
 	return &ObjGenerator{
 
-		Verts:       map[vec3.Value]uint{},
-		VertNormals: map[vec3.Value]uint{},
-		VertUVs:     map[vec2.Value]uint{},
+		Verts:       map[v3.Value]uint{},
+		VertNormals: map[v3.Value]uint{},
+		VertUVs:     map[v2.Value]uint{},
 
 		VertCount:       0,
 		VertNormalCount: 0,
@@ -36,7 +36,7 @@ func NewModelObject() *ObjGenerator {
 	}
 }
 
-func (m *ObjGenerator) AddTriangle(a, b, c vec3.Value, uva, uvb, uvc vec2.Value, normal vec3.Value) {
+func (m *ObjGenerator) AddTriangle(a, b, c v3.Value, uva, uvb, uvc v2.Value, normal v3.Value) {
 	ni, ok := m.VertNormals[normal]
 	if !ok {
 		m.VertNormalCount++
@@ -109,7 +109,7 @@ func (m *ObjGenerator) Export(path string, matPath string, matName string) (err 
 	fmt.Fprintf(w, "mtllib %s\n", matPathRel)
 	fmt.Fprintf(w, "o %s\n", "MyModel")
 
-	verts := make([]vec3.Value, m.VertCount, m.VertCount)
+	verts := make([]v3.Value, m.VertCount, m.VertCount)
 	for v, i := range m.Verts {
 		verts[i-1] = v
 	}
@@ -117,7 +117,7 @@ func (m *ObjGenerator) Export(path string, matPath string, matName string) (err 
 		fmt.Fprintf(w, "v %.6f %.6f %.6f\n", v.X, v.Y, v.Z)
 	}
 
-	normals := make([]vec3.Value, m.VertNormalCount, m.VertNormalCount)
+	normals := make([]v3.Value, m.VertNormalCount, m.VertNormalCount)
 	for v, i := range m.VertNormals {
 		normals[i-1] = v
 	}
@@ -125,7 +125,7 @@ func (m *ObjGenerator) Export(path string, matPath string, matName string) (err 
 		fmt.Fprintf(w, "vn %.6f %.6f %.6f\n", v.X, v.Y, v.Z)
 	}
 
-	uvs := make([]vec2.Value, m.VertUVCount, m.VertUVCount)
+	uvs := make([]v2.Value, m.VertUVCount, m.VertUVCount)
 	for v, i := range m.VertUVs {
 		uvs[i-1] = v
 	}

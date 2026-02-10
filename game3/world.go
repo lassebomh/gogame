@@ -1,8 +1,8 @@
 package game3
 
 import (
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 	"math"
 	"time"
@@ -33,9 +33,9 @@ type World struct {
 	EditorActive bool
 	Editor       *Editor
 
-	MousePosition     vec2.Value
-	MouseRayOrigin    vec3.Value
-	MouseRayDirection vec3.Value
+	MousePosition     v2.Value
+	MouseRayOrigin    v3.Value
+	MouseRayDirection v3.Value
 
 	renderTexture rl.RenderTexture2D
 	shader        *MainShader
@@ -50,18 +50,18 @@ func (w *World) Upsert(worldType WorldType) *World {
 		w = &World{}
 	}
 	w.Type = worldType
-	w.planetOrganicTexture = rl.LoadTexture("./models/organic.png")
+	w.planetOrganicTexture = rl.LoadTexture("./resources/organic.png")
 
 	if w.Type == WorldEarth {
 		game.Earth = w
 	} else {
 		game.Station = w
-		w.planetTexture = rl.LoadTexture("./models/earth_elevation.png")
-		w.planetShader = NewShader(&PlanetShader{}, "", "./glsl330/planet2.fs")
+		w.planetTexture = rl.LoadTexture("./resources/earth_elevation.png")
+		w.planetShader = NewShader(&PlanetShader{}, "", "./resources/glsl330/planet2.fs")
 	}
 	w.space = cp.NewSpace()
 	w.space.SetCollisionSlop(0.01)
-	w.shader = NewShader(&MainShader{}, "./glsl330/lighting.vs", "./glsl330/lighting.fs")
+	w.shader = NewShader(&MainShader{}, "./resources/glsl330/lighting.vs", "./resources/glsl330/lighting.fs")
 	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
 	w.renderTexture = rl.LoadRenderTexture(int32(renderWidth/4), int32(renderHeight/4))
 
@@ -89,22 +89,22 @@ func (w *World) Update(dt time.Duration) {
 	mousePos := rl.GetMousePosition()
 	mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
 
-	w.MouseRayOrigin = vec3.FromRaylib(mouseRay.Position)
-	w.MouseRayDirection = vec3.FromRaylib(mouseRay.Direction)
+	w.MouseRayOrigin = v3.FromRaylib(mouseRay.Position)
+	w.MouseRayDirection = v3.FromRaylib(mouseRay.Direction)
 
 	if w.Player != nil {
 
 		w.Player.Update()
 
 		cameraDistance := 30.
-		cameraDirection := vec3.XYZ(0, -5, 1).Normalize()
+		cameraDirection := v3.XYZ(0, -5, 1).Normalize()
 
 		w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
 
 		w.Camera = Camera3D{
 			Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
 			Target:     w.Camera.Target,
-			Up:         vec3.Y(1),
+			Up:         v3.Y(1),
 			Fovy:       15,
 			Projection: rl.CameraPerspective,
 		}
@@ -141,12 +141,12 @@ func (w *World) Draw() {
 
 				w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
 				w.shader.PlayerPosition.SetVec3(w.Player.Position)
-				w.shader.LightSpot(w.Player.Position.Add(vec3.Y(0.2)), w.Player.lookPosition.Add(vec3.Y(0.2)), 30, 35, rl.White, 1.5)
+				w.shader.LightSpot(w.Player.Position.Add(v3.Y(0.2)), w.Player.lookPosition.Add(v3.Y(0.2)), 30, 35, rl.White, 1.5)
 			} else {
-				w.shader.LightSpot(vec3.Zero, vec3.One, 0, 1, rl.White, 0)
+				w.shader.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
 			}
 
-			w.shader.LightDirectional(vec3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
+			w.shader.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
 
 			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
 			chunks := make([]*Chunk, 0, 9)
@@ -215,7 +215,7 @@ func (w *World) Draw() {
 
 }
 
-func (w *World) UpsertCellChunk(pos vec3.Value) (*Cell, *Chunk) {
+func (w *World) UpsertCellChunk(pos v3.Value) (*Cell, *Chunk) {
 	cpos, lpos := WorldToChunk(pos)
 
 	chunk, ok := w.Chunks[cpos]
@@ -234,13 +234,13 @@ func (w *World) UpsertCellChunk(pos vec3.Value) (*Cell, *Chunk) {
 	return cell, chunk
 }
 
-func (w *World) UpsertCell(pos vec3.Value) *Cell {
+func (w *World) UpsertCell(pos v3.Value) *Cell {
 	cell, _ := w.UpsertCellChunk(pos)
 	return cell
 
 }
 
-func (w *World) GetCell(pos vec3.Value) (*Cell, bool) {
+func (w *World) GetCell(pos v3.Value) (*Cell, bool) {
 	if pos.Y < 0 || pos.Y >= ChunkHeight {
 		return nil, false
 	}

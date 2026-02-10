@@ -2,8 +2,6 @@ package game3
 
 import (
 	"fmt"
-	"game/vec2"
-	"game/vec3"
 )
 
 func Printv(args ...any) {
@@ -18,5 +16,5 @@ func Printv(args ...any) {
 	fmt.Printf(format, args...)
 }
 
-type v2 vec2.Value
-type v3 vec3.Value
+// type v2 v2.Value
+// type v3 v3.Value

@@ -1,8 +1,8 @@
 package game3
 
 import (
-	"game/vec2"
-	"game/vec3"
+	v2 "game/vec2"
+	v3 "game/vec3"
 	"image/color"
 	"math"
 
@@ -20,7 +20,7 @@ type Monster struct {
 	arms []*MonsterArm
 
 	world    *World
-	Position vec3.Value
+	Position v3.Value
 
 	bodyModel    rl.Model
 	segmentModel rl.Model
@@ -31,7 +31,7 @@ type Monster struct {
 
 type MonsterArm struct {
 	segments  []*MonsterArmSegment
-	tipTarget vec3.Value
+	tipTarget v3.Value
 	path      []*PathPoint
 }
 
@@ -44,12 +44,12 @@ type MonsterArmSegment struct {
 
 	YVelocity float64
 
-	Position vec3.Value
+	Position v3.Value
 }
 
 func (m *Monster) Update() {
 
-	newVelocity := vec2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()*6))
+	newVelocity := v2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()*6))
 	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
 	m.Position, m.YVelocity = UpdatePhysicsY(m.world, m.shape, m.Position, m.YVelocity)
@@ -95,7 +95,7 @@ func (m *Monster) Update() {
 		// 	speed := 200.
 		// 	delta := m.Position.Subtract(m.path[2].Center)
 		// 	m.body.SetForce(delta.Normalize().Scale(speed * m.body.Mass()).Chipmunk())
-		// 	// newVelocity := vec2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()))
+		// 	// newVelocity := v2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()))
 		// 	// m.body.SetVelocity(newVelocity.X, newVelocity.Y)
 		// }
 
@@ -139,7 +139,7 @@ func (m *Monster) Update() {
 
 				playerDist := entangleTarget.Distance(tip.Position)
 
-				dir := entangleTarget.Subtract(tip.Position).Normalize().RotateByAxisAngle(vec3.Y(-1), math.Pi/2)
+				dir := entangleTarget.Subtract(tip.Position).Normalize().RotateByAxisAngle(v3.Y(-1), math.Pi/2)
 				if i%2 == 0 {
 					dir = dir.Negate()
 				}
@@ -182,32 +182,32 @@ func (m *Monster) Draw() {
 	minTipDistance /= 1.5
 
 	m.world.shader.HideOutsideView.Set(1)
-	m.world.shader.Visibility.Set(vec2.Clamp(1-minTipDistance, 0, 1))
+	m.world.shader.Visibility.Set(v2.Clamp(1-minTipDistance, 0, 1))
 	defer m.world.shader.HideOutsideView.Set(0)
 
 	col := color.RGBA{50, 50, 50, 255}
 
-	rl.DrawModelEx(m.bodyModel, m.Position.Add(vec3.Y(m.Radius)).Raylib(), vec3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), vec3.Fill(m.Radius).Raylib(), col)
+	rl.DrawModelEx(m.bodyModel, m.Position.Add(v3.Y(m.Radius)).Raylib(), v3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), v3.Fill(m.Radius).Raylib(), col)
 
 	for _, arm := range m.arms {
 
-		positions := make([]vec3.Value, len(arm.segments)+1)
-		positions[0] = m.Position.Add(vec3.Y(m.Radius))
+		positions := make([]v3.Value, len(arm.segments)+1)
+		positions[0] = m.Position.Add(v3.Y(m.Radius))
 
 		for i, segment := range arm.segments {
 
-			segmentOffset := vec3.XYZ(
+			segmentOffset := v3.XYZ(
 				math.Cos(segment.body.Angle()),
 				0,
 				math.Sin(segment.body.Angle()),
 			).Scale(segment.Length / 2)
 
-			heightOffset := vec3.XYZ(0, segment.Width/2+0.25, 0)
+			heightOffset := v3.XYZ(0, segment.Width/2+0.25, 0)
 
 			positions[i+1] = segment.Position.Add(segmentOffset).Add(heightOffset)
 		}
 
-		positionsSoft := append([]vec3.Value{}, positions...)
+		positionsSoft := append([]v3.Value{}, positions...)
 
 		for i := 1; i < len(positions)-1; i++ {
 			positionsSoft[i] = positions[i].Lerp(positions[i-1].Lerp(positions[i+1], 0.5), 0.5)
@@ -225,7 +225,7 @@ func (m *Monster) Draw() {
 			yaw := math.Atan2(float64(-direction.X), float64(direction.Z))
 			pitch := math.Asin(float64(direction.Y))
 
-			mat := (vec3.NewMatrix().RotateY(
+			mat := (v3.NewMatrix().RotateY(
 				-math.Pi/2,
 			).Scale(
 				segment.Width*1.2, segment.Width*1.2, from.Distance(to)*0.9,
@@ -249,7 +249,7 @@ func (m *Monster) Draw() {
 func SpawnNewMonster(world *World) {
 	m := &Monster{
 		Radius:   0.25,
-		Position: vec3.XYZ(0, 0, 0),
+		Position: v3.XYZ(0, 0, 0),
 	}
 	m.Spawn(world)
 }
@@ -260,10 +260,10 @@ func (m *Monster) Spawn(world *World) *Monster {
 	}
 	m.world = world
 	m.world.Monster = m
-	m.Position = vec3.XYZ(0, 0, -5)
+	m.Position = v3.XYZ(0, 0, -5)
 
 	if !rl.IsModelValid(m.bodyModel) {
-		m.bodyModel = rl.LoadModel("./models/monster/monster_body.glb")
+		m.bodyModel = rl.LoadModel("./resources/models/monster/monster_body.glb")
 		mats := m.bodyModel.GetMaterials()
 		for i := range mats {
 			mats[i].Shader = m.world.shader.shader
@@ -271,7 +271,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 		}
 	}
 	if !rl.IsModelValid(m.segmentModel) {
-		m.segmentModel = rl.LoadModel("./models/monster/monster_arm_segment.glb")
+		m.segmentModel = rl.LoadModel("./resources/models/monster/monster_arm_segment.glb")
 		mats := m.segmentModel.GetMaterials()
 		for i := range mats {
 			mats[i].Shader = m.world.shader.shader
@@ -321,8 +321,8 @@ func (m *Monster) Spawn(world *World) *Monster {
 			mass := segment.Length * segment.Width * 0.5
 
 			segment.body = m.world.space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
-			position := prevPosition.Add(vec3.X(segment.Length))
-			segment.body.SetPosition(position.Subtract(vec3.X(segment.Length * 0.5)).Chipmunk())
+			position := prevPosition.Add(v3.X(segment.Length))
+			segment.body.SetPosition(position.Subtract(v3.X(segment.Length * 0.5)).Chipmunk())
 
 			segment.shape = m.world.space.AddShape(cp.NewBox(segment.body, segment.Length, segment.Width, 0))
 			segment.shape.SetElasticity(0.5)
@@ -348,7 +348,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 		for i, segment := range arm.segments {
 			f := float64(i)
 			angle := f / 2
-			pos := m.Position.Add(vec3.XZ(math.Cos(f+math.Pi/2), math.Sin(f+math.Pi/2)).Scale(0.25))
+			pos := m.Position.Add(v3.XZ(math.Cos(f+math.Pi/2), math.Sin(f+math.Pi/2)).Scale(0.25))
 			segment.body.SetAngle(-angle)
 			segment.body.SetPosition(pos.Chipmunk())
 		}
