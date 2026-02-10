@@ -117,8 +117,64 @@ func fColorToRaylib(c cp.FColor) rl.Color {
 }
 
 type DynamicPhysicsObject struct {
-	shape    *cp.Shape
-	Position v3.Value
+	world     *World
+	body      *cp.Body
+	shape     *cp.Shape
+	Position  v3.Value
+	YVelocity float64
+}
+
+func (d *DynamicPhysicsObject) UpdatePhysics() {
+	bodyPos := d.body.Position()
+	d.Position.X = bodyPos.X
+	d.Position.Z = bodyPos.Y
+
+	cell, _ := d.world.UpsertCellChunk(d.Position)
+
+	groundY := math.Floor(d.Position.Y)
+
+	switch cell.Faces[FaceDown].Type {
+	case FaceStair:
+		x := math.Ceil(d.Position.X) - d.Position.X
+		z := d.Position.Z - math.Floor(d.Position.Z)
+
+		switch cell.Faces[FaceDown].Rotation {
+		case FaceEast:
+			groundY += x
+		case FaceNorth:
+			groundY += z
+		case FaceWest:
+			groundY += 1 - x
+		case FaceSouth:
+			groundY += 1 - z
+		}
+
+	case FaceNone:
+		groundY = 0
+	}
+
+	if d.Position.Y > groundY {
+		d.YVelocity -= d.world.TimeStep.Seconds() / 5
+	}
+	if d.Position.Y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
+		d.YVelocity *= 10
+	}
+
+	if d.Position.Y+d.YVelocity < groundY {
+		d.Position.Y = groundY
+		d.YVelocity = 0
+	}
+
+	d.Position.Y += d.YVelocity
+
+	nextCell, _ := d.world.UpsertCellChunk(d.Position.Add(v3.Y(0.1)))
+
+	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
+		d.Position.Y = math.Ceil(d.Position.Y)
+	}
+
+	d.shape.Filter.Categories = Category(d.Position.Y, false, true)
+	d.shape.Filter.Mask = Category(d.Position.Y, true, true)
 }
 
 func UpdatePhysicsY(w *World, shape *cp.Shape, pos v3.Value, yVelocity float64) (v3.Value, float64) {

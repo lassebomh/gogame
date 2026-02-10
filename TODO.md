@@ -1,5 +1,3 @@
-visibility verts should go 360 around. Simplify shader.
-
 add fullbright render option
 
 add physics drawer render option with proper filter
@@ -18,6 +16,10 @@ x just deletes
 
 ---
 
+find library for model generation?
+
+---
+
 make system for "objects"
 
 objects have models and bodies and hold information about lights.
@@ -28,3 +30,9 @@ separate shader for objects?
 examples:
 lamp posts
 doors
+
+---
+
+backlog
+
+visibility verts should go 360 around. Simplify shader.

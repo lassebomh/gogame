@@ -4,6 +4,7 @@ import (
 	v2 "game/vec2"
 	v3 "game/vec3"
 	"image/color"
+	"log"
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -11,22 +12,16 @@ import (
 )
 
 type Monster struct {
-	YVelocity float64
-	Radius    float64
-	body      *cp.Body
-	shape     *cp.Shape
-	// PathFinder *PathFinder
+	DynamicPhysicsObject
 
-	arms []*MonsterArm
+	Radius float64
 
-	world    *World
-	Position v3.Value
+	arms  []*MonsterArm
+	Aggro float64
+	path  []*PathPoint
 
 	bodyModel    rl.Model
 	segmentModel rl.Model
-	path         []*PathPoint
-
-	Aggro float64
 }
 
 type MonsterArm struct {
@@ -36,15 +31,10 @@ type MonsterArm struct {
 }
 
 type MonsterArmSegment struct {
-	body  *cp.Body
-	shape *cp.Shape
+	DynamicPhysicsObject
 
 	Length float64
 	Width  float64
-
-	YVelocity float64
-
-	Position v3.Value
 }
 
 func (m *Monster) Update() {
@@ -52,7 +42,7 @@ func (m *Monster) Update() {
 	newVelocity := v2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()*6))
 	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
-	m.Position, m.YVelocity = UpdatePhysicsY(m.world, m.shape, m.Position, m.YVelocity)
+	m.UpdatePhysics()
 
 	tipsVisibleToPlayer := 0
 	tipsMinDistanceToPlayer := math.Inf(1)
@@ -160,7 +150,7 @@ func (m *Monster) Update() {
 		}
 
 		for _, segment := range arm.segments {
-			segment.Position, segment.YVelocity = UpdatePhysicsY(m.world, segment.shape, segment.Position, segment.YVelocity)
+			segment.UpdatePhysics()
 		}
 	}
 }
@@ -248,14 +238,17 @@ func (m *Monster) Draw() {
 
 func SpawnNewMonster(world *World) {
 	m := &Monster{
-		Radius:   0.25,
-		Position: v3.XYZ(0, 0, 0),
+		Radius: 0.25,
+		DynamicPhysicsObject: DynamicPhysicsObject{
+			Position: v3.XYZ(0, 0, 0),
+		},
 	}
 	m.Spawn(world)
 }
 
 func (m *Monster) Spawn(world *World) *Monster {
 	if m.world != nil {
+		log.Fatal("not implemented")
 		m.world.Monster = nil
 	}
 	m.world = world
@@ -313,6 +306,9 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 			segment := &MonsterArmSegment{
 				// Length: m.Radius * 1,
+				DynamicPhysicsObject: DynamicPhysicsObject{
+					world: world,
+				},
 				Length: m.Radius * 0.7,
 				Width:  (m.Radius * 2) / (1 + float64(i)/6),
 			}

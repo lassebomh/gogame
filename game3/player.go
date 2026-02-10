@@ -15,14 +15,13 @@ const VISIBILITY_CONE_RADIANS = math.Pi / 3
 const VISIBILITY_DISTANCE = 10
 
 type Player struct {
-	world *World
+	DynamicPhysicsObject
 
-	Position v3.Value
-	// Y         float64
-	YVelocity float64
-	Radius    float64
-	body      *cp.Body
-	shape     *cp.Shape
+	// Position v3.Value
+	// YVelocity float64
+	// body      *cp.Body
+	// shape     *cp.Shape
+	Radius float64
 
 	visibilityVerts [VISIBILITY_VERTS]v3.Value
 
@@ -62,7 +61,7 @@ func (p *Player) Update() {
 	newVelocity := p.body.Velocity().Lerp(force, 0.1)
 	p.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
-	p.Position, p.YVelocity = UpdatePhysicsY(p.world, p.shape, p.Position, p.YVelocity)
+	p.UpdatePhysics()
 
 	// look position
 	if math.Abs(p.world.MouseRayDirection.Y) >= 1e-6 {
@@ -131,8 +130,10 @@ func (p *Player) Update() {
 
 func SpawnNewPlayer(world *World) {
 	p := &Player{
-		Radius:   0.1,
-		Position: v3.XYZ(0, 0, 0),
+		Radius: 0.1,
+		DynamicPhysicsObject: DynamicPhysicsObject{
+			Position: v3.XYZ(0, 0, 0),
+		},
 	}
 	p.Spawn(world)
 }
