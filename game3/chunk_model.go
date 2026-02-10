@@ -86,6 +86,22 @@ var FaceModels = []FaceModel{
 		FaceDirection: FaceDown,
 		FaceType:      FaceStair,
 	},
+	{
+		Id:            face_model_wall_station,
+		Name:          "wall station",
+		TileX:         6,
+		TileY:         2,
+		FaceDirection: FaceWest,
+		FaceType:      FaceSolid,
+	},
+	{
+		Id:            face_model_floor_station,
+		Name:          "floor station",
+		TileX:         6,
+		TileY:         4,
+		FaceDirection: FaceDown,
+		FaceType:      FaceSolid,
+	},
 }
 
 var FaceModelsMap = make(map[FaceModelType]FaceModel)
@@ -98,6 +114,8 @@ var (
 	face_model_road               = FaceModelType(3)
 	face_model_floor_light_tiles  = FaceModelType(4)
 	face_model_stair_metal        = FaceModelType(5)
+	face_model_wall_station       = FaceModelType(7)
+	face_model_floor_station      = FaceModelType(8)
 )
 
 func init() {
