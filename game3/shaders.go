@@ -22,13 +22,10 @@ type MainShader struct {
 
 	LightI int
 
-	// UVClamp UniformVec4 `glsl:"uvClamp"`
-
 	ShadowMap UniformTexture `glsl:"shadowMap"`
 
-	PlayerPosition UniformVec3 `glsl:"playerPosition"`
-	// PlayerViewResolution UniformVec2 `glsl:"iResolution"`
-	Visibility UniformFloat `glsl:"visibility"`
+	PlayerPosition UniformVec3  `glsl:"playerPosition"`
+	Visibility     UniformFloat `glsl:"visibility"`
 
 	HideOutsideView UniformFloat `glsl:"hideOutsideView"`
 	FullBright      UniformInt   `glsl:"fullBright"`

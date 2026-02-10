@@ -116,6 +116,11 @@ func fColorToRaylib(c cp.FColor) rl.Color {
 	}
 }
 
+type DynamicPhysicsObject struct {
+	shape    *cp.Shape
+	Position vec3.Value
+}
+
 func UpdatePhysicsY(w *World, shape *cp.Shape, pos vec3.Value, yVelocity float64) (vec3.Value, float64) {
 	bodyPos := shape.Body().Position()
 	pos.X = bodyPos.X

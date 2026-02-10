@@ -1,6 +1,10 @@
 package game3
 
-import "fmt"
+import (
+	"fmt"
+	"game/vec2"
+	"game/vec3"
+)
 
 func Printv(args ...any) {
 	format := ""
@@ -13,3 +17,6 @@ func Printv(args ...any) {
 	format += "\n"
 	fmt.Printf(format, args...)
 }
+
+type v2 vec2.Value
+type v3 vec3.Value
