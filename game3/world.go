@@ -38,11 +38,6 @@ type World struct {
 	MouseRayDirection v3.Value
 
 	renderTexture rl.RenderTexture2D
-	shader        *MainShader
-
-	planetShader         *PlanetShader
-	planetTexture        rl.Texture2D
-	planetOrganicTexture rl.Texture2D
 }
 
 func (w *World) Upsert(worldType WorldType) *World {
@@ -50,18 +45,14 @@ func (w *World) Upsert(worldType WorldType) *World {
 		w = &World{}
 	}
 	w.Type = worldType
-	w.planetOrganicTexture = rl.LoadTexture("./resources/organic.png")
 
 	if w.Type == WorldEarth {
 		game.Earth = w
 	} else {
 		game.Station = w
-		w.planetTexture = rl.LoadTexture("./resources/earth_elevation.png")
-		w.planetShader = NewShader(&PlanetShader{}, "", "./resources/glsl330/planet2.fs")
 	}
 	w.space = cp.NewSpace()
 	w.space.SetCollisionSlop(0.01)
-	w.shader = NewShader(&MainShader{}, "./resources/glsl330/lighting.vs", "./resources/glsl330/lighting.fs")
 	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
 	w.renderTexture = rl.LoadRenderTexture(int32(renderWidth/4), int32(renderHeight/4))
 
@@ -123,30 +114,30 @@ func (w *World) Draw() {
 		rl.ClearBackground(rl.Black)
 
 		if w.Type == WorldStation {
-			BeginShaderMode(w.planetShader, func() {
-				w.planetShader.Time.Set(game.Day)
-				w.planetShader.Fov.Set(30)
-				w.planetShader.Channel0.Set(w.planetOrganicTexture)
-				w.planetShader.Channel1.Set(w.planetTexture)
-				w.planetShader.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
+			BeginShaderMode(globals.Shaders.Planet, func() {
+				globals.Shaders.Planet.Time.Set(game.Day)
+				globals.Shaders.Planet.Fov.Set(30)
+				globals.Shaders.Planet.Channel0.Set(globals.Textures.Organic)
+				globals.Shaders.Planet.Channel1.Set(globals.Textures.PlanetElevation)
+				globals.Shaders.Planet.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
 
 				rl.DrawRectangle(0, 0, w.renderTexture.Texture.Width, w.renderTexture.Texture.Height, rl.White)
 			})
 		}
 
 		BeginMode3D(w.Camera, func() {
-			w.shader.Visibility.Set(1)
+			globals.Shaders.Main.Visibility.Set(1)
 
 			if w.Player != nil {
 
-				w.shader.ShadowMap.Set(w.Player.viewTexture.Texture)
-				w.shader.PlayerPosition.SetVec3(w.Player.Position)
-				w.shader.LightSpot(w.Player.Position.Add(v3.Y(0.2)), w.Player.lookPosition.Add(v3.Y(0.2)), 30, 35, rl.White, 1.5)
+				globals.Shaders.Main.ShadowMap.Set(w.Player.viewTexture.Texture)
+				globals.Shaders.Main.PlayerPosition.SetVec3(w.Player.Position)
+				globals.Shaders.Main.LightSpot(w.Player.Position.Add(v3.Y(0.2)), w.Player.lookPosition.Add(v3.Y(0.2)), 30, 35, rl.White, 1.5)
 			} else {
-				w.shader.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
+				globals.Shaders.Main.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
 			}
 
-			w.shader.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
+			globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
 
 			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
 			chunks := make([]*Chunk, 0, 9)
@@ -164,7 +155,7 @@ func (w *World) Draw() {
 				chunk.UpdateLights()
 			}
 
-			w.shader.UpdateLights()
+			globals.Shaders.Main.UpdateLights()
 
 			maxY := targetLocalPos.Y
 
@@ -179,7 +170,7 @@ func (w *World) Draw() {
 					visibility = w.Player.Position.Y - float64(y-1)
 				}
 
-				w.shader.Visibility.Set(visibility)
+				globals.Shaders.Main.Visibility.Set(visibility)
 
 				for _, chunk := range chunks {
 

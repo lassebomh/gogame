@@ -19,9 +19,6 @@ type Monster struct {
 	arms  []*MonsterArm
 	Aggro float64
 	path  []*PathPoint
-
-	bodyModel    rl.Model
-	segmentModel rl.Model
 }
 
 type MonsterArm struct {
@@ -171,13 +168,13 @@ func (m *Monster) Draw() {
 
 	minTipDistance /= 1.5
 
-	m.world.shader.HideOutsideView.Set(1)
-	m.world.shader.Visibility.Set(v2.Clamp(1-minTipDistance, 0, 1))
-	defer m.world.shader.HideOutsideView.Set(0)
+	globals.Shaders.Main.HideOutsideView.Set(1)
+	globals.Shaders.Main.Visibility.Set(v2.Clamp(1-minTipDistance, 0, 1))
+	defer globals.Shaders.Main.HideOutsideView.Set(0)
 
 	col := color.RGBA{50, 50, 50, 255}
 
-	rl.DrawModelEx(m.bodyModel, m.Position.Add(v3.Y(m.Radius)).Raylib(), v3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), v3.Fill(m.Radius).Raylib(), col)
+	rl.DrawModelEx(globals.Models.MonsterBody, m.Position.Add(v3.Y(m.Radius)).Raylib(), v3.Y(-1).Raylib(), float32(m.body.Angle()*rl.Rad2deg), v3.Fill(m.Radius).Raylib(), col)
 
 	for _, arm := range m.arms {
 
@@ -229,8 +226,8 @@ func (m *Monster) Draw() {
 				middle,
 			))
 
-			m.segmentModel.Transform = mat.Raylib()
-			rl.DrawModel(m.segmentModel, rl.Vector3{}, 1, col)
+			globals.Models.MonsterArmSegment.Transform = mat.Raylib()
+			rl.DrawModel(globals.Models.MonsterArmSegment, rl.Vector3{}, 1, col)
 
 		}
 	}
@@ -255,28 +252,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	m.world.Monster = m
 	m.Position = v3.XYZ(0, 0, -5)
 
-	if !rl.IsModelValid(m.bodyModel) {
-		m.bodyModel = rl.LoadModel("./resources/models/monster/monster_body.glb")
-		mats := m.bodyModel.GetMaterials()
-		for i := range mats {
-			mats[i].Shader = m.world.shader.shader
-			mats[i].GetMap(rl.MapDiffuse).Texture = world.planetOrganicTexture
-		}
-	}
-	if !rl.IsModelValid(m.segmentModel) {
-		m.segmentModel = rl.LoadModel("./resources/models/monster/monster_arm_segment.glb")
-		mats := m.segmentModel.GetMaterials()
-		for i := range mats {
-			mats[i].Shader = m.world.shader.shader
-			mats[i].GetMap(rl.MapDiffuse).Texture = world.planetOrganicTexture
-		}
-	}
-
 	m.Radius = 0.22
-	// if p.PathFinder == nil {
-	// 	p.PathFinder = NewPathFinder(g.Level)
-	// }
-	// p.PathFinder.level = g.Level
 
 	mass := m.Radius * m.Radius / 1.5
 	body := m.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, m.Radius, cp.Vector{2, 2})))

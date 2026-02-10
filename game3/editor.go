@@ -196,7 +196,7 @@ func (e *Editor) Update(timeStep time.Duration) {
 }
 
 func (e *Editor) Draw() {
-	e.world.shader.FullBright.Set(1)
+	globals.Shaders.Main.FullBright.Set(1)
 	rl.ClearBackground(rl.DarkGray)
 
 	BeginMode3D(e.Camera, func() {
@@ -255,7 +255,7 @@ func (e *Editor) Draw() {
 		})
 
 	})
-	e.world.shader.FullBright.Set(0)
+	globals.Shaders.Main.FullBright.Set(0)
 
 	cpos, lpos := WorldToChunk(e.mouseWorldPosition)
 

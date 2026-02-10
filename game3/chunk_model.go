@@ -288,7 +288,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 
 	edit.Export()
 	mdl := rl.LoadModel(path)
-	mdl.Materials.Shader = c.world.shader.shader
+	mdl.Materials.Shader = globals.Shaders.Main.shader
 
 	os.Remove(path)
 
@@ -306,7 +306,7 @@ func (c *Chunk) UpdateLights() {
 				from := to.AddXYZ(0, 3, 0)
 
 				if cell.Faces[FaceDown].ModelType == face_model_sidewalk_lightpole {
-					c.world.shader.LightSpot(from, to, 5, 25, rl.NewColor(253, 249, 100, 255), 0.4)
+					globals.Shaders.Main.LightSpot(from, to, 5, 25, rl.NewColor(253, 249, 100, 255), 0.4)
 				}
 			}
 		}

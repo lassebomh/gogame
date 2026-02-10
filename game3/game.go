@@ -35,6 +35,8 @@ func LoadGame(path string) {
 		log.Println("Save not found.")
 	}
 
+	globalsInit()
+
 	game.Earth.Upsert(WorldEarth)
 	game.Station.Upsert(WorldStation)
 
