@@ -119,19 +119,18 @@ func (t *ToolCell) DrawHUD(e *Editor) {
 
 	if t.palletePosition != v2.Zero {
 
-		line := NewLineLayout(t.palletePosition.X, t.palletePosition.Y, 24, 120)
+		stack := NewStackLayout(t.palletePosition.X, t.palletePosition.Y, 160, 24)
 
 		raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_LEFT))
 		raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
 		raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
 
 		for _, faceModel := range FaceModels {
-			if raygui.Toggle(line.Next(), faceModel.Name, t.FaceModelType == faceModel.Id) {
+			if raygui.Toggle(stack.Down(24), faceModel.Name, t.FaceModelType == faceModel.Id) {
 				t.FaceModelType = faceModel.Id
 				t.FaceType = faceModel.FaceType
 				t.FaceDirection = faceModel.FaceDirection
 			}
-			line.Break()
 		}
 	}
 }

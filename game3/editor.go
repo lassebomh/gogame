@@ -239,22 +239,6 @@ func (e *Editor) Draw() {
 					},
 					nil,
 				)
-
-				// e.world.space.EachBody(func(body *cp.Body) {
-				// 	isCorrectLevel := false
-				// 	body.EachShape(func(s *cp.Shape) {
-				// 		if Category(e.Position.Y, true, true)&s.Filter.Categories != 0 {
-				// 			isCorrectLevel = true
-				// 			cp.DrawShape(s, &phys)
-				// 		}
-				// 	})
-
-				// 	if isCorrectLevel {
-				// 		body.EachConstraint(func(c *cp.Constraint) {
-				// 			cp.DrawConstraint(c, &phys)
-				// 		})
-				// 	}
-				// })
 			}
 
 			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), v3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
@@ -275,16 +259,6 @@ func (e *Editor) Draw() {
 				path, _ := point.FindPath(e.world.Player.Position)
 				DrawPath(path)
 			}
-
-			// for _, neighbor := range point.GetNeighborPathPoints() {
-			// 	neighbor.Draw()
-			// }
-
-			// if e.world.Monster != nil {
-			// 	for _, arm := range e.world.Monster.arms {
-			// 		DrawPathPoints(arm.path)
-			// 	}
-			// }
 		})
 
 	})

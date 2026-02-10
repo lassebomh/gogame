@@ -1,6 +1,6 @@
 add fullbright render option
 
-add physics drawer render option with proper filter
+~~add physics drawer render option with proper filter~~
 
 add buttons for monster behavior
 
