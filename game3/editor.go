@@ -10,6 +10,13 @@ import (
 
 	"github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jakecoffman/cp"
+)
+
+type EditorDrawFlags int32
+
+const (
+	EditorDrawFlagPhysics = EditorDrawFlags(1 << iota)
 )
 
 type Editor struct {
@@ -17,7 +24,6 @@ type Editor struct {
 
 	Position     v3.Value
 	PositionSoft v3.Value
-	// PositionVelocity v3.Value
 
 	Pitch           float64
 	Yaw             float64
@@ -25,7 +31,8 @@ type Editor struct {
 	ScrollYVelocity float64
 	Scale           float64
 
-	Camera Camera3D
+	Camera          Camera3D
+	EditorDrawFlags EditorDrawFlags
 
 	mousePosition      v2.Value
 	mouseWorldPosition v3.Value
@@ -221,8 +228,34 @@ func (e *Editor) Draw() {
 			// rl.DrawCube(e.mouseWorldPosition.Add(v3.Y(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Green)
 			// rl.DrawCube(e.mouseWorldPosition.Add(v3.Z(0.25)).Raylib(), 0.05, 0.05, 0.05, rl.Blue)
 
-			// phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
-			// cp.DrawSpace(e.world.space, &phys)
+			if e.EditorDrawFlags&EditorDrawFlagPhysics != 0 {
+				phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
+
+				e.world.space.BBQuery(
+					cp.NewBBForCircle(e.Position.Chipmunk(), 8),
+					cp.NewShapeFilter(0, Category(e.Position.Y, true, true), Category(e.Position.Y, true, true)),
+					func(shape *cp.Shape, data interface{}) {
+						cp.DrawShape(shape, &phys)
+					},
+					nil,
+				)
+
+				// e.world.space.EachBody(func(body *cp.Body) {
+				// 	isCorrectLevel := false
+				// 	body.EachShape(func(s *cp.Shape) {
+				// 		if Category(e.Position.Y, true, true)&s.Filter.Categories != 0 {
+				// 			isCorrectLevel = true
+				// 			cp.DrawShape(s, &phys)
+				// 		}
+				// 	})
+
+				// 	if isCorrectLevel {
+				// 		body.EachConstraint(func(c *cp.Constraint) {
+				// 			cp.DrawConstraint(c, &phys)
+				// 		})
+				// 	}
+				// })
+			}
 
 			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), v3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
 			rl.DrawSphere(e.PositionSoft.Raylib(), float32(e.Scale/400), color.RGBA{0, 255, 0, 255})
@@ -280,7 +313,15 @@ func (e *Editor) Draw() {
 		e.ToolCell.DrawHUD(e)
 	}
 
-	if raygui.Button(rl.NewRectangle(20, 20, 100, 20), "TP Player") {
+	stack := NewStackLayout(0, 30, 100, 30)
+
+	if raygui.Toggle(stack.Down(30), raygui.IconText(raygui.ICON_LASER, "Show Bodies"), e.EditorDrawFlags&EditorDrawFlagPhysics != 0) {
+		e.EditorDrawFlags |= EditorDrawFlagPhysics
+	} else {
+		e.EditorDrawFlags &^= EditorDrawFlagPhysics
+	}
+
+	if raygui.Button(stack.Down(30), "TP Player") {
 		player := game.Earth.Player
 		if player == nil {
 			player = game.Station.Player

@@ -161,6 +161,7 @@ func (p *Player) Spawn(world *World) {
 	p.shape.SetFriction(0)
 	p.shape.Filter.Group = GroupPlayer
 	p.body = body
+	p.UpdatePhysics()
 
 	if !rl.IsRenderTextureValid(p.viewTexture) {
 		p.viewTexture = rl.LoadRenderTexture(16*40, 16*40)

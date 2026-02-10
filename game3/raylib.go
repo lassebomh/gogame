@@ -174,6 +174,39 @@ func (c Camera3D) Raylib() rl.Camera3D {
 	}
 }
 
+type StackLayout struct {
+	pos  v2.Value
+	size v2.Value
+}
+
+func NewStackLayout(x, y, w, h float64) *StackLayout {
+
+	return &StackLayout{
+		pos:  v2.XY(x, y),
+		size: v2.XY(w, h),
+	}
+}
+
+func (s *StackLayout) ToRectangle() rl.Rectangle {
+	return rl.NewRectangle(
+		float32(s.pos.X),
+		float32(s.pos.Y),
+		float32(s.size.X),
+		float32(s.size.Y),
+	)
+}
+
+func (s *StackLayout) Down(h float64) rl.Rectangle {
+	rect := rl.NewRectangle(
+		float32(s.pos.X),
+		float32(s.pos.Y),
+		float32(s.size.X),
+		float32(h),
+	)
+	s.pos.Y += h
+	return rect
+}
+
 type LineLayout struct {
 	X      float64
 	Y      float64
@@ -181,11 +214,22 @@ type LineLayout struct {
 	Width  float64
 }
 
-func NewLineLayout(X float64, Y float64, Height float64) *LineLayout {
-	return &LineLayout{X, Y, Height, 0}
+func NewLineLayout(X float64, Y float64, Height float64, Width float64) *LineLayout {
+	return &LineLayout{X, Y, Height, Width}
 }
 
-func (l *LineLayout) Next(width float64) rl.Rectangle {
+func (l *LineLayout) Next() rl.Rectangle {
+	rect := rl.NewRectangle(
+		float32(l.X+l.Width),
+		float32(l.Y),
+		float32(l.Width),
+		float32(l.Height),
+	)
+
+	return rect
+}
+
+func (l *LineLayout) NextEx(width float64) rl.Rectangle {
 	rect := rl.NewRectangle(
 		float32(l.X+l.Width),
 		float32(l.Y),

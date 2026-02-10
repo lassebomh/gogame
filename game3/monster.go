@@ -265,6 +265,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	m.body = body
 	m.world.Monster = m
 	m.shape.Filter.Group = GroupMonster
+	m.UpdatePhysics()
 
 	m.arms = make([]*MonsterArm, 0)
 
@@ -312,6 +313,8 @@ func (m *Monster) Spawn(world *World) *Monster {
 				damping := 2 * math.Sqrt(stiffness*segment.body.Moment())
 				m.world.space.AddConstraint(cp.NewDampedRotarySpring(prevBody, segment.body, 0, stiffness, damping))
 			}
+
+			segment.UpdatePhysics()
 
 			prevPosition = position
 			prevBody = segment.body
