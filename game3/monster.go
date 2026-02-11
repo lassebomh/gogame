@@ -35,9 +35,41 @@ type MonsterArmSegment struct {
 }
 
 func (m *Monster) Update() {
+	maxSpeed := m.world.TimeStep.Seconds() * m.body.Mass()
 
-	newVelocity := v2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()*6))
-	m.body.SetVelocity(newVelocity.X, newVelocity.Y)
+	velocity := v2.FromChipmunk(m.body.Velocity())
+
+	for rad := 0.; rad < math.Pi*2; rad += math.Pi / 4 {
+		dir := v2.FromRadians(rad).Scale(0.5)
+		result := m.world.space.SegmentQueryFirst(
+			m.Position.Chipmunk(),
+			m.Position.AddXYZ(dir.X, 0, dir.Y).Chipmunk(),
+			0,
+			cp.NewShapeFilter(
+				0,
+				Category(m.Position.Y, true, false),
+				Category(m.Position.Y, true, false),
+			),
+		)
+
+		velocity = velocity.Add(dir.Scale((result.Alpha - 1) / 2))
+	}
+
+	pathPoint := NewPathPoint(m.world, m.Position)
+	m.path, _ = pathPoint.FindPath(m.world.Player.Position)
+
+	if len(m.path) >= 3 {
+		diff := m.path[1].Center.Lerp(m.path[2].Center, 0.5).Subtract(m.Position).Scale(2)
+		velocity.X += diff.X
+		velocity.Y += diff.Z
+	}
+
+	velocityMagnitude := velocity.Length() / maxSpeed
+	if velocityMagnitude > 1 {
+		velocity = velocity.Scale(1 / velocityMagnitude)
+	}
+
+	m.body.SetForce(velocity.Chipmunk())
 
 	m.UpdatePhysics()
 
@@ -105,6 +137,12 @@ func (m *Monster) Update() {
 			arm.segments[ii].body.SetTorque(angle * tip.body.Moment() * 200)
 			curlAngles[ii] = angle
 		}
+
+		// // spread velocity
+		// for _, segment := range arm.segments {
+		// 	vel := segment.body.Velocity().Lerp(m.body.Velocity(), 0.02)
+		// 	segment.body.SetVelocity(vel.X, vel.Y)
+		// }
 
 		if m.world.Player != nil {
 
@@ -252,7 +290,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	m.world.Monster = m
 	m.Position = v3.XYZ(0, 0, -5)
 
-	m.Radius = 0.22
+	m.Radius = 0.25
 
 	mass := m.Radius * m.Radius / 1.5
 	body := m.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, m.Radius, cp.Vector{2, 2})))
@@ -287,7 +325,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 					world: world,
 				},
 				Length: m.Radius * 0.7,
-				Width:  (m.Radius * 2) / (1 + float64(i)/6),
+				Width:  (m.Radius * 1.5) / (1 + float64(i)/6),
 			}
 			arm.segments = append(arm.segments, segment)
 
