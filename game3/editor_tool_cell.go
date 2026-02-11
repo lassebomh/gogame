@@ -25,15 +25,6 @@ type ToolCell struct {
 
 func (t *ToolCell) Update(e *Editor) {
 
-	if rl.IsMouseButtonPressed(rl.MouseMiddleButton) {
-		face := e.world.UpsertCell(e.mouseCellPos).Faces[t.FaceDirection]
-
-		faceModel := FaceModelsMap[face.ModelType]
-		t.FaceModelType = faceModel.Id
-		t.FaceType = faceModel.FaceType
-		t.FaceDirection = faceModel.FaceDirection
-	}
-
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		if t.pastingCells == nil {
 			t.pastingCells = map[v3.Value]bool{}
@@ -125,11 +116,11 @@ func (t *ToolCell) DrawHUD(e *Editor) {
 		raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
 		raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
 
-		for _, faceModel := range FaceModels {
-			if raygui.Toggle(stack.Down(24), faceModel.Name, t.FaceModelType == faceModel.Id) {
+		for name, faceModel := range FaceModels {
+			if raygui.Toggle(stack.Down(24), name, t.FaceModelType == faceModel.Id) {
 				t.FaceModelType = faceModel.Id
 				t.FaceType = faceModel.FaceType
-				t.FaceDirection = faceModel.FaceDirection
+				// t.FaceDirection = faceModel.FaceDirection
 			}
 		}
 	}

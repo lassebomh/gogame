@@ -20,103 +20,129 @@ var FaceSolidMeshes [5]Mesh
 var FaceStairMeshes [5]Mesh
 
 type FaceModelType int32
-type FaceModel struct {
-	Id            FaceModelType
-	Name          string
-	TileX         int
-	TileY         int
-	FaceDirection FaceDirection
-	FaceType      FaceType
+
+type FaceModelHandler struct {
+	Id       FaceModelType
+	TileX    int
+	TileY    int
+	FaceType FaceType
+	Render   func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh)
 }
 
-var FaceModels = []FaceModel{
-	{
-		Id:            face_model_debug,
-		Name:          "debug",
-		TileX:         6,
-		TileY:         1,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_wall_brick,
-		Name:          "wall brick",
-		TileX:         2,
-		TileY:         4,
-		FaceDirection: FaceWest,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_sidewalk,
-		Name:          "floor sidewalk",
-		TileX:         8,
-		TileY:         6,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_sidewalk_lightpole,
-		Name:          "floor sidewalk light pole",
-		TileX:         8,
-		TileY:         6,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_road,
-		Name:          "floor road",
-		TileX:         6,
-		TileY:         6,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_floor_light_tiles,
-		Name:          "floor light tiles",
-		TileX:         3,
-		TileY:         5,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_stair_metal,
-		Name:          "stair metal",
-		TileX:         4,
-		TileY:         5,
-		FaceDirection: FaceDown,
-		FaceType:      FaceStair,
-	},
-	{
-		Id:            face_model_wall_station,
-		Name:          "wall station",
-		TileX:         6,
-		TileY:         2,
-		FaceDirection: FaceWest,
-		FaceType:      FaceSolid,
-	},
-	{
-		Id:            face_model_floor_station,
-		Name:          "floor station",
-		TileX:         6,
-		TileY:         4,
-		FaceDirection: FaceDown,
-		FaceType:      FaceSolid,
-	},
+func NewFaceModel(id FaceModelType, faceType FaceType, atlasX int, atlasY int, render func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh)) FaceModelHandler {
+	return FaceModelHandler{
+		Id:       id,
+		TileX:    atlasX,
+		TileY:    atlasY,
+		FaceType: faceType,
+		Render:   render,
+	}
 }
-
-var FaceModelsMap = make(map[FaceModelType]FaceModel)
 
 var (
-	face_model_debug              = FaceModelType(0)
-	face_model_wall_brick         = FaceModelType(1)
-	face_model_sidewalk           = FaceModelType(2)
-	face_model_sidewalk_lightpole = FaceModelType(6)
-	face_model_road               = FaceModelType(3)
-	face_model_floor_light_tiles  = FaceModelType(4)
-	face_model_stair_metal        = FaceModelType(5)
-	face_model_wall_station       = FaceModelType(7)
-	face_model_floor_station      = FaceModelType(8)
+	f0 = FaceModelType(0)
+	f1 = FaceModelType(1)
+	f2 = FaceModelType(2)
+	f6 = FaceModelType(6)
+	f3 = FaceModelType(3)
+	f4 = FaceModelType(4)
+	f5 = FaceModelType(5)
+	f7 = FaceModelType(7)
+	f8 = FaceModelType(8)
 )
+
+func FaceModelDefaultRender(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
+	edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rotation)
+}
+
+var FaceModels = map[string]FaceModelHandler{
+	"face_model_debug":             NewFaceModel(0, FaceSolid, 6, 1, FaceModelDefaultRender),
+	"face_model_wall_brick":        NewFaceModel(1, FaceSolid, 2, 4, FaceModelDefaultRender),
+	"face_model_floor_road":        NewFaceModel(3, FaceSolid, 6, 6, FaceModelDefaultRender),
+	"face_model_floor_light_tiles": NewFaceModel(4, FaceSolid, 3, 5, FaceModelDefaultRender),
+	"face_model_stair_metal":       NewFaceModel(5, FaceStair, 4, 5, FaceModelDefaultRender),
+	"face_model_wall_station":      NewFaceModel(7, FaceSolid, 6, 2, FaceModelDefaultRender),
+	"face_model_floor_station":     NewFaceModel(8, FaceSolid, 6, 4, FaceModelDefaultRender),
+	"face_model_floor_sidewalk": NewFaceModel(2, FaceSolid, 8, 6, func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
+		upCell, _ := c.world.GetCell(worldPos.Add(v3.Z(1)))
+		downCell, _ := c.world.GetCell(worldPos.Add(v3.Z(-1)))
+		leftCell, _ := c.world.GetCell(worldPos.Add(v3.X(1)))
+		rightCell, _ := c.world.GetCell(worldPos.Add(v3.X(-1)))
+
+		up := upCell.Faces[FaceDown].ModelType
+		down := downCell.Faces[FaceDown].ModelType
+		left := leftCell.Faces[FaceDown].ModelType
+		right := rightCell.Faces[FaceDown].ModelType
+
+		tileX := faceModel.TileX
+		tileY := faceModel.TileY
+
+		if left == f2 || left == f6 {
+			rotation = 0
+		}
+		if right == f2 || right == f6 {
+			rotation = 2
+		}
+		if down == f2 || down == f6 {
+			rotation = 3
+		}
+		if up == f2 || up == f6 {
+			rotation = 1
+		}
+		if up == f3 && left == f3 && down != f3 && right != f3 {
+			tileX = 7
+			rotation = 2
+		}
+
+		if up == f3 && right == f3 && down != f3 && left != f3 {
+			tileX = 7
+			rotation = 3
+		}
+
+		if right == f3 && down == f3 && left != f3 && up != f3 {
+			tileX = 7
+			rotation = 0
+		}
+
+		if left == f3 && down == f3 && right != f3 && up != f3 {
+			tileX = 7
+			rotation = 1
+		}
+
+		edit.AddMesh(mesh, tileX, tileY, rotation)
+	}),
+	"face_model_sidewalk_lightpole": NewFaceModel(6, FaceSolid, 8, 6, func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
+		tileX := faceModel.TileX
+		tileY := faceModel.TileY
+		rotation = (rotation + 1) % 4
+
+		polePart := UnitCube.Transform(
+			v3.NewMatrix().
+				TranslateXYZ(-0.5, 0, -0.5).
+				Scale(0.08, 1, 0.08).
+				RotateY(math.Pi/4).
+				TranslateXYZ(0.5, 0, 0.5).
+				Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
+		).Transform(translate)
+
+		edit.AddMesh(polePart, 3, 4, 0)
+		edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 1, 0)), 3, 4, 0)
+		edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 2, 0)), 3, 4, 0)
+
+		poleHead := UnitCube.Transform(v3.NewMatrix().
+			TranslateXYZ(-0.5, -0.5, -0.1).
+			Scale(0.15, 0.1, 0.35).
+			RotateY((math.Pi*2.)*float64(rotation)/4).
+			TranslateXYZ(0.5, 3, 0.5).
+			Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
+		).Transform(translate)
+
+		edit.AddMesh(poleHead, 3, 4, 0)
+		edit.AddMesh(mesh, tileX, tileY, rotation)
+	}),
+}
+
+var FaceModelsMap = make(map[FaceModelType]FaceModelHandler)
 
 func init() {
 	for _, faceModel := range FaceModels {
@@ -157,7 +183,7 @@ func init() {
 func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 	path := filepath.Join(CHUNKS_PATH, fmt.Sprintf("chunk_%d.obj", rl.GetRandomValue(0, 2147483647)))
 	os.Remove(path)
-	edit := NewModel(15, path, "./chunks/chunk.mtl", "Material")
+	edit := NewModel(globals.Textures.AtlasTiles, path, "./chunks/chunk.mtl", "Material")
 
 	touched := false
 
@@ -215,85 +241,7 @@ func GenerateChunkYModel(c *Chunk, y int) (rl.Model, bool) {
 					rotation = (rotation + 1) % 4
 				}
 
-				switch faceModel.Id {
-				case face_model_sidewalk_lightpole:
-					{
-						tileX := faceModel.TileX
-						tileY := faceModel.TileY
-						rotation := (rotation + 1) % 4
-
-						polePart := UnitCube.Transform(
-							v3.NewMatrix().
-								TranslateXYZ(-0.5, 0, -0.5).
-								Scale(0.08, 1, 0.08).
-								RotateY(math.Pi/4).
-								TranslateXYZ(0.5, 0, 0.5).
-								Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
-						).Transform(translate)
-
-						edit.AddMesh(polePart, 3, 4, 0)
-						edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 1, 0)), 3, 4, 0)
-						edit.AddMesh(polePart.Transform(v3.MatrixTranslateXYZ(0, 2, 0)), 3, 4, 0)
-
-						poleHead := UnitCube.Transform(v3.NewMatrix().
-							TranslateXYZ(-0.5, -0.5, -0.1).
-							Scale(0.15, 0.1, 0.35).
-							RotateY((math.Pi*2.)*float64(rotation)/4).
-							TranslateXYZ(0.5, 3, 0.5).
-							Translate(FaceForward[FaceRight[FaceDirection(rotation)]].Scale(0.4)),
-						).Transform(translate)
-
-						edit.AddMesh(poleHead, 3, 4, 0)
-						edit.AddMesh(mesh, tileX, tileY, rotation)
-					}
-				case face_model_sidewalk:
-					{
-						up := c.world.UpsertCell(worldPos.Add(v3.Z(1))).Faces[FaceDown].ModelType
-						down := c.world.UpsertCell(worldPos.Add(v3.Z(-1))).Faces[FaceDown].ModelType
-						left := c.world.UpsertCell(worldPos.Add(v3.X(1))).Faces[FaceDown].ModelType
-						right := c.world.UpsertCell(worldPos.Add(v3.X(-1))).Faces[FaceDown].ModelType
-
-						tileX := faceModel.TileX
-						tileY := faceModel.TileY
-
-						if left == face_model_sidewalk || left == face_model_sidewalk_lightpole {
-							rotation = 0
-						}
-						if right == face_model_sidewalk || right == face_model_sidewalk_lightpole {
-							rotation = 2
-						}
-						if down == face_model_sidewalk || down == face_model_sidewalk_lightpole {
-							rotation = 3
-						}
-						if up == face_model_sidewalk || up == face_model_sidewalk_lightpole {
-							rotation = 1
-						}
-						if up == face_model_road && left == face_model_road && down != face_model_road && right != face_model_road {
-							tileX = 7
-							rotation = 2
-						}
-
-						if up == face_model_road && right == face_model_road && down != face_model_road && left != face_model_road {
-							tileX = 7
-							rotation = 3
-						}
-
-						if right == face_model_road && down == face_model_road && left != face_model_road && up != face_model_road {
-							tileX = 7
-							rotation = 0
-						}
-
-						if left == face_model_road && down == face_model_road && right != face_model_road && up != face_model_road {
-							tileX = 7
-							rotation = 1
-						}
-
-						edit.AddMesh(mesh, tileX, tileY, rotation)
-					}
-
-				default:
-					edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rotation)
-				}
+				faceModel.Render(c, worldPos, rotation, translate, faceModel, edit, mesh)
 
 				touched = true
 			}
@@ -323,7 +271,7 @@ func (c *Chunk) UpdateLights() {
 				to := worldPos.AddXYZ(0.5, 0, 0.5).Add(FaceForward[FaceOpposite[cell.Faces[FaceDown].Rotation]].Scale(0.7))
 				from := to.AddXYZ(0, 3, 0)
 
-				if cell.Faces[FaceDown].ModelType == face_model_sidewalk_lightpole {
+				if cell.Faces[FaceDown].ModelType == f6 {
 					globals.Shaders.Main.LightSpot(from, to, 5, 25, rl.NewColor(253, 249, 100, 255), 0.4)
 				}
 			}

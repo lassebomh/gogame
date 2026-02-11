@@ -1,7 +1,6 @@
 package game3
 
 import (
-	"fmt"
 	v2 "game/vec2"
 	v3 "game/vec3"
 	"image/color"
@@ -43,6 +42,8 @@ type Editor struct {
 	Tool     Tool
 	ToolCell ToolCell
 
+	editorPresets *EditorPresets
+
 	world *World
 }
 
@@ -70,6 +71,7 @@ func (e *Editor) Upsert(world *World) {
 	e.world = world
 	world.Editor = e
 	e.PositionSoft = e.Position
+	e.editorPresets = GetEditorPresets(e)
 }
 
 func (e *Editor) Update(timeStep time.Duration) {
@@ -264,23 +266,18 @@ func (e *Editor) Draw() {
 	})
 	globals.Shaders.Main.FullBright.Set(0)
 
-	cpos, lpos := WorldToChunk(e.mouseWorldPosition)
-
-	rl.DrawText(fmt.Sprintf("%.1f %.1f %.1f", e.mouseWorldPosition.X, e.mouseWorldPosition.Y, e.mouseWorldPosition.Z), 10, 40, 20, rl.White)
-	rl.DrawText(fmt.Sprintf("%+v", cpos), 10, 60, 20, rl.White)
-	rl.DrawText(fmt.Sprintf("%+v", lpos), 10, 80, 20, rl.White)
-	cell, ok := e.world.GetCell(e.mouseCellPos)
-
-	if ok {
-		y := int32(100)
-
-		for i, face := range cell.Faces {
-
-			rl.DrawText(fmt.Sprintf("%+v %+v", FaceDirection(i), face), 10, y, 20, rl.White)
-
-			y += 20
-		}
-	}
+	// cpos, lpos := WorldToChunk(e.mouseWorldPosition)
+	// rl.DrawText(fmt.Sprintf("%.1f %.1f %.1f", e.mouseWorldPosition.X, e.mouseWorldPosition.Y, e.mouseWorldPosition.Z), 10, 40, 20, rl.White)
+	// rl.DrawText(fmt.Sprintf("%+v", cpos), 10, 60, 20, rl.White)
+	// rl.DrawText(fmt.Sprintf("%+v", lpos), 10, 80, 20, rl.White)
+	// cell, ok := e.world.GetCell(e.mouseCellPos)
+	// if ok {
+	// 	y := int32(100)
+	// 	for i, face := range cell.Faces {
+	// 		rl.DrawText(fmt.Sprintf("%+v %+v", FaceDirection(i), face), 10, y, 20, rl.White)
+	// 		y += 20
+	// 	}
+	// }
 
 	switch e.Tool {
 	case TOOL_CELL:
@@ -304,5 +301,41 @@ func (e *Editor) Draw() {
 		player.Spawn(e.world)
 		player.body.SetPosition(e.Position.Chipmunk())
 		player.Update()
+	}
+
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), NewStackLayout(200, 200, 40, 40), e.editorPresets.Wall)
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), NewStackLayout(240, 200, 40, 40), e.editorPresets.Floor)
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), NewStackLayout(280, 200, 40, 40), e.editorPresets.Stair)
+
+}
+
+func RenderPresetGroup(e *Editor, icon string, stack *StackLayout, presets []EditorPreset) {
+
+	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_CENTER))
+	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT_VERTICAL, int64(raygui.TEXT_ALIGN_MIDDLE))
+	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
+	// raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
+
+	raygui.Toggle(stack.Down(40), icon, false)
+
+	for i := range presets {
+		preset := &presets[i]
+		buttonRect := stack.Down(40)
+		if raygui.Toggle(buttonRect, "", preset.Active) {
+			for i := range presets {
+				presets[i].Active = false
+			}
+			preset.Activate(e)
+			preset.Active = true
+		}
+		tileWidth := float32(globals.Textures.Atlas.Width) / float32(globals.Textures.AtlasTiles)
+		destRect := rl.NewRectangle(buttonRect.X+1, buttonRect.Y+1, buttonRect.Width-2, buttonRect.Height-2)
+		sourceRect := rl.NewRectangle(
+			float32(preset.TileX-1)*tileWidth,
+			float32(preset.TileY-1)*tileWidth,
+			tileWidth,
+			tileWidth,
+		)
+		rl.DrawTexturePro(globals.Textures.Atlas, sourceRect, destRect, v2.Zero.Raylib(), 0, rl.White)
 	}
 }

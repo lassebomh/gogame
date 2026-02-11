@@ -6,8 +6,9 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
-type Object struct {
+type Door struct {
 	Position v3.Value
+	Angle    float64
 	body     *cp.Body
 	shape    *cp.Shape
 }

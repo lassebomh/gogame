@@ -11,6 +11,8 @@ var globals struct {
 	Textures struct {
 		PlanetElevation rl.Texture2D
 		Organic         rl.Texture2D
+		Atlas           rl.Texture2D
+		AtlasTiles      int
 	}
 
 	Shaders struct {
@@ -26,6 +28,8 @@ func globalsInit() {
 
 	globals.Textures.Organic = rl.LoadTexture("./resources/organic.png")
 	globals.Textures.PlanetElevation = rl.LoadTexture("./resources/earth_elevation.png")
+	globals.Textures.Atlas = rl.LoadTexture("./resources/atlas.png")
+	globals.Textures.AtlasTiles = 15
 
 	globals.Models.MonsterBody = rl.LoadModel("./resources/models/monster/monster_body.glb")
 	mats := globals.Models.MonsterBody.GetMaterials()
