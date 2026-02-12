@@ -125,18 +125,18 @@ func Vector3One() Value {
 }
 
 // Vector3Add - Add two vectors
-func (v1 Value) Add(v2 Value) Value {
-	return XYZ(v1.X+v2.X, v1.Y+v2.Y, v1.Z+v2.Z)
+func (v Value) Add(v2 Value) Value {
+	return XYZ(v.X+v2.X, v.Y+v2.Y, v.Z+v2.Z)
 }
 
 // Vector3Add - Add two vectors
-func (v1 Value) AddXYZ(x, y, z float64) Value {
-	return XYZ(v1.X+x, v1.Y+y, v1.Z+z)
+func (v Value) AddXYZ(x, y, z float64) Value {
+	return XYZ(v.X+x, v.Y+y, v.Z+z)
 }
 
 // Vector3Add - Add two vectors
-func (v1 Value) SubtractXYZ(x, y, z float64) Value {
-	return XYZ(v1.X-x, v1.Y-y, v1.Z-z)
+func (v Value) SubtractXYZ(x, y, z float64) Value {
+	return XYZ(v.X-x, v.Y-y, v.Z-z)
 }
 
 func (v Value) ToColor() color.RGBA {
@@ -144,13 +144,13 @@ func (v Value) ToColor() color.RGBA {
 }
 
 // Vector3AddValue - Add vector and float value
-func (v Value) AddValue(add float64) Value {
-	return XYZ(v.X+add, v.Y+add, v.Z+add)
+func (v Value) AddValue(o float64) Value {
+	return XYZ(v.X+o, v.Y+o, v.Z+o)
 }
 
 // Vector3Subtract - Subtract two vectors
-func (v1 Value) Subtract(v2 Value) Value {
-	return XYZ(v1.X-v2.X, v1.Y-v2.Y, v1.Z-v2.Z)
+func (v Value) Subtract(o Value) Value {
+	return XYZ(v.X-o.X, v.Y-o.Y, v.Z-o.Z)
 }
 
 // Vector3SubtractValue - Subtract vector by float value
@@ -164,23 +164,23 @@ func (v Value) Scale(scale float64) Value {
 }
 
 // Vector3Multiply - Multiply vector by vector
-func (v1 Value) Multiply(v2 Value) Value {
+func (v Value) Multiply(v2 Value) Value {
 	result := Value{}
 
-	result.X = v1.X * v2.X
-	result.Y = v1.Y * v2.Y
-	result.Z = v1.Z * v2.Z
+	result.X = v.X * v2.X
+	result.Y = v.Y * v2.Y
+	result.Z = v.Z * v2.Z
 
 	return result
 }
 
 // Vector3CrossProduct - Calculate two vectors cross product
-func (v1 Value) CrossProduct(v2 Value) Value {
+func (v Value) CrossProduct(v2 Value) Value {
 	result := Value{}
 
-	result.X = v1.Y*v2.Z - v1.Z*v2.Y
-	result.Y = v1.Z*v2.X - v1.X*v2.Z
-	result.Z = v1.X*v2.Y - v1.Y*v2.X
+	result.X = v.Y*v2.Z - v.Z*v2.Y
+	result.Y = v.Z*v2.X - v.X*v2.Z
+	result.Z = v.X*v2.Y - v.Y*v2.X
 
 	return result
 }
@@ -215,38 +215,38 @@ func (v Value) LengthSqr() float64 {
 }
 
 // Vector3DotProduct - Calculate two vectors dot product
-func (v1 Value) DotProduct(v2 Value) float64 {
-	return v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z
+func (v Value) DotProduct(v2 Value) float64 {
+	return v.X*v2.X + v.Y*v2.Y + v.Z*v2.Z
 }
 
 // Vector3Distance - Calculate distance between two vectors
-func (v1 Value) Distance(v2 Value) float64 {
-	dx := v2.X - v1.X
-	dy := v2.Y - v1.Y
-	dz := v2.Z - v1.Z
+func (v Value) Distance(v2 Value) float64 {
+	dx := v2.X - v.X
+	dy := v2.Y - v.Y
+	dz := v2.Z - v.Z
 
 	return float64(math.Sqrt(float64(dx*dx + dy*dy + dz*dz)))
 }
 
 // Vector3DistanceSqr - Calculate square distance between two vectors
-func (v1 Value) DistanceSqr(v2 Value) float64 {
+func (v Value) DistanceSqr(v2 Value) float64 {
 	var result float64
 
-	dx := v2.X - v1.X
-	dy := v2.Y - v1.Y
-	dz := v2.Z - v1.Z
+	dx := v2.X - v.X
+	dy := v2.Y - v.Y
+	dz := v2.Z - v.Z
 	result = dx*dx + dy*dy + dz*dz
 
 	return result
 }
 
 // Vector3Angle - Calculate angle between two vectors
-func (v1 Value) Angle(v2 Value) float64 {
+func (v Value) Angle(v2 Value) float64 {
 	var result float64
 
-	cross := Value{X: v1.Y*v2.Z - v1.Z*v2.Y, Y: v1.Z*v2.X - v1.X*v2.Z, Z: v1.X*v2.Y - v1.Y*v2.X}
+	cross := Value{X: v.Y*v2.Z - v.Z*v2.Y, Y: v.Z*v2.X - v.X*v2.Z, Z: v.X*v2.Y - v.Y*v2.X}
 	length := float64(math.Sqrt(float64(cross.X*cross.X + cross.Y*cross.Y + cross.Z*cross.Z)))
-	dot := v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z
+	dot := v.X*v2.X + v.Y*v2.Y + v.Z*v2.Z
 	result = float64(math.Atan2(float64(length), float64(dot)))
 
 	return result
@@ -263,8 +263,8 @@ func (v Value) Abs() Value {
 }
 
 // Vector3Divide - Divide vector by vector
-func (v1 Value) Divide(v2 Value) Value {
-	return XYZ(v1.X/v2.X, v1.Y/v2.Y, v1.Z/v2.Z)
+func (v Value) Divide(v2 Value) Value {
+	return XYZ(v.X/v2.X, v.Y/v2.Y, v.Z/v2.Z)
 }
 
 // Vector3Normalize - Normalize provided vector
@@ -289,10 +289,10 @@ func (v Value) Normalize() Value {
 }
 
 // Vector3Project - Calculate the projection of the vector v1 on to v2
-func (v1 Value) Project(v2 Value) Value {
+func (v Value) Project(v2 Value) Value {
 	result := Value{}
 
-	v1dv2 := (v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z)
+	v1dv2 := (v.X*v2.X + v.Y*v2.Y + v.Z*v2.Z)
 	v2dv2 := (v2.X*v2.X + v2.Y*v2.Y + v2.Z*v2.Z)
 
 	mag := v1dv2 / v2dv2
@@ -305,17 +305,17 @@ func (v1 Value) Project(v2 Value) Value {
 }
 
 // Vector3Reject - Calculate the rejection of the vector v1 on to v2
-func (v1 Value) Reject(v2 Value) Value {
+func (v Value) Reject(v2 Value) Value {
 	result := Value{}
 
-	v1dv2 := (v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z)
+	v1dv2 := (v.X*v2.X + v.Y*v2.Y + v.Z*v2.Z)
 	v2dv2 := (v2.X*v2.X + v2.Y*v2.Y + v2.Z*v2.Z)
 
 	mag := v1dv2 / v2dv2
 
-	result.X = v1.X - (v2.X * mag)
-	result.Y = v1.Y - (v2.Y * mag)
-	result.Z = v1.Z - (v2.Z * mag)
+	result.X = v.X - (v2.X * mag)
+	result.Y = v.Y - (v2.Y * mag)
+	result.Z = v.Z - (v2.Z * mag)
 
 	return result
 }
@@ -323,11 +323,11 @@ func (v1 Value) Reject(v2 Value) Value {
 // Vector3OrthoNormalize - Orthonormalize provided vectors
 // Makes vectors normalized and orthogonal to each other
 // Gram-Schmidt function implementation
-func (v1 *Value) OrthoNormalize(v2 *Value) {
-	(*v1).Normalize()
+func (v *Value) OrthoNormalize(v2 *Value) {
+	(*v).Normalize()
 
-	vn1 := (*v1).CrossProduct(*v2).Normalize()
-	vn2 := vn1.CrossProduct(*v1)
+	vn1 := (*v).CrossProduct(*v2).Normalize()
+	vn2 := vn1.CrossProduct(*v)
 	*v2 = vn2
 }
 
@@ -385,60 +385,60 @@ func (v Value) RotateByAxisAngle(axis Value, angle float64) Value {
 }
 
 // Vector3Lerp - Calculate linear interpolation between two vectors
-func (v1 Value) Lerp(v2 Value, amount float64) Value {
+func (v Value) Lerp(v2 Value, amount float64) Value {
 	result := Value{}
 
-	result.X = v1.X + amount*(v2.X-v1.X)
-	result.Y = v1.Y + amount*(v2.Y-v1.Y)
-	result.Z = v1.Z + amount*(v2.Z-v1.Z)
+	result.X = v.X + amount*(v2.X-v.X)
+	result.Y = v.Y + amount*(v2.Y-v.Y)
+	result.Z = v.Z + amount*(v2.Z-v.Z)
 
 	return result
 }
 
 // Vector3Reflect - Calculate reflected vector to normal
-func (vector Value) Reflect(normal Value) Value {
+func (v Value) Reflect(normal Value) Value {
 	// I is the original vector
 	// N is the normal of the incident plane
 	// R = I - (2*N*( DotProduct[ I,N] ))
 
 	result := Value{}
 
-	dotProduct := vector.DotProduct(normal)
+	dotProduct := v.DotProduct(normal)
 
-	result.X = vector.X - (2.0*normal.X)*dotProduct
-	result.Y = vector.Y - (2.0*normal.Y)*dotProduct
-	result.Z = vector.Z - (2.0*normal.Z)*dotProduct
+	result.X = v.X - (2.0*normal.X)*dotProduct
+	result.Y = v.Y - (2.0*normal.Y)*dotProduct
+	result.Z = v.Z - (2.0*normal.Z)*dotProduct
 
 	return result
 }
 
 // Vector3Min - Return min value for each pair of components
-func (vec1 Value) Min(vec2 Value) Value {
+func (v Value) Min(vec2 Value) Value {
 	result := Value{}
 
-	result.X = float64(math.Min(float64(vec1.X), float64(vec2.X)))
-	result.Y = float64(math.Min(float64(vec1.Y), float64(vec2.Y)))
-	result.Z = float64(math.Min(float64(vec1.Z), float64(vec2.Z)))
+	result.X = float64(math.Min(float64(v.X), float64(vec2.X)))
+	result.Y = float64(math.Min(float64(v.Y), float64(vec2.Y)))
+	result.Z = float64(math.Min(float64(v.Z), float64(vec2.Z)))
 
 	return result
 }
 
 // Vector3Max - Return max value for each pair of components
-func (vec1 Value) Max(vec2 Value) Value {
+func (v Value) Max(vec2 Value) Value {
 	result := Value{}
 
-	result.X = float64(math.Max(float64(vec1.X), float64(vec2.X)))
-	result.Y = float64(math.Max(float64(vec1.Y), float64(vec2.Y)))
-	result.Z = float64(math.Max(float64(vec1.Z), float64(vec2.Z)))
+	result.X = float64(math.Max(float64(v.X), float64(vec2.X)))
+	result.Y = float64(math.Max(float64(v.Y), float64(vec2.Y)))
+	result.Z = float64(math.Max(float64(v.Z), float64(vec2.Z)))
 
 	return result
 }
 
 // Vector3Barycenter - Barycenter coords for p in triangle abc
-func (p Value) Barycenter(a, b, c Value) Value {
+func (v Value) Barycenter(a, b, c Value) Value {
 	v0 := b.Subtract(a)
 	v1 := c.Subtract(a)
-	v2 := p.Subtract(a)
+	v2 := v.Subtract(a)
 	d00 := v0.DotProduct(v0)
 	d01 := v0.DotProduct(v1)
 	d11 := v1.DotProduct(v1)
@@ -508,10 +508,10 @@ func (v Value) ClampValue(min float64, max float64) Value {
 }
 
 // Vector3Equals - Check whether two given vectors are almost equal
-func (p Value) Equals(q Value) bool {
-	return (math.Abs(float64(p.X-q.X)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.X)), math.Abs(float64(q.X)))) &&
-		math.Abs(float64(p.Y-q.Y)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.Y)), math.Abs(float64(q.Y)))) &&
-		math.Abs(float64(p.Z-q.Z)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(p.Z)), math.Abs(float64(q.Z)))))
+func (v Value) Equals(q Value) bool {
+	return (math.Abs(float64(v.X-q.X)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(v.X)), math.Abs(float64(q.X)))) &&
+		math.Abs(float64(v.Y-q.Y)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(v.Y)), math.Abs(float64(q.Y)))) &&
+		math.Abs(float64(v.Z-q.Z)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(v.Z)), math.Abs(float64(q.Z)))))
 }
 
 // Vector3Refract - Compute the direction of a refracted ray

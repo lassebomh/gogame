@@ -44,4 +44,6 @@ func globalsInit() {
 		mats[i].GetMap(rl.MapDiffuse).Texture = globals.Textures.Organic
 	}
 
+	rl.SetLineWidth(2)
+
 }

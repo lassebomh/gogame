@@ -206,6 +206,16 @@ func (s *StackLayout) Down(h float64) rl.Rectangle {
 	s.pos.Y += h
 	return rect
 }
+func (s *StackLayout) Right(w float64) rl.Rectangle {
+	rect := rl.NewRectangle(
+		float32(s.pos.X),
+		float32(s.pos.Y),
+		float32(w),
+		float32(s.size.Y),
+	)
+	s.pos.X += w
+	return rect
+}
 
 type LineLayout struct {
 	X      float64

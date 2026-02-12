@@ -5,13 +5,10 @@ import (
 	v3 "game/vec3"
 	"image/color"
 
-	"github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type ToolCell struct {
-	// CellPos v3.Value
-
 	Delete        bool
 	FaceType      FaceType
 	FaceRotation  FaceDirection
@@ -29,7 +26,6 @@ func (t *ToolCell) Update(e *Editor) {
 		if t.pastingCells == nil {
 			t.pastingCells = map[v3.Value]bool{}
 		}
-
 		t.pastingCells[e.mouseCellPos] = true
 	}
 
@@ -71,9 +67,7 @@ func (t *ToolCell) Update(e *Editor) {
 			t.FaceDirection = e.mouseCellDirection
 		}
 		t.FaceRotation = e.mouseCellDirection
-
 	}
-
 }
 
 func (t *ToolCell) Draw3D(e *Editor) {
@@ -107,21 +101,4 @@ func (t *ToolCell) Draw3D(e *Editor) {
 }
 
 func (t *ToolCell) DrawHUD(e *Editor) {
-
-	if t.palletePosition != v2.Zero {
-
-		stack := NewStackLayout(t.palletePosition.X, t.palletePosition.Y, 160, 24)
-
-		raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_LEFT))
-		raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
-		raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
-
-		for name, faceModel := range FaceModels {
-			if raygui.Toggle(stack.Down(24), name, t.FaceModelType == faceModel.Id) {
-				t.FaceModelType = faceModel.Id
-				t.FaceType = faceModel.FaceType
-				// t.FaceDirection = faceModel.FaceDirection
-			}
-		}
-	}
 }

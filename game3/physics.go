@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ShapeHeight float32 = 0.01 // The vertical thickness of the wireframes
+	ShapeHeight float32 = 0.0001 // The vertical thickness of the wireframes
 )
 
 type PhysicsDrawer struct {
@@ -43,7 +43,7 @@ func (d *PhysicsDrawer) cv3(v cp.Vector, offset float32) rl.Vector3 {
 func (d *PhysicsDrawer) DrawCircle(pos cp.Vector, angle, radius float64, outline, fill cp.FColor, data interface{}) {
 	color := fColorToRaylib(fill)
 	// Draw a wireframe cylinder to represent the volume
-	rl.DrawCylinderEx(d.cv3(pos, 0), d.cv3(pos, ShapeHeight), float32(radius), float32(radius), 16, color)
+	rl.DrawCylinderWiresEx(d.cv3(pos, 0), d.cv3(pos, ShapeHeight), float32(radius), float32(radius), 16, color)
 }
 
 func (d *PhysicsDrawer) DrawSegment(a, b cp.Vector, fill cp.FColor, data interface{}) {
@@ -59,19 +59,29 @@ func (d *PhysicsDrawer) DrawFatSegment(a, b cp.Vector, radius float64, outline, 
 }
 
 func (d *PhysicsDrawer) DrawPolygon(count int, verts []cp.Vector, radius float64, outline, fill cp.FColor, data interface{}) {
+	// color := fColorToRaylib(fill)
+	// if count < 3 {
+	// 	return
+	// }
+	// for i := 1; i < count-1; i++ {
+	// 	v0 := d.cv3(verts[0], 0)
+	// 	v1 := d.cv3(verts[i], 0)
+	// 	v2 := d.cv3(verts[i+1], 0)
+
+	// 	rl.DrawTriangle3D(v2, v1, v0, color)
+	// }
+
 	color := fColorToRaylib(fill)
+	for i := 0; i < count; i++ {
+		nextIdx := (i + 1) % count
+		currBottom := d.cv3(verts[i], 0)
+		nextBottom := d.cv3(verts[nextIdx], 0)
+		currTop := d.cv3(verts[i], ShapeHeight)
+		nextTop := d.cv3(verts[nextIdx], ShapeHeight)
 
-	if count < 3 {
-		return // need at least 3 vertices for a polygon
-	}
-
-	// Triangulate using a fan from the first vertex
-	for i := 1; i < count-1; i++ {
-		v0 := d.cv3(verts[0], 0)
-		v1 := d.cv3(verts[i], 0)
-		v2 := d.cv3(verts[i+1], 0)
-
-		rl.DrawTriangle3D(v2, v1, v0, color)
+		rl.DrawLine3D(currBottom, nextBottom, color) // Bottom ring
+		rl.DrawLine3D(currTop, nextTop, color)       // Top ring
+		rl.DrawLine3D(currBottom, currTop, color)    // Vertical ribs
 	}
 }
 
@@ -122,6 +132,7 @@ type DynamicPhysicsObject struct {
 	shape     *cp.Shape
 	Position  v3.Value
 	YVelocity float64
+	// ADD PREVIOUS POSITION
 }
 
 func (d *DynamicPhysicsObject) UpdatePhysics() {

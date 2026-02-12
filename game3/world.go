@@ -38,6 +38,8 @@ type World struct {
 	MouseRayDirection v3.Value
 
 	renderTexture rl.RenderTexture2D
+
+	raycastResults []RaycastResult
 }
 
 func (w *World) Upsert(worldType WorldType) *World {
@@ -51,6 +53,7 @@ func (w *World) Upsert(worldType WorldType) *World {
 	} else {
 		game.Station = w
 	}
+	w.raycastResults = make([]RaycastResult, 0)
 	w.space = cp.NewSpace()
 	w.space.SetCollisionSlop(0.01)
 	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
@@ -76,6 +79,7 @@ func (w *World) Update(dt time.Duration) {
 		w.space.Step(PhysicsTickrate.Seconds())
 		w.TimePhysicsAccumulator -= PhysicsTickrate
 	}
+	w.raycastResults = w.raycastResults[:0]
 
 	mousePos := rl.GetMousePosition()
 	mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
@@ -246,4 +250,91 @@ func (w *World) GetCell(pos v3.Value) (*Cell, bool) {
 	cell := &chunk.Cells[lpos.Y][lpos.X][lpos.Z]
 
 	return cell, true
+}
+
+type RaycastResult struct {
+	ID       int
+	Start    v3.Value
+	End      v3.Value
+	Position v3.Value
+	Normal   v2.Value
+	Alpha    float64
+	Hit      bool
+}
+
+func (w *World) Raycast(start v3.Value, end v3.Value) (result RaycastResult) {
+	result.Start = start
+	result.End = end
+	result.Position = end
+
+	if int(start.Y+0.4) == int(end.Y+0.4) {
+		queryResult := w.space.SegmentQueryFirst(
+			start.Chipmunk(),
+			end.Chipmunk(),
+			0,
+			cp.NewShapeFilter(
+				0,
+				Category(start.Y, true, false),
+				Category(start.Y, true, false),
+			),
+		)
+		result.Hit = queryResult.Shape != nil
+		result.Position = v3.XYZ(queryResult.Point.X, cp.Lerp(start.Y, end.Y, queryResult.Alpha), queryResult.Point.Y)
+		result.Alpha = queryResult.Alpha
+		result.Normal = v2.Value(queryResult.Normal)
+	} else {
+		result.Hit = true
+	}
+
+	w.raycastResults = append(w.raycastResults, result)
+
+	return
+}
+
+func (w *World) GetPathTarget(from v3.Value, to v3.Value) (v3.Value, float64) {
+
+	pathPoint := NewPathPoint(w, from)
+	path, length := pathPoint.FindPath(to)
+	if len(path) == 0 {
+		return from, 0
+	}
+
+	first, path := path[0], path[1:]
+
+	positions := make([]v3.Value, len(path))
+	for i, point := range path {
+		if i == len(path)-1 {
+			positions[i] = to
+		} else {
+			positions[i] = point.Center
+		}
+	}
+
+	if len(path) == 0 {
+		return from, 0
+	}
+
+	if !w.Raycast(first.Center, to).Hit {
+		return to, first.Center.Distance(to)
+	}
+
+	i := -1
+	low, high := 0, len(path)-2
+
+	for low <= high {
+		mid := low + (high-low)/2
+
+		if !w.Raycast(first.Center, positions[mid]).Hit {
+			i = mid
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+
+	if i == -1 {
+		return positions[0], length
+	} else {
+		return positions[i], length
+	}
 }

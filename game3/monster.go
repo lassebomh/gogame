@@ -35,96 +35,28 @@ type MonsterArmSegment struct {
 }
 
 func (m *Monster) Update() {
-	maxSpeed := m.world.TimeStep.Seconds() * m.body.Mass()
 
-	velocity := v2.FromChipmunk(m.body.Velocity())
+	vel := v2.FromChipmunk(m.body.Velocity().Mult(0.99))
 
-	for rad := 0.; rad < math.Pi*2; rad += math.Pi / 4 {
-		dir := v2.FromRadians(rad).Scale(0.5)
-		result := m.world.space.SegmentQueryFirst(
-			m.Position.Chipmunk(),
-			m.Position.AddXYZ(dir.X, 0, dir.Y).Chipmunk(),
-			0,
-			cp.NewShapeFilter(
-				0,
-				Category(m.Position.Y, true, false),
-				Category(m.Position.Y, true, false),
-			),
-		)
+	bodyTarget, _ := m.world.GetPathTarget(m.Position, m.world.Player.Position)
+	bodyDir := v2.XY(bodyTarget.X-m.Position.X, bodyTarget.Z-m.Position.Z).Normalize()
 
-		velocity = velocity.Add(dir.Scale((result.Alpha - 1) / 2))
-	}
-
-	pathPoint := NewPathPoint(m.world, m.Position)
-	m.path, _ = pathPoint.FindPath(m.world.Player.Position)
-
-	if len(m.path) >= 3 {
-		diff := m.path[1].Center.Lerp(m.path[2].Center, 0.5).Subtract(m.Position).Scale(2)
-		velocity.X += diff.X
-		velocity.Y += diff.Z
-	}
-
-	velocityMagnitude := velocity.Length() / maxSpeed
-	if velocityMagnitude > 1 {
-		velocity = velocity.Scale(1 / velocityMagnitude)
-	}
-
-	m.body.SetForce(velocity.Chipmunk())
-
-	m.UpdatePhysics()
-
-	tipsVisibleToPlayer := 0
-	tipsMinDistanceToPlayer := math.Inf(1)
-
-	if m.world.Player != nil {
-		for _, arm := range m.arms {
-			tip := arm.segments[len(arm.segments)-1]
-			if math.Floor(tip.Position.Y) != math.Floor(m.world.Player.Position.Y) {
-				continue
-			}
-
-			result := m.world.space.SegmentQueryFirst(
-				tip.Position.Chipmunk(),
-				m.world.Player.Position.Chipmunk(),
-				0,
-				cp.NewShapeFilter(
-					0,
-					Category(tip.Position.Y, true, false),
-					Category(tip.Position.Y, true, false),
-				),
-			)
-
-			if result.Shape == nil {
-				tipsVisibleToPlayer++
-			}
-
-			dist := tip.Position.Distance(m.world.Player.Position) - m.world.Player.Radius
-			if dist < tipsMinDistanceToPlayer {
-				tipsMinDistanceToPlayer = dist
-			}
+	// push on walls
+	for a := 0.; a < math.Pi*2.; a += math.Pi / 4 {
+		dir := v3.XYZ(math.Cos(a), 0, math.Sin(a))
+		res := m.world.Raycast(m.Position, m.Position.Add(dir.Scale(0.5)))
+		if res.Hit {
+			vel = vel.Add(res.Normal.Scale((1 - res.Alpha) * 0.3))
 		}
 	}
 
-	if tipsVisibleToPlayer > 0 && tipsMinDistanceToPlayer < 2 {
-		m.Aggro = 3
-
-		// pathPoint := NewPathPoint(m.world, m.Position)
-		// m.path, _ = pathPoint.FindPath(m.world.Player.Position)
-		// if len(m.path) >= 3 {
-		// 	speed := 200.
-		// 	delta := m.Position.Subtract(m.path[2].Center)
-		// 	m.body.SetForce(delta.Normalize().Scale(speed * m.body.Mass()).Chipmunk())
-		// 	// newVelocity := v2.FromChipmunk(m.body.Velocity()).Scale(math.Pow(0.01, m.world.TimeStep.Seconds()))
-		// 	// m.body.SetVelocity(newVelocity.X, newVelocity.Y)
-		// }
-
-	} else if m.Aggro > 0 {
-		m.Aggro -= m.world.TimeStep.Seconds()
-	}
+	m.body.SetVelocity(vel.X, vel.Y)
 
 	for i, arm := range m.arms {
-		tip := arm.segments[len(arm.segments)-1]
+		isDisabled := i == int(game.Time.Seconds()*2)%len(m.arms)
 
+		tip := arm.segments[len(arm.segments)-1]
+		// Uncurl
 		curlAngles := make([]float64, len(arm.segments)-2)
 		for ii, segment := range arm.segments[:len(arm.segments)-2] {
 			a := segment.body.Position()
@@ -132,62 +64,69 @@ func (m *Monster) Update() {
 			c := arm.segments[ii+2].Position.Chipmunk()
 			v1 := b.Sub(a)
 			v2 := c.Sub(b)
-
 			angle := math.Atan2(v1.Cross(v2), v1.Dot(v2))
 			arm.segments[ii].body.SetTorque(angle * tip.body.Moment() * 200)
 			curlAngles[ii] = angle
 		}
 
-		// // spread velocity
-		// for _, segment := range arm.segments {
-		// 	vel := segment.body.Velocity().Lerp(m.body.Velocity(), 0.02)
-		// 	segment.body.SetVelocity(vel.X, vel.Y)
-		// }
-
 		if m.world.Player != nil {
-
-			pathPoint := NewPathPoint(m.world, tip.Position)
-			arm.path, _ = pathPoint.FindPath(m.world.Player.Position)
-
-			speed := 30.
-
-			if m.Aggro > 0 {
-				speed = 120
-			}
-
-			if len(arm.path) >= 3 {
-				arm.tipTarget = arm.path[1].Center.Lerp(arm.path[2].Center, 0.5)
-
-			} else {
-
+			tip := arm.segments[len(arm.segments)-1]
+			target3d, length := m.world.GetPathTarget(tip.Position, m.world.Player.Position)
+			if length < 2 {
 				entangleTarget := m.world.Player.Position
-
 				playerDist := entangleTarget.Distance(tip.Position)
-
 				dir := entangleTarget.Subtract(tip.Position).Normalize().RotateByAxisAngle(v3.Y(-1), math.Pi/2)
 				if i%2 == 0 {
 					dir = dir.Negate()
 				}
-
 				entangleTarget = entangleTarget.Add(dir.Scale(math.Sqrt(playerDist*m.world.Player.Radius) + m.world.Player.Radius))
-
-				// arm.tipTarget = m.world.Player.Position
-				arm.tipTarget = entangleTarget
+				target3d = entangleTarget
 			}
-			delta := arm.tipTarget.Subtract(tip.Position)
-			currentDir := cp.ForAngle(tip.body.Angle())
-			relativeAngle := math.Atan2(currentDir.Cross(delta.Chipmunk()), currentDir.Dot(delta.Chipmunk()))
-			tip.body.SetTorque(relativeAngle * tip.body.Moment() * 70)
-			tip.body.SetForce(delta.Normalize().Scale(speed * tip.body.Mass()).Chipmunk())
-			arm.segments[len(arm.segments)-1].body.SetForce(delta.Normalize().Scale(speed * tip.body.Mass()).Chipmunk())
-			arm.segments[len(arm.segments)-2].body.SetForce(delta.Normalize().Scale(speed * tip.body.Mass()).Chipmunk())
 
+			pos := v2.XY(tip.Position.X, tip.Position.Z)
+			target := v2.XY(target3d.X, target3d.Z)
+
+			delta := target.Subtract(pos)
+			tipDir := delta.Normalize()
+			if !isDisabled {
+				tip.body.ApplyForceAtWorldPoint(tipDir.Scale(0.6).Chipmunk(), pos.Chipmunk())
+			}
+
+			for otherArmI, arm := range m.arms {
+				if otherArmI == i {
+					continue
+				}
+
+				otherTip := arm.segments[len(arm.segments)-1]
+
+				diff := tip.Position.Subtract(otherTip.Position)
+				diff = diff.Scale(1 / max(0.05, diff.Length())).Scale(0.01)
+
+				tip.body.ApplyForceAtWorldPoint(diff.Chipmunk(), pos.Chipmunk())
+				// add a turn here if its next to disabled
+
+			}
+
+			for ii, segment := range arm.segments {
+				vel := v2.FromChipmunk(segment.body.Velocity())
+
+				if isDisabled {
+					vel = vel.Scale(0.95)
+				} else {
+					alpha := (float64(ii+1) / float64(len(arm.segments)))
+					dir := bodyDir.SLerp(tipDir, alpha)
+					vel = vel.Lerp(dir.Scale(vel.Length()), 0.025)
+				}
+				segment.body.SetVelocity(vel.X, vel.Y)
+			}
 		}
 
 		for _, segment := range arm.segments {
 			segment.UpdatePhysics()
 		}
 	}
+	m.UpdatePhysics()
+
 }
 
 func (m *Monster) Draw() {
@@ -288,7 +227,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	}
 	m.world = world
 	m.world.Monster = m
-	m.Position = v3.XYZ(0, 0, -5)
+	m.Position = v3.XYZ(12, 0, -3)
 
 	m.Radius = 0.25
 

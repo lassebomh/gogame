@@ -159,7 +159,6 @@ func NewPathPoint(world *World, pos v3.Value) *PathPoint {
 
 	for i := pos.Y; i >= 0; i-- {
 		pos.Y = i
-
 		cell, ok = world.GetCell(pos)
 		if ok && cell.Faces[FaceDown].Type != FaceNone {
 			start := &PathPoint{

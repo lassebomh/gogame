@@ -64,6 +64,17 @@ func Clamp(value, min, max float64) float64 {
 
 	return res
 }
+func (v Value) SLerp(other Value, t float64) Value {
+	dot := v.Normalize().DotProduct(other.Normalize())
+	omega := math.Acos(Clamp(dot, -1, 1))
+
+	if omega < 1e-3 {
+		return v.Lerp(other, t)
+	}
+
+	denom := 1.0 / math.Sin(omega)
+	return v.Scale(math.Sin((1.0-t)*omega) * denom).Add(other.Scale(math.Sin(t*omega) * denom))
+}
 
 // Lerp - Calculate linear interpolation between two floats
 func Lerp(start, end, amount float64) float64 {
@@ -93,6 +104,11 @@ func FloatEquals(x, y float64) bool {
 // Vector2Add - Add two vectors (v1 + v2)
 func (v1 Value) Add(v2 Value) Value {
 	return XY(v1.X+v2.X, v1.Y+v2.Y)
+}
+
+// Vector2Add - Add two vectors (v1 + v2)
+func (v1 Value) AddXY(x, y float64) Value {
+	return XY(v1.X+x, v1.Y+y)
 }
 
 // Vector2AddValue - Add vector and float value
