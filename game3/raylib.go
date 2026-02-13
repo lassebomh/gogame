@@ -174,6 +174,29 @@ func (c Camera3D) Raylib() rl.Camera3D {
 	}
 }
 
+type CursorLayout struct{ rl.Rectangle }
+
+func NewCursorLayout(x, y, w, h float32) *CursorLayout {
+	return &CursorLayout{
+		Rectangle: rl.NewRectangle(x, y, w, h),
+	}
+}
+
+func (c *CursorLayout) Right() *CursorLayout {
+	c.X += c.Width
+	return c
+}
+func (c *CursorLayout) Down() *CursorLayout {
+	c.Y += c.Height
+	return c
+}
+func (c *CursorLayout) Copy() *CursorLayout {
+	return NewCursorLayout(c.X, c.Y, c.Width, c.Height)
+}
+func (c *CursorLayout) With(fn func(cursor *CursorLayout)) {
+	fn(NewCursorLayout(c.X, c.Y, c.Width, c.Height))
+}
+
 type StackLayout struct {
 	pos  v2.Value
 	size v2.Value

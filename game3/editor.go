@@ -21,12 +21,14 @@ const (
 )
 
 type EditorSettings struct {
+	Play         bool
 	DrawPhysics  bool
 	Orthographic bool
 	FocusMode    EditorFocusMode
 }
 
 type Editor struct {
+	world    *World
 	TimeStep time.Duration
 
 	Position     v3.Value
@@ -38,8 +40,11 @@ type Editor struct {
 	ScrollYVelocity float64
 	Scale           float64
 
-	Camera Camera3D
-	// EditorDrawFlags EditorDrawFlags
+	editorPresets *EditorPresets
+
+	contextMenu v2.Value
+
+	Camera   Camera3D
 	Settings EditorSettings
 
 	mousePosition      v2.Value
@@ -50,18 +55,12 @@ type Editor struct {
 
 	Tool     TOOL
 	ToolCell ToolCell
-
-	presetPalettePosition v2.Value
-	editorPresets         *EditorPresets
-
-	world *World
 }
 
 type TOOL = int32
 
 const (
 	TOOL_CELL = TOOL(iota)
-	TOOL_PLAY
 )
 
 func (e *Editor) Upsert(world *World) {
@@ -114,11 +113,11 @@ func (e *Editor) Update(timeStep time.Duration) {
 		targetVelocity = targetVelocity.Normalize().Scale(e.Scale * timeStep.Seconds() * 1.5)
 	}
 
-	if rl.IsKeyDown(rl.KeyQ) && e.presetPalettePosition == v2.Zero {
-		e.presetPalettePosition = e.mousePosition
+	if rl.IsKeyDown(rl.KeyQ) && e.contextMenu == v2.Zero {
+		e.contextMenu = e.mousePosition
 	}
 	if rl.IsKeyReleased(rl.KeyQ) {
-		e.presetPalettePosition = v2.Zero
+		e.contextMenu = v2.Zero
 	}
 
 	scroll := float64(rl.GetMouseWheelMoveV().Y)
@@ -137,13 +136,13 @@ func (e *Editor) Update(timeStep time.Duration) {
 	e.ScrollY += e.ScrollYVelocity * timeStep.Seconds() * 120
 	e.Scale = math.Pow(2, -e.ScrollY/50)
 
-	if e.Tool != TOOL_PLAY {
+	if !e.Settings.Play {
 
 		e.Position = e.Position.Add(targetVelocity)
 
 		currentMousePos := v2.FromRaylib(rl.GetMousePosition())
 
-		if e.presetPalettePosition == v2.Zero {
+		if e.contextMenu == v2.Zero {
 			if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 				mouseMove := (currentMousePos.Subtract(e.mousePosition)).Scale(0.007)
 				e.Yaw += mouseMove.X
@@ -159,7 +158,7 @@ func (e *Editor) Update(timeStep time.Duration) {
 			}
 			e.mousePosition = currentMousePos
 
-			mouseRay := rl.GetScreenToWorldRay(rl.Vector2{float32(currentMousePos.X), float32(currentMousePos.Y)}, e.Camera.Raylib())
+			mouseRay := rl.GetScreenToWorldRay(e.mousePosition.Raylib(), e.Camera.Raylib())
 
 			origin := v3.FromRaylib(mouseRay.Position)
 			dir := v3.FromRaylib(mouseRay.Direction)
@@ -200,13 +199,14 @@ func (e *Editor) Update(timeStep time.Duration) {
 	}
 
 	if e.Settings.FocusMode == EditorFocusPlayer && e.world.Player != nil {
-		e.Position = e.world.Player.Position
+		// e.Position = e.world.Player.Position
+		e.PositionSoft = e.PositionSoft.Lerp(e.world.Player.Position.AddXYZ(0, 0.1, 0), 1-friction)
+	} else if e.Settings.FocusMode == EditorFocusMonster && e.world.Monster != nil {
+		// e.Position = e.world.Monster.Position
+		e.PositionSoft = e.PositionSoft.Lerp(e.world.Monster.Position.AddXYZ(0, 0.1, 0), 1-friction)
+	} else {
+		e.PositionSoft = e.PositionSoft.Lerp(e.Position.AddXYZ(0, 0.1, 0), 1-friction)
 	}
-	if e.Settings.FocusMode == EditorFocusMonster && e.world.Monster != nil {
-		e.Position = e.world.Monster.Position
-	}
-
-	e.PositionSoft = e.PositionSoft.Lerp(e.Position, 1-friction)
 
 	if e.Settings.Orthographic {
 		e.Camera = Camera3D{
@@ -231,18 +231,34 @@ func (e *Editor) Update(timeStep time.Duration) {
 	}
 
 	if rl.IsKeyPressed(rl.KeyOne) {
-		e.Tool = TOOL_PLAY
+		e.Settings.Play = !e.Settings.Play
 	}
 	if rl.IsKeyPressed(rl.KeyTwo) {
-		e.Tool = TOOL_CELL
+		e.Settings.DrawPhysics = !e.Settings.DrawPhysics
+	}
+	if rl.IsKeyPressed(rl.KeyThree) {
+		e.Settings.Orthographic = !e.Settings.Orthographic
+	}
+	if rl.IsKeyPressed(rl.KeyFour) {
+		switch e.Settings.FocusMode {
+		case EditorFocusNone:
+			e.Settings.FocusMode = EditorFocusMonster
+		case EditorFocusPlayer:
+			e.Settings.FocusMode = EditorFocusNone
+		case EditorFocusMonster:
+			e.Settings.FocusMode = EditorFocusPlayer
+		}
 	}
 
-	switch e.Tool {
-	case TOOL_CELL:
-		e.ToolCell.Update(e)
-	case TOOL_PLAY:
+	if e.Settings.Play {
 		game.Update(e.TimeStep)
+	} else {
+		switch e.Tool {
+		case TOOL_CELL:
+			e.ToolCell.Update(e)
+		}
 	}
+
 }
 
 func (e *Editor) Draw() {
@@ -252,27 +268,27 @@ func (e *Editor) Draw() {
 	BeginMode3D(e.Camera, func() {
 
 		for pos, chunk := range e.world.Chunks {
-			for y := range min(ChunkHeight, int(e.Position.Y)+1) {
+			for y := range min(ChunkHeight, int(e.PositionSoft.Y)+1) {
 				worldPos := ChunkToWorld(pos, LocalPos{0, y, 0})
 				rl.DrawModel(chunk.models[y], worldPos.Raylib(), 1, rl.White)
 			}
 		}
 
-		if e.world.Player != nil && e.world.Player.Position.Y <= e.Position.Y {
+		if e.world.Player != nil && e.world.Player.Position.Y <= math.Floor(e.PositionSoft.Y) {
 			e.world.Player.Draw()
 		}
-		if e.world.Monster != nil && e.world.Monster.Position.Y <= e.Position.Y {
+		if e.world.Monster != nil && e.world.Monster.Position.Y <= math.Floor(e.PositionSoft.Y) {
 			e.world.Monster.Draw()
 		}
 
 		BeginOverlayMode(func() {
 
 			if e.Settings.DrawPhysics {
-				phys := NewPhysicsDrawer(e.Position.Y, true, true, true)
+				phys := NewPhysicsDrawer(e.PositionSoft.Y, true, true, true)
 
 				e.world.space.BBQuery(
-					cp.NewBBForCircle(e.Position.Chipmunk(), 8),
-					cp.NewShapeFilter(0, Category(e.Position.Y, true, true), Category(e.Position.Y, true, true)),
+					cp.NewBBForCircle(e.PositionSoft.Chipmunk(), 8),
+					cp.NewShapeFilter(0, Category(e.PositionSoft.Y, true, true), Category(e.PositionSoft.Y, true, true)),
 					func(shape *cp.Shape, data interface{}) {
 						cp.DrawShape(shape, &phys)
 						// body := shape.Body()
@@ -312,11 +328,11 @@ func (e *Editor) Draw() {
 				e.ToolCell.Draw3D(e)
 			}
 
-			if e.world.Player != nil {
-				point := NewPathPoint(e.world, e.Position)
-				path, _ := point.FindPath(e.world.Player.Position)
-				DrawPath(path)
-			}
+			// if e.world.Player != nil {
+			// 	point := NewPathPoint(e.world, e.Position)
+			// 	path, _ := point.FindPath(e.world.Player.Position)
+			// 	DrawPath(path)
+			// }
 		})
 
 	})
@@ -327,76 +343,101 @@ func (e *Editor) Draw() {
 		e.ToolCell.DrawHUD(e)
 	}
 
-	//! TODO Pressing one toggles play/EDIT mode. Just a play button.
-	// All exclusive modes has one key and toggles between them. Downward layout or something
-	// Remove "Cell" button. there are presets to handle that.
-
 	raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_LEFT))
 	raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_ALIGNMENT_VERTICAL, int64(raygui.TEXT_ALIGN_MIDDLE))
 	raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_PADDING, 2)
 
-	stack := NewStackLayout(300, 30, 110, 24)
+	topbar := NewCursorLayout(300, 0, 24, 24)
 
-	if raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_PLAYER_PLAY, ""), e.Tool == TOOL_PLAY) {
-		e.Tool = TOOL_PLAY
-	}
-	if raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_CUBE, ""), e.Tool == TOOL_CELL) {
-		e.Tool = TOOL_CELL
-	}
+	e.Settings.Play = raygui.Toggle(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_PLAYER_PLAY, ""), e.Settings.Play)
+	e.Settings.DrawPhysics = raygui.Toggle(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_LASER, ""), e.Settings.DrawPhysics)
+	e.Settings.Orthographic = raygui.Toggle(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_MODE_2D, ""), e.Settings.Orthographic)
 
-	e.Settings.DrawPhysics = raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_LASER, ""), e.Settings.DrawPhysics)
-	e.Settings.Orthographic = raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_MODE_2D, ""), e.Settings.Orthographic)
-
-	// if raygui.Button(stack.Right(24), raygui.IconText(raygui.ICON_PLAYER_NEXT, "")) {
+	// if raygui.Button(cursor.Right(24), raygui.IconText(raygui.ICON_PLAYER_NEXT, "")) {
 	// 	e.world.Update(time.Second / 60)
 	// }
 
-	if raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_TARGET_MOVE, ""), e.Settings.FocusMode == EditorFocusNone) {
-		e.Settings.FocusMode = EditorFocusNone
-	}
-	if raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_PLAYER, ""), e.Settings.FocusMode == EditorFocusPlayer) {
-		e.Settings.FocusMode = EditorFocusPlayer
-	}
-	if raygui.Toggle(stack.Right(24), raygui.IconText(raygui.ICON_DEMON, ""), e.Settings.FocusMode == EditorFocusMonster) {
-		e.Settings.FocusMode = EditorFocusMonster
-	}
+	topbar.Right().With(func(cursor *CursorLayout) {
+		var icon int32
 
-	if e.presetPalettePosition != v2.Zero {
-
-		contextMenu := NewStackLayout(e.presetPalettePosition.X, e.presetPalettePosition.Y, 120, 24)
-		if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_TARGET, "Teleport Player")) {
-			player := game.Earth.Player
-			if player == nil {
-				player = game.Station.Player
-			}
-
-			player.Spawn(e.world)
-			pos := e.mouseWorldPosition
-			player.Position.Y = pos.Y
-			player.body.SetPosition(pos.Chipmunk())
-			player.Update()
+		switch e.Settings.FocusMode {
+		case EditorFocusNone:
+			icon = raygui.ICON_TARGET_MOVE
+		case EditorFocusPlayer:
+			icon = raygui.ICON_PLAYER
+		case EditorFocusMonster:
+			icon = raygui.ICON_DEMON
 		}
 
-		// size := 32.
-		// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), NewStackLayout(e.presetPalettePosition.X, e.presetPalettePosition.Y, size, size), e.editorPresets.Wall)
-		// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), NewStackLayout(e.presetPalettePosition.X+size, e.presetPalettePosition.Y, size, size), e.editorPresets.Floor)
-		// RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), NewStackLayout(e.presetPalettePosition.X+size*2, e.presetPalettePosition.Y, size, size), e.editorPresets.Stair)
-	}
+		if raygui.Button(cursor.Rectangle, raygui.IconText(icon, "")) {
+			switch e.Settings.FocusMode {
+			case EditorFocusNone:
+				e.Settings.FocusMode = EditorFocusMonster
+			case EditorFocusPlayer:
+				e.Settings.FocusMode = EditorFocusNone
+			case EditorFocusMonster:
+				e.Settings.FocusMode = EditorFocusPlayer
+			}
+		}
+	})
+
+	sidebar := NewCursorLayout(0, 100, 30, 30)
+
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, "Wall"), sidebar, e.editorPresets.Wall)
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, "Floor"), sidebar, e.editorPresets.Floor)
+	RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, "Stair"), sidebar, e.editorPresets.Stair)
+
+	// if e.contextMenu != v2.Zero {
+
+	// contextMenu := NewStackLayout(e.contextMenu.X, e.contextMenu.Y, 120, 24)
+	// if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_TARGET, "Teleport Player")) {
+	// 	player := game.Earth.Player
+	// 	if player == nil {
+	// 		player = game.Station.Player
+	// 	}
+
+	// 	player.Spawn(e.world)
+	// 	pos := e.mouseWorldPosition
+	// 	player.Position.Y = pos.Y
+	// 	player.body.SetPosition(pos.Chipmunk())
+	// 	player.Update()
+	// }
+
+	// size := 32.
+	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), NewStackLayout(e.presetPalettePosition.X, e.presetPalettePosition.Y, size, size), e.editorPresets.Wall)
+	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), NewStackLayout(e.presetPalettePosition.X+size, e.presetPalettePosition.Y, size, size), e.editorPresets.Floor)
+	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), NewStackLayout(e.presetPalettePosition.X+size*2, e.presetPalettePosition.Y, size, size), e.editorPresets.Stair)
+	// }
 
 }
 
-func RenderPresetGroup(e *Editor, icon string, stack *StackLayout, presets []EditorPreset) {
+func RenderPresetGroup(e *Editor, title string, cursor *CursorLayout, presets []EditorPreset) {
 
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_CENTER))
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT_VERTICAL, int64(raygui.TEXT_ALIGN_MIDDLE))
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
 	// raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
 
-	raygui.Toggle(stack.Down(32), icon, false)
+	// i := 0
 
-	for i := range presets {
-		preset := &presets[i]
-		buttonRect := stack.Down(32)
+	tileWidth := float32(30.)
+	tileHorizontal := 2
+
+	cursor.X = 0
+	cursor.Width = tileWidth * float32(tileHorizontal)
+	// cursor.Height = 24
+
+	raygui.Toggle(cursor.Down().Rectangle, title, false)
+
+	cursor.Width = tileWidth
+	cursor.Height = tileWidth
+
+	for i, preset := range presets {
+		if i%tileHorizontal == 0 {
+			cursor.X = -tileWidth
+			cursor.Y += tileWidth
+		}
+		buttonRect := cursor.Right().Rectangle
 		if raygui.Button(buttonRect, "") {
 			for i := range presets {
 				presets[i].Active = false
@@ -413,5 +454,13 @@ func RenderPresetGroup(e *Editor, icon string, stack *StackLayout, presets []Edi
 			tileWidth,
 		)
 		rl.DrawTexturePro(globals.Textures.Atlas, sourceRect, destRect, v2.Zero.Raylib(), 0, rl.White)
+
+		// if i%tileHorizontal == 0 {
+		// 	cursor.Y += tileWidth
+		// }
 	}
+
+	// for i := range presets {
+	// 	preset := &presets[i]
+
 }
