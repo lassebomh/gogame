@@ -167,10 +167,10 @@ func (d *DynamicPhysicsObject) UpdatePhysics() {
 	}
 
 	if d.Position.Y+d.YVelocity > ground {
-		d.YVelocity -= d.world.TimeStep.Seconds() / 5
+		d.YVelocity -= 0.01
 	}
 
-	if d.Position.Y <= ground {
+	if d.Position.Y+d.YVelocity <= ground {
 		d.Position.Y = ground
 		d.YVelocity = 0
 	}
@@ -182,61 +182,6 @@ func (d *DynamicPhysicsObject) UpdatePhysics() {
 	}
 
 	d.Position.Y += d.YVelocity
-}
-
-func UpdatePhysicsY(w *World, shape *cp.Shape, pos v3.Value, yVelocity float64) (v3.Value, float64) {
-	bodyPos := shape.Body().Position()
-	pos.X = bodyPos.X
-	pos.Z = bodyPos.Y
-
-	cell, _ := w.UpsertCellChunk(pos)
-
-	groundY := math.Floor(pos.Y)
-
-	switch cell.Faces[FaceDown].Type {
-	case FaceStair:
-		x := math.Ceil(pos.X) - pos.X
-		z := pos.Z - math.Floor(pos.Z)
-
-		switch cell.Faces[FaceDown].Rotation {
-		case FaceEast:
-			groundY += x
-		case FaceNorth:
-			groundY += z
-		case FaceWest:
-			groundY += 1 - x
-		case FaceSouth:
-			groundY += 1 - z
-		}
-
-	case FaceNone:
-		groundY = 0
-	}
-
-	if pos.Y > groundY {
-		yVelocity -= w.TimeStep.Seconds() / 5
-	}
-	if pos.Y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
-		yVelocity *= 10
-	}
-
-	if pos.Y+yVelocity < groundY {
-		pos.Y = groundY
-		yVelocity = 0
-	}
-
-	pos.Y += yVelocity
-
-	nextCell, _ := w.UpsertCellChunk(pos.Add(v3.Y(0.1)))
-
-	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
-		pos.Y = math.Ceil(pos.Y)
-	}
-
-	shape.Filter.Categories = Category(pos.Y, false, true)
-	shape.Filter.Mask = Category(pos.Y, true, true)
-
-	return pos, yVelocity
 }
 
 const PhysicsTickrate = time.Second / 60

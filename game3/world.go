@@ -22,6 +22,8 @@ type World struct {
 	TimeStep               time.Duration
 	TimePhysicsAccumulator time.Duration
 
+	other *World
+
 	Type   WorldType
 	Chunks map[ChunkPos]*Chunk
 	space  *cp.Space
@@ -55,7 +57,7 @@ func (w *World) Upsert(worldType WorldType) *World {
 	}
 	w.raycastResults = make([]RaycastResult, 0)
 	w.space = cp.NewSpace()
-	w.space.SetCollisionSlop(0.01)
+	w.space.SetCollisionSlop(0.005)
 	renderWidth, renderHeight := rl.GetRenderWidth(), rl.GetRenderHeight()
 	w.renderTexture = rl.LoadRenderTexture(int32(renderWidth/4), int32(renderHeight/4))
 
@@ -76,37 +78,39 @@ func (w *World) Update(dt time.Duration) {
 	w.TimePhysicsAccumulator += dt
 
 	for w.TimePhysicsAccumulator >= PhysicsTickrate {
-		w.space.Step(PhysicsTickrate.Seconds())
 		w.TimePhysicsAccumulator -= PhysicsTickrate
-	}
-	w.raycastResults = w.raycastResults[:0]
 
-	mousePos := rl.GetMousePosition()
-	mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
+		w.space.Step(PhysicsTickrate.Seconds())
 
-	w.MouseRayOrigin = v3.FromRaylib(mouseRay.Position)
-	w.MouseRayDirection = v3.FromRaylib(mouseRay.Direction)
+		w.raycastResults = w.raycastResults[:0]
 
-	if w.Player != nil {
+		mousePos := rl.GetMousePosition()
+		mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
 
-		w.Player.Update()
+		w.MouseRayOrigin = v3.FromRaylib(mouseRay.Position)
+		w.MouseRayDirection = v3.FromRaylib(mouseRay.Direction)
 
-		cameraDistance := 30.
-		cameraDirection := v3.XYZ(0, -5, 1).Normalize()
+		if w.Player != nil {
 
-		w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
+			cameraDistance := 30.
+			cameraDirection := v3.XYZ(0, -5, 1).Normalize()
 
-		w.Camera = Camera3D{
-			Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
-			Target:     w.Camera.Target,
-			Up:         v3.Y(1),
-			Fovy:       15,
-			Projection: rl.CameraPerspective,
+			w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
+
+			w.Camera = Camera3D{
+				Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
+				Target:     w.Camera.Target,
+				Up:         v3.Y(1),
+				Fovy:       15,
+				Projection: rl.CameraPerspective,
+			}
+
+			w.Player.Update()
 		}
-	}
 
-	if w.Monster != nil {
-		w.Monster.Update()
+		if w.Monster != nil {
+			w.Monster.Update()
+		}
 	}
 }
 
@@ -141,7 +145,7 @@ func (w *World) Draw() {
 				globals.Shaders.Main.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
 			}
 
-			globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.3)
+			globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.7)
 
 			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
 			chunks := make([]*Chunk, 0, 9)

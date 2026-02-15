@@ -30,6 +30,11 @@ type Player struct {
 }
 
 func (p *Player) Update() {
+
+	if math.Mod(game.DayPrev, 1) < 8/24 && math.Mod(game.Day, 1) >= 8/24 {
+		p.Spawn(p.world.other)
+	}
+
 	force := cp.Vector{}
 
 	if rl.IsKeyDown(rl.KeyA) {
@@ -58,7 +63,7 @@ func (p *Player) Update() {
 
 	}
 
-	newVelocity := p.body.Velocity().Lerp(force, 0.1)
+	newVelocity := p.body.Velocity().Lerp(force, 0.3)
 	p.body.SetVelocity(newVelocity.X, newVelocity.Y)
 
 	p.UpdatePhysics()

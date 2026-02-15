@@ -10,8 +10,9 @@ import (
 var game *Game
 
 type Game struct {
-	Time time.Duration
-	Day  float64
+	Time    time.Duration
+	Day     float64
+	DayPrev float64
 
 	Earth   *World
 	Station *World
@@ -41,6 +42,8 @@ func LoadGame(path string) {
 
 	game.Earth.Upsert(WorldEarth)
 	game.Station.Upsert(WorldStation)
+	game.Earth.other = game.Station
+	game.Station.other = game.Earth
 
 	if game.Station.Player != nil {
 		game.Station.Player.Spawn(game.Station)
@@ -61,6 +64,8 @@ func LoadGame(path string) {
 
 func (g *Game) Update(dt time.Duration) {
 	g.Time += dt
+
+	g.DayPrev = g.Day
 	g.Day = g.Time.Seconds() / (60 * 1)
 
 	if g.Station.Player != nil {

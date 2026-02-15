@@ -199,13 +199,11 @@ func (e *Editor) Update(timeStep time.Duration) {
 	}
 
 	if e.Settings.FocusMode == EditorFocusPlayer && e.world.Player != nil {
-		// e.Position = e.world.Player.Position
-		e.PositionSoft = e.PositionSoft.Lerp(e.world.Player.Position.AddXYZ(0, 0.1, 0), 1-friction)
+		e.PositionSoft = e.PositionSoft.Lerp(e.world.Player.Position.AddXYZ(0, 0.1, 0), 0.2)
 	} else if e.Settings.FocusMode == EditorFocusMonster && e.world.Monster != nil {
-		// e.Position = e.world.Monster.Position
-		e.PositionSoft = e.PositionSoft.Lerp(e.world.Monster.Position.AddXYZ(0, 0.1, 0), 1-friction)
+		e.PositionSoft = e.PositionSoft.Lerp(e.world.Monster.Position.AddXYZ(0, 0.1, 0), 0.2)
 	} else {
-		e.PositionSoft = e.PositionSoft.Lerp(e.Position.AddXYZ(0, 0.1, 0), 1-friction)
+		e.PositionSoft = e.PositionSoft.Lerp(e.Position.AddXYZ(0, 0.1, 0), 0.2)
 	}
 
 	if e.Settings.Orthographic {
@@ -213,7 +211,7 @@ func (e *Editor) Update(timeStep time.Duration) {
 			Position:   e.PositionSoft.AddXYZ(0, e.Scale, -0.0001),
 			Target:     e.PositionSoft,
 			Up:         v3.Y(1),
-			Fovy:       e.Scale,
+			Fovy:       e.Scale * 1.4,
 			Projection: rl.CameraOrthographic,
 		}
 	} else {
@@ -312,7 +310,7 @@ func (e *Editor) Draw() {
 			rl.DrawSphere(e.PositionSoft.Raylib(), float32(e.Scale/400), color.RGBA{0, 255, 0, 255})
 
 			for cpos := range e.world.Chunks {
-				rl.DrawCubeWires(v3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, 0, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
+				rl.DrawCubeWires(v3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, e.Position.Y, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
 			}
 
 			// if e.world.Monster != nil {

@@ -36,6 +36,10 @@ type MonsterArmSegment struct {
 
 func (m *Monster) Update() {
 
+	if m.world.Player == nil {
+		return
+	}
+
 	vel := v2.FromChipmunk(m.body.Velocity().Mult(0.99))
 
 	bodyTarget, _ := m.world.GetPathTarget(m.Position, m.world.Player.Position)
@@ -89,7 +93,7 @@ func (m *Monster) Update() {
 			delta := target.Subtract(pos)
 			tipDir := delta.Normalize()
 			if !isDisabled {
-				tip.body.ApplyForceAtWorldPoint(tipDir.Scale(0.6).Chipmunk(), pos.Chipmunk())
+				tip.body.ApplyForceAtWorldPoint(tipDir.Scale(1.25).Chipmunk(), pos.Chipmunk())
 			}
 
 			for otherArmI, arm := range m.arms {
@@ -227,7 +231,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 	}
 	m.world = world
 	m.world.Monster = m
-	m.Position = v3.XYZ(1, 0, 0)
+	m.Position = v3.XYZ(-12, 2, 0)
 
 	m.Radius = 0.25
 
@@ -246,7 +250,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 12 {
+	for range 4 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -256,15 +260,16 @@ func (m *Monster) Spawn(world *World) *Monster {
 		prevBody := m.body
 		prevPosition := m.Position
 
-		for i := range 12 {
+		for i := range 16 {
 
 			segment := &MonsterArmSegment{
 				// Length: m.Radius * 1,
 				DynamicPhysicsObject: DynamicPhysicsObject{
-					world: world,
+					world:    world,
+					Position: m.Position,
 				},
-				Length: m.Radius * 0.9,
-				Width:  (m.Radius * 1.5) / (1 + float64(i)/4),
+				Length: m.Radius * 0.7,
+				Width:  (m.Radius * 1.7) / (1 + float64(i)/5),
 			}
 			arm.segments = append(arm.segments, segment)
 
