@@ -21,7 +21,9 @@ func LoadGame(path string) {
 	game = &Game{}
 
 	file, err := os.Open(path)
-	defer file.Close()
+	if err == nil {
+		defer file.Close()
+	}
 
 	if err == nil {
 		decoder := gob.NewDecoder(file)

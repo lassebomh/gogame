@@ -11,8 +11,9 @@ func Start() {
 	rl.SetConfigFlags(rl.FlagVsyncHint)
 	rl.SetTraceLogLevel(rl.LogError)
 	rl.SetTargetFPS(144)
-	rl.InitWindow(1400, 700, "raylib")
+	rl.InitWindow(1600, 750, "raylib")
 	rl.SetWindowPosition(0, 10)
+
 	defer rl.CloseWindow()
 
 	LoadGame("./save.gob")

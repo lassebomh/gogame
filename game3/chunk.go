@@ -13,18 +13,16 @@ const CHUNKS_PATH = "./chunks/"
 
 const StairBlockerWidth = 0.1
 
-var WALL_VERTS = [4][]cp.Vector{
-	[]cp.Vector{{1, 1}, {1, 0}, {1 - WallWidth, 0}, {1 - WallWidth, 1}},
-	[]cp.Vector{{1, 1}, {0, 1}, {0, 1 - WallWidth}, {1, 1 - WallWidth}},
-	[]cp.Vector{{0, 1}, {0, 0}, {WallWidth, 0}, {WallWidth, 1}},
-	[]cp.Vector{{1, 0}, {0, 0}, {0, WallWidth}, {1, WallWidth}},
-}
+var WALL_VERTS [4][]cp.Vector
 
-var STAIR_VERTS = [4][]cp.Vector{
-	[]cp.Vector{{1, 1}, {1, 0}, {1 - StairBlockerWidth, 0}, {1 - StairBlockerWidth, 1}},
-	[]cp.Vector{{1, 1}, {0, 1}, {0, 1 - StairBlockerWidth}, {1, 1 - StairBlockerWidth}},
-	[]cp.Vector{{0, 1}, {0, 0}, {StairBlockerWidth, 0}, {StairBlockerWidth, 1}},
-	[]cp.Vector{{1, 0}, {0, 0}, {0, StairBlockerWidth}, {1, StairBlockerWidth}},
+func init() {
+	W := 0.1
+	WALL_VERTS = [4][]cp.Vector{
+		{{1 + W, 1 + W}, {1 + W, -W}, {1 - W, -W}, {1 - W, 1 + W}},
+		{{1 + W, 1 + W}, {-W, 1 + W}, {-W, 1 - W}, {1 + W, 1 - W}},
+		{{-W, 1 + W}, {-W, -W}, {W, -W}, {W, 1 + W}},
+		{{1 + W, -W}, {-W, -W}, {-W, W}, {1 + W, W}},
+	}
 }
 
 const (
@@ -121,23 +119,23 @@ func (c *Chunk) ReloadBodies() {
 					}
 				}
 
-				// down := &cell.Faces[FaceDown]
-				// if down.Type == FaceStair {
-				// 	left := FaceLeft[down.Rotation]
-				// 	right := FaceRight[down.Rotation]
-				// 	for i := range 2 {
-				// 		shape := cp.NewPolyShape(c.body, 4, STAIR_VERTS[left], transform, 0)
-				// 		shape.Filter.Group = GroupStatic
-				// 		shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
-				// 		shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
-				// 		c.world.space.AddShape(shape)
-				// 		shape = cp.NewPolyShape(c.body, 4, STAIR_VERTS[right], transform, 0)
-				// 		shape.Filter.Group = GroupStatic
-				// 		shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
-				// 		shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
-				// 		c.world.space.AddShape(shape)
-				// 	}
-				// }
+				down := &cell.Faces[FaceDown]
+				if down.Type == FaceStair {
+					left := FaceLeft[down.Rotation]
+					right := FaceRight[down.Rotation]
+					for i := range 2 {
+						shape := cp.NewPolyShape(c.body, 4, WALL_VERTS[left], transform, 0)
+						shape.Filter.Group = GroupStatic
+						shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
+						shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
+						c.world.space.AddShape(shape)
+						shape = cp.NewPolyShape(c.body, 4, WALL_VERTS[right], transform, 0)
+						shape.Filter.Group = GroupStatic
+						shape.Filter.Categories = Category(worldPos.Y+float64(i), false, true)
+						shape.Filter.Mask = Category(worldPos.Y+float64(i), false, true)
+						c.world.space.AddShape(shape)
+					}
+				}
 
 			}
 		}

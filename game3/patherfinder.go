@@ -9,8 +9,6 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-var lock = 0
-
 type PathPoint struct {
 	Position v3.Value
 	Center   v3.Value
@@ -20,6 +18,9 @@ type PathPoint struct {
 }
 
 func (p *PathPoint) GetPoint(pos v3.Value) *PathPoint {
+	if pos.Y < 0 {
+		return nil
+	}
 
 	point, ok := p.points[pos]
 	if ok {
@@ -28,24 +29,6 @@ func (p *PathPoint) GetPoint(pos v3.Value) *PathPoint {
 
 	cell, ok := p.world.GetCell(pos)
 	if !ok {
-		return nil
-	}
-
-	if cell.Faces[FaceDown].Type == FaceNone && pos.Y > 0 {
-		pos = pos.SubtractXYZ(0, 1, 0)
-
-		point, ok = p.points[pos]
-		if ok {
-			return point
-		}
-
-		cell, ok = p.world.GetCell(pos)
-		if !ok {
-			return nil
-		}
-	}
-
-	if cell.Faces[FaceDown].Type == FaceNone {
 		return nil
 	}
 
@@ -62,82 +45,180 @@ func (p *PathPoint) GetPoint(pos v3.Value) *PathPoint {
 }
 
 func (p *PathPoint) PathNeighbors() []astar.Pather {
+	out := make([]astar.Pather, 0)
 
-	switch p.Cell.Faces[FaceDown].Type {
-	case FaceNone:
-		if p.Position.Y == 0 {
-			return []astar.Pather{}
-		}
-
+	if p.Cell.Faces[FaceDown].Type == FaceNone {
 		below := p.GetPoint(p.Position.Subtract(v3.Y(1)))
-		if below != nil && below.Cell.Faces[FaceDown].Type == FaceStair {
-			return below.PathNeighbors()
-		} else {
-			return []astar.Pather{}
+		if below != nil && below.Cell.Faces[FaceDown].Type != FaceNone {
+			out = append(out, below)
 		}
 
-	case FaceStair:
-		stairDir := p.Cell.Faces[FaceDown].Rotation
-		nextPos := p.Position.Add(FaceForward[stairDir]).Add(v3.Y(1))
-		prevPos := p.Position.Add(FaceForward[FaceOpposite[stairDir]])
-
-		out := make([]astar.Pather, 0, 2)
-
-		prevCell := p.GetPoint(prevPos)
-		if prevCell != nil {
-			out = append(out, prevCell)
-		}
-
-		nextCell := p.GetPoint(nextPos)
-		if nextCell != nil {
-			out = append(out, nextCell)
-		}
 		return out
 	}
 
-	neighbors := make([]astar.Pather, 0)
+	if p.Cell.Faces[FaceDown].Type == FaceStair {
+		forward := FaceForward[p.Cell.Faces[FaceDown].Rotation]
+		prev := p.GetPoint(p.Position.Subtract(forward))
+		if prev != nil && prev.Cell.Faces[FaceDown].Type != FaceNone {
+			out = append(out, prev)
+		} else {
+			prevBelow := p.GetPoint(p.Position.Subtract(forward).SubtractXYZ(0, 1, 0))
+			if prevBelow != nil && prevBelow.Cell.Faces[FaceDown].Type == FaceStair {
+				out = append(out, prevBelow)
+			}
 
-	for i := range FaceDown {
-		face := &p.Cell.Faces[i]
-
-		if face.Type == FaceSolid {
-			continue
 		}
 
-		nextPos := p.Position.Add(FaceForward[i])
-
-		next := p.GetPoint(nextPos)
-		if next == nil {
-			continue
+		nextUp := p.GetPoint(p.Position.Add(forward.Add(v3.Y(1))))
+		if nextUp != nil && nextUp.Cell.Faces[FaceDown].Type != FaceNone {
+			out = append(out, nextUp)
 		}
-		nextFaces := next.Cell.Faces
-
-		if nextFaces[FaceOpposite[i]].Type == FaceSolid {
-			continue
-		}
-
-		if nextFaces[FaceDown].Type == FaceSolid || (nextFaces[FaceDown].Type == FaceStair && nextFaces[FaceDown].Rotation == i) {
-			neighbors = append(neighbors, next)
-			continue
-		}
-
-		if p.Position.Y == 0 {
-			continue
-		}
-
-		nextBelow := p.GetPoint(nextPos.Subtract(v3.Y(1)))
-		if nextBelow == nil {
-			continue
-		}
-
-		if nextBelow.Cell.Faces[FaceDown].Type != FaceStair || nextBelow.Cell.Faces[FaceDown].Rotation != FaceOpposite[i] {
-			continue
-		}
-
-		neighbors = append(neighbors, nextBelow)
 	}
 
-	return neighbors
+	if p.Cell.Faces[FaceDown].Type == FaceSolid {
+		for i := range FaceDown {
+			face := &p.Cell.Faces[i]
+			if face.Type == FaceSolid {
+				continue
+			}
+
+			nextPos := p.Position.Add(FaceForward[i])
+			// if nextBelow.Cell.Faces[FaceDown].Type == FaceStair {
+
+			next := p.GetPoint(nextPos)
+			if next == nil {
+				continue
+			}
+
+			if next.Cell.Faces[FaceOpposite[i]].Type == FaceSolid {
+				continue
+			}
+
+			if next.Cell.Faces[FaceDown].Type != FaceNone {
+				out = append(out, next)
+			} else {
+				nextBelow := p.GetPoint(nextPos.SubtractXYZ(0, 1, 0))
+				if nextBelow != nil {
+					out = append(out, nextBelow)
+				}
+			}
+
+			// }
+
+		}
+	}
+
+	// switch p.Cell.Faces[FaceDown].Type {
+	// case FaceNone:
+	// 	if p.Position.Y == 0 {
+	// 		return []astar.Pather{}
+	// 	}
+
+	// 	below := p.GetPoint(p.Position.Subtract(v3.Y(1)))
+	// 	if below != nil && below.Cell.Faces[FaceDown].Type == FaceStair {
+	// 		return below.PathNeighbors()
+	// 	} else {
+	// 		return []astar.Pather{}
+	// 	}
+
+	// case FaceStair:
+	// 	stairDir := p.Cell.Faces[FaceDown].Rotation
+	// 	nextPos := p.Position.Add(FaceForward[stairDir]).Add(v3.Y(1))
+	// 	prevPos := p.Position.Add(FaceForward[FaceOpposite[stairDir]])
+
+	// 	out := make([]astar.Pather, 0, 2)
+
+	// 	nextCell := p.GetPoint(nextPos)
+	// 	if nextCell != nil {
+	// 		out = append(out, nextCell)
+	// 	}
+
+	// 	prevCell := p.GetPoint(prevPos)
+	// 	if prevCell == nil {
+	// 		return out
+	// 	}
+
+	// 	if prevCell.Cell.Faces[FaceDown].Type == FaceSolid {
+	// 		out = append(out, prevCell)
+	// 	} else {
+	// 		if prevCell.Cell.Faces[FaceOpposite[stairDir]].Type != FaceSolid {
+	// 			prevBelowCell := p.GetPoint(prevPos.SubtractXYZ(0, 1, 0))
+	// 			if prevBelowCell != nil {
+	// 				out = append(out, prevBelowCell)
+	// 			}
+	// 		}
+	// 	}
+
+	// 	return out
+	// }
+
+	// neighbors := make([]astar.Pather, 0)
+
+	// for i := range FaceDown {
+	// 	face := &p.Cell.Faces[i]
+
+	// 	if face.Type == FaceSolid {
+	// 		continue
+	// 	}
+
+	// 	nextPos := p.Position.Add(FaceForward[i])
+
+	// 	next := p.GetPoint(nextPos)
+	// 	if next == nil {
+	// 		continue
+	// 	}
+	// 	nextFaces := next.Cell.Faces
+
+	// 	if nextFaces[FaceOpposite[i]].Type == FaceSolid {
+	// 		continue
+	// 	}
+
+	// 	if nextFaces[FaceDown].Type == FaceSolid || (nextFaces[FaceDown].Type == FaceStair && nextFaces[FaceDown].Rotation == i) {
+	// 		neighbors = append(neighbors, next)
+	// 		continue
+	// 	}
+
+	// 	// if p.Position.Y > 0 {
+	// 	// 	nextBelowPos := p.Position.Add(FaceForward[i]).SubtractXYZ(0, 1, 0)
+
+	// 	// 	nextBelow := p.GetPoint(nextBelowPos)
+	// 	// 	if nextBelow != nil {
+	// 	// 		nextBelowFaces := nextBelow.Cell.Faces
+
+	// 	// 	}
+	// 	// }
+
+	// 	// if cell.Faces[FaceDown].Type == FaceNone && pos.Y > 0 {
+	// 	// 	pos = pos.SubtractXYZ(0, 1, 0)
+
+	// 	// 	point, ok = p.points[pos]
+	// 	// 	if ok {
+	// 	// 		return point
+	// 	// 	}
+
+	// 	// 	cell, ok = p.world.GetCell(pos)
+	// 	// 	if !ok {
+	// 	// 		return nil
+	// 	// 	}
+	// 	// }
+
+	// 	if p.Position.Y == 0 {
+	// 		continue
+	// 	}
+
+	// 	nextBelow := p.GetPoint(nextPos.Subtract(v3.Y(1)))
+	// 	if nextBelow == nil {
+	// 		continue
+	// 	}
+
+	// 	if nextBelow.Cell.Faces[FaceDown].Type != FaceStair { //|| nextBelow.Cell.Faces[FaceDown].Rotation != FaceOpposite[i] {
+	// 		continue
+	// 	}
+
+	// 	neighbors = append(neighbors, nextBelow)
+	// }
+
+	return out
 
 }
 
@@ -212,7 +293,7 @@ func (p *PathPoint) FindPath(endPos v3.Value) ([]*PathPoint, float64) {
 }
 
 func (p *PathPoint) Draw() {
-	rl.DrawSphere(p.Center.Raylib(), 0.05, color.RGBA{255, 255, 0, 30})
+	rl.DrawSphere(p.Center.Raylib(), 0.05, color.RGBA{255, 255, 0, 80})
 }
 
 func DrawPath(pathPoints []*PathPoint) {

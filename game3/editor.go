@@ -277,7 +277,7 @@ func (e *Editor) Draw() {
 		if e.world.Player != nil && e.world.Player.Position.Y <= math.Floor(e.PositionSoft.Y) {
 			e.world.Player.Draw()
 		}
-		if e.world.Monster != nil && e.world.Monster.Position.Y <= math.Floor(e.PositionSoft.Y) {
+		if e.world.Monster != nil {
 			e.world.Monster.Draw()
 		}
 
@@ -291,13 +291,6 @@ func (e *Editor) Draw() {
 					cp.NewShapeFilter(0, Category(e.PositionSoft.Y, true, true), Category(e.PositionSoft.Y, true, true)),
 					func(shape *cp.Shape, data interface{}) {
 						cp.DrawShape(shape, &phys)
-						// body := shape.Body()
-						// position := body.Position()
-						// velocity := body.Velocity()
-						// diff := v3.XYZ(velocity.X, 0, velocity.Y).Scale(0.1)
-						// from := v3.XYZ(position.X, e.Position.Y, position.Y)
-						// to := from.Add(diff)
-						// rl.DrawLine3D(from.Raylib(), to.Raylib(), rl.Yellow)
 					},
 					nil,
 				)
@@ -318,24 +311,33 @@ func (e *Editor) Draw() {
 			rl.DrawCubeWiresV(e.mouseCellPos.AddXYZ(0.5, 0, 0.5).Raylib(), v3.XYZ(1, 0, 1).Raylib(), color.RGBA{255, 255, 255, 255})
 			rl.DrawSphere(e.PositionSoft.Raylib(), float32(e.Scale/400), color.RGBA{0, 255, 0, 255})
 
-			for cpos, _ := range e.world.Chunks {
-
+			for cpos := range e.world.Chunks {
 				rl.DrawCubeWires(v3.XYZ(float64(cpos.X)*ChunkWidth+ChunkWidth*0.5, 0, float64(cpos.Z)*ChunkWidth+ChunkWidth*0.5).Raylib(), ChunkWidth, 0, ChunkWidth, color.RGBA{255, 255, 255, 10})
 			}
+
+			// if e.world.Monster != nil {
+			// 	for _, arm := range e.world.Monster.arms {
+			// 		DrawPath(arm.path)
+			// 	}
+			// }
+
+			// pathPoint := NewPathPoint(e.world, e.PositionSoft)
+			// if pathPoint != nil && e.world.Player != nil {
+			// 	path, _ := pathPoint.FindPath(e.world.Player.Position)
+			// 	DrawPath(path)
+
+			// 	for _, p := range pathPoint.GetNeighborPathPoints() {
+			// 		p.Draw()
+			// 	}
+			// }
 
 			switch e.Tool {
 			case TOOL_CELL:
 				e.ToolCell.Draw3D(e)
 			}
-
-			// if e.world.Player != nil {
-			// 	point := NewPathPoint(e.world, e.Position)
-			// 	path, _ := point.FindPath(e.world.Player.Position)
-			// 	DrawPath(path)
-			// }
 		})
-
 	})
+
 	globals.Shaders.Main.FullBright.Set(0)
 
 	switch e.Tool {
@@ -353,9 +355,9 @@ func (e *Editor) Draw() {
 	e.Settings.DrawPhysics = raygui.Toggle(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_LASER, ""), e.Settings.DrawPhysics)
 	e.Settings.Orthographic = raygui.Toggle(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_MODE_2D, ""), e.Settings.Orthographic)
 
-	// if raygui.Button(cursor.Right(24), raygui.IconText(raygui.ICON_PLAYER_NEXT, "")) {
-	// 	e.world.Update(time.Second / 60)
-	// }
+	if raygui.Button(topbar.Right().Rectangle, raygui.IconText(raygui.ICON_PLAYER_NEXT, "")) {
+		e.world.Update(time.Second / 60)
+	}
 
 	topbar.Right().With(func(cursor *CursorLayout) {
 		var icon int32
@@ -387,28 +389,27 @@ func (e *Editor) Draw() {
 	RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, "Floor"), sidebar, e.editorPresets.Floor)
 	RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, "Stair"), sidebar, e.editorPresets.Stair)
 
-	// if e.contextMenu != v2.Zero {
+	contextMenu := NewStackLayout(0, 20, 120, 24)
 
-	// contextMenu := NewStackLayout(e.contextMenu.X, e.contextMenu.Y, 120, 24)
-	// if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_TARGET, "Teleport Player")) {
-	// 	player := game.Earth.Player
-	// 	if player == nil {
-	// 		player = game.Station.Player
-	// 	}
+	if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_TARGET, "Teleport Player")) {
+		player := game.Earth.Player
+		if player == nil {
+			player = game.Station.Player
+		}
 
-	// 	player.Spawn(e.world)
-	// 	pos := e.mouseWorldPosition
-	// 	player.Position.Y = pos.Y
-	// 	player.body.SetPosition(pos.Chipmunk())
-	// 	player.Update()
-	// }
+		player.Spawn(e.world)
+		pos := e.Position
+		player.Position.Y = pos.Y
+		player.body.SetPosition(pos.Chipmunk())
+		player.Update()
+	}
 
-	// size := 32.
-	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_FRONT, ""), NewStackLayout(e.presetPalettePosition.X, e.presetPalettePosition.Y, size, size), e.editorPresets.Wall)
-	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_CUBE_FACE_BOTTOM, ""), NewStackLayout(e.presetPalettePosition.X+size, e.presetPalettePosition.Y, size, size), e.editorPresets.Floor)
-	// RenderPresetGroup(e, raygui.IconText(raygui.ICON_VERTICAL_BARS, ""), NewStackLayout(e.presetPalettePosition.X+size*2, e.presetPalettePosition.Y, size, size), e.editorPresets.Stair)
-	// }
-
+	if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_ARROW_UP, "Up")) {
+		e.Position.Y++
+	}
+	if raygui.Button(contextMenu.Down(24), raygui.IconText(raygui.ICON_ARROW_DOWN, "Down")) {
+		e.Position.Y--
+	}
 }
 
 func RenderPresetGroup(e *Editor, title string, cursor *CursorLayout, presets []EditorPreset) {
@@ -416,17 +417,11 @@ func RenderPresetGroup(e *Editor, title string, cursor *CursorLayout, presets []
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT, int64(raygui.TEXT_ALIGN_CENTER))
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_ALIGNMENT_VERTICAL, int64(raygui.TEXT_ALIGN_MIDDLE))
 	raygui.SetStyle(raygui.TOGGLE, raygui.TEXT_PADDING, 4)
-	// raygui.SetStyle(raygui.DEFAULT, raygui.TEXT_SIZE, 10)
-
-	// i := 0
-
 	tileWidth := float32(30.)
 	tileHorizontal := 2
 
 	cursor.X = 0
 	cursor.Width = tileWidth * float32(tileHorizontal)
-	// cursor.Height = 24
-
 	raygui.Toggle(cursor.Down().Rectangle, title, false)
 
 	cursor.Width = tileWidth
@@ -454,13 +449,5 @@ func RenderPresetGroup(e *Editor, title string, cursor *CursorLayout, presets []
 			tileWidth,
 		)
 		rl.DrawTexturePro(globals.Textures.Atlas, sourceRect, destRect, v2.Zero.Raylib(), 0, rl.White)
-
-		// if i%tileHorizontal == 0 {
-		// 	cursor.Y += tileWidth
-		// }
 	}
-
-	// for i := range presets {
-	// 	preset := &presets[i]
-
 }

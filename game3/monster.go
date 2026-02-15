@@ -227,12 +227,12 @@ func (m *Monster) Spawn(world *World) *Monster {
 	}
 	m.world = world
 	m.world.Monster = m
-	m.Position = v3.XYZ(12, 0, -3)
+	m.Position = v3.XYZ(1, 0, 0)
 
 	m.Radius = 0.25
 
-	mass := m.Radius * m.Radius / 1.5
-	body := m.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, m.Radius, cp.Vector{2, 2})))
+	mass := m.Radius * m.Radius / 2
+	body := m.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, m.Radius, cp.Vector{X: 2, Y: 2})))
 
 	body.SetPosition(m.Position.Chipmunk())
 
@@ -246,7 +246,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.arms = make([]*MonsterArm, 0)
 
-	for range 5 {
+	for range 12 {
 
 		arm := &MonsterArm{
 			segments: make([]*MonsterArmSegment, 0),
@@ -256,19 +256,19 @@ func (m *Monster) Spawn(world *World) *Monster {
 		prevBody := m.body
 		prevPosition := m.Position
 
-		for i := range 16 {
+		for i := range 12 {
 
 			segment := &MonsterArmSegment{
 				// Length: m.Radius * 1,
 				DynamicPhysicsObject: DynamicPhysicsObject{
 					world: world,
 				},
-				Length: m.Radius * 0.7,
-				Width:  (m.Radius * 1.5) / (1 + float64(i)/6),
+				Length: m.Radius * 0.9,
+				Width:  (m.Radius * 1.5) / (1 + float64(i)/4),
 			}
 			arm.segments = append(arm.segments, segment)
 
-			mass := segment.Length * segment.Width * 0.5
+			mass := segment.Length * segment.Width * 0.4
 
 			segment.body = m.world.space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
 			position := prevPosition.Add(v3.X(segment.Length))

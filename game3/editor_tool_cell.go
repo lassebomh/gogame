@@ -22,7 +22,7 @@ type ToolCell struct {
 
 func (t *ToolCell) Update(e *Editor) {
 
-	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+	if rl.IsKeyDown(rl.KeySpace) {
 		if t.pastingCells == nil {
 			t.pastingCells = map[v3.Value]bool{}
 		}
@@ -38,9 +38,9 @@ func (t *ToolCell) Update(e *Editor) {
 
 	t.Delete = rl.IsKeyDown(rl.KeyX)
 
-	if rl.IsMouseButtonReleased(rl.MouseButtonRight) {
+	if rl.IsKeyReleased(rl.KeySpace) {
 		chunks := make(map[*Chunk]bool, 0)
-		for pos, _ := range t.pastingCells {
+		for pos := range t.pastingCells {
 			cell, chunk := e.world.UpsertCellChunk(pos)
 
 			face := &cell.Faces[t.FaceDirection]
@@ -62,7 +62,7 @@ func (t *ToolCell) Update(e *Editor) {
 		t.pastingCells = nil
 	}
 
-	if !rl.IsMouseButtonDown(rl.MouseButtonRight) {
+	if !rl.IsKeyDown(rl.KeySpace) {
 		if t.FaceDirection != FaceDown {
 			t.FaceDirection = e.mouseCellDirection
 		}

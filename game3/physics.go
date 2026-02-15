@@ -132,60 +132,56 @@ type DynamicPhysicsObject struct {
 	shape     *cp.Shape
 	Position  v3.Value
 	YVelocity float64
+	stairLock bool
 	// ADD PREVIOUS POSITION
 }
 
 func (d *DynamicPhysicsObject) UpdatePhysics() {
 	bodyPos := d.body.Position()
 	d.Position.X = bodyPos.X
+	d.Position.Y = max(d.Position.Y, 0)
 	d.Position.Z = bodyPos.Y
+	defer func() {
+		d.shape.Filter.Categories = Category(d.Position.Y, false, true)
+		d.shape.Filter.Mask = Category(d.Position.Y, true, true)
+	}()
 
-	cell, _ := d.world.UpsertCellChunk(d.Position)
+	cell, ok := d.world.GetCell(d.Position)
 
-	groundY := math.Floor(d.Position.Y)
-
-	switch cell.Faces[FaceDown].Type {
-	case FaceStair:
-		x := math.Ceil(d.Position.X) - d.Position.X
-		z := d.Position.Z - math.Floor(d.Position.Z)
-
-		switch cell.Faces[FaceDown].Rotation {
-		case FaceEast:
-			groundY += x
-		case FaceNorth:
-			groundY += z
-		case FaceWest:
-			groundY += 1 - x
-		case FaceSouth:
-			groundY += 1 - z
-		}
-
-	case FaceNone:
-		groundY = 0
+	if !ok {
+		return
 	}
 
-	if d.Position.Y > groundY {
+	ground := math.Floor(d.Position.Y)
+
+	if cell.Faces[FaceDown].Type == FaceNone {
+		ground = 0
+	}
+
+	if cell.Faces[FaceDown].Type == FaceStair {
+		d.stairLock = true
+		stairDir := FaceForward[cell.Faces[FaceDown].Rotation]
+		stairStartPos := d.Position.Map(math.Floor).AddXYZ(0.5, 0, 0.5).Subtract(stairDir.Scale(0.5))
+		diff := d.Position.Subtract(stairStartPos)
+		ground += diff.Multiply(stairDir).Sum()
+	}
+
+	if d.Position.Y+d.YVelocity > ground {
 		d.YVelocity -= d.world.TimeStep.Seconds() / 5
 	}
-	if d.Position.Y-0.2 < groundY && cell.Faces[FaceDown].Type == FaceStair {
-		d.YVelocity *= 10
-	}
 
-	if d.Position.Y+d.YVelocity < groundY {
-		d.Position.Y = groundY
+	if d.Position.Y <= ground {
+		d.Position.Y = ground
 		d.YVelocity = 0
 	}
 
-	d.Position.Y += d.YVelocity
-
-	nextCell, _ := d.world.UpsertCellChunk(d.Position.Add(v3.Y(0.1)))
-
-	if nextCell != cell && (nextCell.Faces[FaceDown].Type == FaceSolid || nextCell.Faces[FaceDown].Type == FaceStair) {
-		d.Position.Y = math.Ceil(d.Position.Y)
+	if d.stairLock && cell.Faces[FaceDown].Type != FaceStair {
+		d.stairLock = false
+		d.YVelocity = 0
+		d.Position.Y = math.Round(d.Position.Y)
 	}
 
-	d.shape.Filter.Categories = Category(d.Position.Y, false, true)
-	d.shape.Filter.Mask = Category(d.Position.Y, true, true)
+	d.Position.Y += d.YVelocity
 }
 
 func UpdatePhysicsY(w *World, shape *cp.Shape, pos v3.Value, yVelocity float64) (v3.Value, float64) {

@@ -120,7 +120,7 @@ func (w *World) Draw() {
 		if w.Type == WorldStation {
 			BeginShaderMode(globals.Shaders.Planet, func() {
 				globals.Shaders.Planet.Time.Set(game.Day)
-				globals.Shaders.Planet.Fov.Set(30)
+				globals.Shaders.Planet.Fov.Set(20) //. + math.Cos(game.Day*math.Pi*2)*25)
 				globals.Shaders.Planet.Channel0.Set(globals.Textures.Organic)
 				globals.Shaders.Planet.Channel1.Set(globals.Textures.PlanetElevation)
 				globals.Shaders.Planet.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
@@ -197,6 +197,14 @@ func (w *World) Draw() {
 			}
 
 		})
+
+		t := game.Day * 24 * float64(time.Hour)
+		t /= (10 * float64(time.Minute))
+		t = math.Floor(t)
+		t *= (10 * float64(time.Minute))
+
+		clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(t))).Format("15:04")
+		rl.DrawText(clock, 12, 12, 10, rl.Green)
 	})
 
 	rl.DrawTexturePro(
@@ -319,7 +327,15 @@ func (w *World) GetPathTarget(from v3.Value, to v3.Value) (v3.Value, float64) {
 	}
 
 	i := -1
-	low, high := 0, len(path)-2
+	low, high := 0, 0
+
+	for i := range len(path) - 2 {
+		point := path[i]
+		if point.Cell.Faces[FaceDown].Type == FaceStair {
+			break
+		}
+		high = i
+	}
 
 	for low <= high {
 		mid := low + (high-low)/2

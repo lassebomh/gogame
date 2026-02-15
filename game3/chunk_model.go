@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	WallWidth  = 0.25
+	WallWidth  = 0.2
 	FloorWidth = 0.1
 )
 

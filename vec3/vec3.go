@@ -114,14 +114,8 @@ func FloatEquals(x, y float64) bool {
 	return (math.Abs(float64(x-y)) <= 0.000001*math.Max(1.0, math.Max(math.Abs(float64(x)), math.Abs(float64(y)))))
 }
 
-// Vector3Zero - Vector with components value 0.0
-func Vector3Zero() Value {
-	return XYZ(0.0, 0.0, 0.0)
-}
-
-// Vector3One - Vector with components value 1.0
-func Vector3One() Value {
-	return XYZ(1.0, 1.0, 1.0)
+func (v Value) Sum() float64 {
+	return v.X + v.Y + v.Z
 }
 
 // Vector3Add - Add two vectors
