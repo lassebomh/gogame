@@ -211,7 +211,7 @@ func (e *Editor) Update(timeStep time.Duration) {
 			Position:   e.PositionSoft.AddXYZ(0, e.Scale, -0.0001),
 			Target:     e.PositionSoft,
 			Up:         v3.Y(1),
-			Fovy:       e.Scale * 1.4,
+			Fovy:       e.Scale * 1.41421356,
 			Projection: rl.CameraOrthographic,
 		}
 	} else {
