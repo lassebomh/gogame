@@ -318,12 +318,10 @@ func (e *Editor) Draw() {
 			// 		DrawPath(arm.path)
 			// 	}
 			// }
-
 			// pathPoint := NewPathPoint(e.world, e.PositionSoft)
 			// if pathPoint != nil && e.world.Player != nil {
 			// 	path, _ := pathPoint.FindPath(e.world.Player.Position)
 			// 	DrawPath(path)
-
 			// 	for _, p := range pathPoint.GetNeighborPathPoints() {
 			// 		p.Draw()
 			// 	}

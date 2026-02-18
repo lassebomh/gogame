@@ -63,7 +63,6 @@ func (p *Player) Update() {
 		force = force.Mult(5)
 	} else {
 		force = force.Mult(3)
-
 	}
 
 	newVelocity := p.body.Velocity().Lerp(force, 0.3)
