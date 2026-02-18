@@ -17,10 +17,6 @@ const VISIBILITY_DISTANCE = 10
 type Player struct {
 	DynamicPhysicsObject
 
-	// Position v3.Value
-	// YVelocity float64
-	// body      *cp.Body
-	// shape     *cp.Shape
 	Radius float64
 
 	visibilityVerts [VISIBILITY_VERTS]v3.Value
@@ -31,7 +27,14 @@ type Player struct {
 
 func (p *Player) Update() {
 
-	if math.Mod(game.DayPrev, 1) < 8/24 && math.Mod(game.Day, 1) >= 8/24 {
+	hour := math.Mod(game.Hour, 24.)
+	hourPrev := math.Mod(game.HourPrev, 24.)
+
+	clock8 := hourPrev < 8. && hour >= 8.
+	clock20 := hourPrev < 20. && hour >= 20.
+	onTeleporter := math.Abs(p.Position.X) <= 2. && math.Abs(p.Position.Z) <= 2.
+
+	if (clock8 || clock20) && onTeleporter {
 		p.Spawn(p.world.other)
 	}
 

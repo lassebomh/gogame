@@ -64,15 +64,23 @@ var FaceModels = map[string]FaceModelHandler{
 	"face_model_wall_station":      NewFaceModel(7, FaceSolid, 6, 2, FaceModelDefaultRender),
 	"face_model_floor_station":     NewFaceModel(8, FaceSolid, 6, 4, FaceModelDefaultRender),
 	"face_model_floor_sidewalk": NewFaceModel(2, FaceSolid, 8, 6, func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
-		upCell, _ := c.world.GetCell(worldPos.Add(v3.Z(1)))
-		downCell, _ := c.world.GetCell(worldPos.Add(v3.Z(-1)))
-		leftCell, _ := c.world.GetCell(worldPos.Add(v3.X(1)))
-		rightCell, _ := c.world.GetCell(worldPos.Add(v3.X(-1)))
+		up := FaceModelType(0)
+		down := FaceModelType(0)
+		left := FaceModelType(0)
+		right := FaceModelType(0)
 
-		up := upCell.Faces[FaceDown].ModelType
-		down := downCell.Faces[FaceDown].ModelType
-		left := leftCell.Faces[FaceDown].ModelType
-		right := rightCell.Faces[FaceDown].ModelType
+		if upCell, ok := c.world.GetCell(worldPos.Add(v3.Z(1))); ok {
+			up = upCell.Faces[FaceDown].ModelType
+		}
+		if downCell, ok := c.world.GetCell(worldPos.Add(v3.Z(-1))); ok {
+			down = downCell.Faces[FaceDown].ModelType
+		}
+		if leftCell, ok := c.world.GetCell(worldPos.Add(v3.X(1))); ok {
+			left = leftCell.Faces[FaceDown].ModelType
+		}
+		if rightCell, ok := c.world.GetCell(worldPos.Add(v3.X(-1))); ok {
+			right = rightCell.Faces[FaceDown].ModelType
+		}
 
 		tileX := faceModel.TileX
 		tileY := faceModel.TileY

@@ -10,9 +10,12 @@ import (
 var game *Game
 
 type Game struct {
-	Time    time.Duration
-	Day     float64
-	DayPrev float64
+	Time     time.Duration
+	Hour     float64
+	HourPrev float64
+
+	TimeStep               time.Duration
+	TimePhysicsAccumulator time.Duration
 
 	Earth   *World
 	Station *World
@@ -63,16 +66,24 @@ func LoadGame(path string) {
 }
 
 func (g *Game) Update(dt time.Duration) {
-	g.Time += dt
 
-	g.DayPrev = g.Day
-	g.Day = g.Time.Seconds() / (60 * 1)
+	g.TimeStep = dt
+	g.TimePhysicsAccumulator += dt
 
-	if g.Station.Player != nil {
-		g.Station.Update(dt)
-	} else {
-		g.Earth.Update(dt)
+	for g.TimePhysicsAccumulator >= PhysicsTickrate {
+		g.TimePhysicsAccumulator -= PhysicsTickrate
+
+		g.Time += PhysicsTickrate
+		g.HourPrev = g.Hour
+		g.Hour = g.Time.Seconds() / (60. / 30)
+
+		if g.Station.Player != nil {
+			g.Station.Update(PhysicsTickrate)
+		} else {
+			g.Earth.Update(PhysicsTickrate)
+		}
 	}
+
 }
 
 func (g *Game) Draw() {

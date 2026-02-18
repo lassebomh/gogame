@@ -19,9 +19,6 @@ const (
 )
 
 type World struct {
-	TimeStep               time.Duration
-	TimePhysicsAccumulator time.Duration
-
 	other *World
 
 	Type   WorldType
@@ -74,43 +71,37 @@ func (w *World) Upsert(worldType WorldType) *World {
 }
 
 func (w *World) Update(dt time.Duration) {
-	w.TimeStep = dt
-	w.TimePhysicsAccumulator += dt
 
-	for w.TimePhysicsAccumulator >= PhysicsTickrate {
-		w.TimePhysicsAccumulator -= PhysicsTickrate
+	w.space.Step(PhysicsTickrate.Seconds())
 
-		w.space.Step(PhysicsTickrate.Seconds())
+	w.raycastResults = w.raycastResults[:0]
 
-		w.raycastResults = w.raycastResults[:0]
+	mousePos := rl.GetMousePosition()
+	mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
 
-		mousePos := rl.GetMousePosition()
-		mouseRay := rl.GetScreenToWorldRay(mousePos, w.Camera.Raylib())
+	w.MouseRayOrigin = v3.FromRaylib(mouseRay.Position)
+	w.MouseRayDirection = v3.FromRaylib(mouseRay.Direction)
 
-		w.MouseRayOrigin = v3.FromRaylib(mouseRay.Position)
-		w.MouseRayDirection = v3.FromRaylib(mouseRay.Direction)
+	if w.Player != nil {
 
-		if w.Player != nil {
+		cameraDistance := 30.
+		cameraDirection := v3.XYZ(0, -5, 1).Normalize()
 
-			cameraDistance := 30.
-			cameraDirection := v3.XYZ(0, -5, 1).Normalize()
+		w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, 0.1)
 
-			w.Camera.Target = w.Camera.Target.Lerp(w.Player.Position, w.TimeStep.Seconds()*10)
-
-			w.Camera = Camera3D{
-				Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
-				Target:     w.Camera.Target,
-				Up:         v3.Y(1),
-				Fovy:       15,
-				Projection: rl.CameraPerspective,
-			}
-
-			w.Player.Update()
+		w.Camera = Camera3D{
+			Position:   w.Camera.Target.Subtract(cameraDirection.Scale(cameraDistance)),
+			Target:     w.Camera.Target,
+			Up:         v3.Y(1),
+			Fovy:       15,
+			Projection: rl.CameraPerspective,
 		}
 
-		if w.Monster != nil {
-			w.Monster.Update()
-		}
+		w.Player.Update()
+	}
+
+	if w.Monster != nil {
+		w.Monster.Update()
 	}
 }
 
@@ -123,7 +114,7 @@ func (w *World) Draw() {
 
 		if w.Type == WorldStation {
 			BeginShaderMode(globals.Shaders.Planet, func() {
-				globals.Shaders.Planet.Time.Set(game.Day)
+				globals.Shaders.Planet.Time.Set(game.Hour / 24)
 				globals.Shaders.Planet.Fov.Set(20) //. + math.Cos(game.Day*math.Pi*2)*25)
 				globals.Shaders.Planet.Channel0.Set(globals.Textures.Organic)
 				globals.Shaders.Planet.Channel1.Set(globals.Textures.PlanetElevation)
@@ -192,17 +183,11 @@ func (w *World) Draw() {
 			}
 			if w.Monster != nil {
 				w.Monster.Draw()
-
-				// BeginOverlayMode(func() {
-				// 	for _, arm := range w.Monster.arms {
-				// 		DrawPath(arm.path)
-				// 	}
-				// })
 			}
 
 		})
 
-		t := game.Day * 24 * float64(time.Hour)
+		t := game.Hour * float64(time.Hour)
 		t /= (10 * float64(time.Minute))
 		t = math.Floor(t)
 		t *= (10 * float64(time.Minute))
