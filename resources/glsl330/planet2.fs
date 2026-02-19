@@ -12,7 +12,6 @@ uniform float iTime;
 uniform float iFov;
 uniform vec2 iResolution;
 uniform sampler2D iChannel0;
-uniform sampler2D iChannel1;
 
 out vec4 finalColor;
 in vec2 fragTexCoord;
@@ -208,9 +207,9 @@ vec3 planet_color(vec3 p, out float height, out float landMask, out float mounta
     uv.y = latitude / PI;               
 
     // 1. ELEVATION DATA
-    float rawElevation = texture(iChannel1, uv).r;
+    float rawElevation = texture(iChannel0, uv).r;
     // Layer organic noise to break up the "perfect" map edges
-    float noise = texture(iChannel0, uv * 4.0).r * 0.1;
+    float noise = texture(iChannel0, uv * 4.0).g * 0.1;
     float altitude = rawElevation + noise;
 
     // 2. BIOME COLORS (Earth Palette)
@@ -238,7 +237,7 @@ vec3 planet_color(vec3 p, out float height, out float landMask, out float mounta
     vec3 finalColor = mix(col, landCol, landWeight);
 
     // 4. CLOUDS (Optional aesthetic layer)
-    float clouds = smoothstep(0.6, 1.0, texture(iChannel0, uv + vec2(-iTime*0.5, 0)).r);
+    float clouds = smoothstep(0.6, 1.0, texture(iChannel0, uv + vec2(-iTime*0.5, 0)).g);
     finalColor = mix(finalColor, vec3(0.9), clouds * 0.6);
 
     // 5. OUTPUTS

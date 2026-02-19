@@ -24,12 +24,10 @@ type MainShader struct {
 
 	ShadowMap UniformTexture `glsl:"shadowMap"`
 
-	PlayerPosition UniformVec3  `glsl:"playerPosition"`
-	Visibility     UniformFloat `glsl:"visibility"`
-
-	HideOutsideView UniformFloat `glsl:"hideOutsideView"`
+	PlayerPosition  UniformVec3  `glsl:"playerPosition"`
 	FullBright      UniformInt   `glsl:"fullBright"`
-	// Ambient          UniformVec4              `glsl:"ambient"`
+	Visibility      UniformFloat `glsl:"visibility"`
+	HideOutsideView UniformFloat `glsl:"hideOutsideView"`
 
 	LightEnabled     [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].enabled"`
 	LightType        [MAX_LIGHTS]UniformInt   `glsl:"lights[%d].type"`
@@ -95,7 +93,6 @@ type PlanetShader struct {
 	shader rl.Shader
 
 	Channel0   UniformTexture `glsl:"iChannel0"`
-	Channel1   UniformTexture `glsl:"iChannel1"`
 	Time       UniformFloat   `glsl:"iTime"`
 	Fov        UniformFloat   `glsl:"iFov"`
 	Resolution UniformVec2    `glsl:"iResolution"`

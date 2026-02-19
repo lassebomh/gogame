@@ -5,6 +5,7 @@ import (
 	. "game/model"
 	v3 "game/vec3"
 	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -51,19 +52,24 @@ var (
 	f8 = FaceModelType(8)
 )
 
-func FaceModelDefaultRender(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
+func FaceModelRenderDefault(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
 	edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rotation)
 }
 
+func FaceModelRenderRandomRotation(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
+	rng := rand.New(rand.NewSource(int64(worldPos.X) ^ int64(worldPos.Z)))
+	edit.AddMesh(mesh, faceModel.TileX, faceModel.TileY, rng.Int()&3)
+}
+
 var FaceModels = map[string]FaceModelHandler{
-	"face_model_debug":             NewFaceModel(0, FaceSolid, 6, 1, FaceModelDefaultRender),
-	"face_model_wall_brick":        NewFaceModel(1, FaceSolid, 2, 4, FaceModelDefaultRender),
-	"face_model_stair_metal":       NewFaceModel(5, FaceStair, 4, 5, FaceModelDefaultRender),
-	"face_model_wall_station":      NewFaceModel(7, FaceSolid, 6, 2, FaceModelDefaultRender),
-	"face_model_floor_road":        NewFaceModel(3, FaceSolid, 6, 6, FaceModelDefaultRender),
-	"face_model_floor_light_tiles": NewFaceModel(4, FaceSolid, 3, 5, FaceModelDefaultRender),
-	"face_model_floor_station":     NewFaceModel(8, FaceSolid, 6, 4, FaceModelDefaultRender),
-	"face_model_floor_teleporter":  NewFaceModel(9, FaceSolid, 6, 5, FaceModelDefaultRender),
+	"face_model_debug":             NewFaceModel(0, FaceSolid, 6, 1, FaceModelRenderDefault),
+	"face_model_wall_brick":        NewFaceModel(1, FaceSolid, 2, 4, FaceModelRenderDefault),
+	"face_model_stair_metal":       NewFaceModel(5, FaceStair, 4, 5, FaceModelRenderDefault),
+	"face_model_wall_station":      NewFaceModel(7, FaceSolid, 6, 2, FaceModelRenderDefault),
+	"face_model_floor_road":        NewFaceModel(3, FaceSolid, 6, 6, FaceModelRenderRandomRotation),
+	"face_model_floor_light_tiles": NewFaceModel(4, FaceSolid, 3, 5, FaceModelRenderDefault),
+	"face_model_floor_station":     NewFaceModel(8, FaceSolid, 6, 4, FaceModelRenderDefault),
+	"face_model_floor_teleporter":  NewFaceModel(9, FaceSolid, 6, 5, FaceModelRenderDefault),
 	"face_model_floor_sidewalk": NewFaceModel(2, FaceSolid, 8, 6, func(c *Chunk, worldPos v3.Value, rotation int, translate v3.Matrix, faceModel FaceModelHandler, edit *Model, mesh Mesh) {
 		up := FaceModelType(0)
 		down := FaceModelType(0)

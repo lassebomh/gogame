@@ -116,8 +116,7 @@ func (w *World) Draw() {
 			BeginShaderMode(globals.Shaders.Planet, func() {
 				globals.Shaders.Planet.Time.Set(game.Hour / 24)
 				globals.Shaders.Planet.Fov.Set(20) //. + math.Cos(game.Day*math.Pi*2)*25)
-				globals.Shaders.Planet.Channel0.Set(globals.Textures.Organic)
-				globals.Shaders.Planet.Channel1.Set(globals.Textures.PlanetElevation)
+				globals.Shaders.Planet.Channel0.Set(globals.Textures.PlanetElevation)
 				globals.Shaders.Planet.Resolution.Set(float64(w.renderTexture.Texture.Width), float64(w.renderTexture.Texture.Height))
 
 				rl.DrawRectangle(0, 0, w.renderTexture.Texture.Width, w.renderTexture.Texture.Height, rl.White)
