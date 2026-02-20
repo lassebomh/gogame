@@ -151,7 +151,7 @@ void main()
   float viewSample = 0;
   for (float x = -2; x <= 2; x++) {
     for (float y = -2; y <= 2; y++) {
-      vec2 uv2 = ((fragPosition.xyz - playerPosition).xz + vec2(x, y)/25) / (20) + 0.5;
+      vec2 uv2 = ((fragPosition.xyz - playerPosition).xz + vec2(x, y)/15) / (20) + 0.5;
       uv2.x *= -1;
       viewSample += texture(shadowMap, uv2).g;
     }
@@ -226,8 +226,6 @@ void main()
       float theta = dot(light, rayDir); 
       float epsilon = lights[i].cutOff - lights[i].outerCutOff;
       float intensity = clamp((theta - lights[i].outerCutOff) / epsilon, 0.0, 1.0);
-      
-      
 
       float NdotL = max(dot(normal, light), 0.0);
       lightDot += (lights[i].color.rgb * NdotL * intensity * lights[i].strength) * (i == 0 ? inView : 1);
