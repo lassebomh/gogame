@@ -3,7 +3,6 @@ package game3
 import (
 	v2 "game/vec2"
 	v3 "game/vec3"
-	"image/color"
 	"math"
 	"time"
 
@@ -70,6 +69,17 @@ func (w *World) Upsert(worldType WorldType) *World {
 	return w
 }
 
+var NIGHT = v3.XYZ(-115, 0.3, .1)
+var DAWN = v3.XYZ(5, 0.5, 1)
+var DAY = v3.XYZ(55, 0.1, 1)
+var HOUR_MORNING float64 = 9
+var HOUR_NIGHT float64 = 21
+var HOURS_TRANSITION float64 = 1
+
+func c(x float64) float64 {
+	return (1 + math.Tanh(x)) / 2
+}
+
 func (w *World) Update(dt time.Duration) {
 
 	w.space.Step(PhysicsTickrate.Seconds())
@@ -130,12 +140,20 @@ func (w *World) Draw() {
 
 				globals.Shaders.Main.ShadowMap.Set(w.Player.viewTexture.Texture)
 				globals.Shaders.Main.PlayerPosition.SetVec3(w.Player.Position)
-				globals.Shaders.Main.LightSpot(w.Player.Position.Add(v3.Y(0.2)), w.Player.lookPosition.Add(v3.Y(0.2)), 30, 35, rl.White, 1.5)
+				globals.Shaders.Main.LightSpot(w.Player.Position.Add(v3.Y(0.2)), w.Player.lookPosition.Add(v3.Y(0.2)), 30, 35, rl.White, 2)
 			} else {
 				globals.Shaders.Main.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
 			}
 
-			globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.7)
+			hour := math.Mod(game.Hour, 24)
+			day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+			transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+			transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+
+			sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
+
+			globals.Shaders.Main.LightDirectional(v3.XYZ((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 1)
+			// globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.7)
 
 			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
 			chunks := make([]*Chunk, 0, 9)

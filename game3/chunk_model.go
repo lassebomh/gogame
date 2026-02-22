@@ -66,6 +66,7 @@ var FaceModels = map[string]FaceModelHandler{
 	"face_model_wall_brick":        NewFaceModel(1, FaceSolid, 2, 4, FaceModelRenderDefault),
 	"face_model_stair_metal":       NewFaceModel(5, FaceStair, 4, 5, FaceModelRenderDefault),
 	"face_model_wall_station":      NewFaceModel(7, FaceSolid, 6, 2, FaceModelRenderDefault),
+	"face_model_wall_metal_rust":   NewFaceModel(13, FaceSolid, 3, 4, FaceModelRenderDefault),
 	"face_model_floor_road":        NewFaceModel(3, FaceSolid, 6, 6, FaceModelRenderRandomRotation),
 	"face_model_floor_road_cross":  NewFaceModel(10, FaceSolid, 7, 5, FaceModelRenderDefault),
 	"face_model_floor_road_lines":  NewFaceModel(11, FaceSolid, 8, 5, FaceModelRenderDefault),
