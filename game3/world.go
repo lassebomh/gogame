@@ -3,6 +3,7 @@ package game3
 import (
 	v2 "game/vec2"
 	v3 "game/vec3"
+	"image/color"
 	"math"
 	"time"
 
@@ -145,15 +146,15 @@ func (w *World) Draw() {
 				globals.Shaders.Main.LightSpot(v3.Zero, v3.One, 0, 1, rl.White, 0)
 			}
 
-			hour := math.Mod(game.Hour, 24)
-			day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
-			transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
-			transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
+			// hour := math.Mod(game.Hour, 24)
+			// day := c(hour-HOUR_MORNING) - c(hour-HOUR_NIGHT)
+			// transitionColor := 1 + ((c(2*(hour-HOUR_MORNING-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_MORNING+HOURS_TRANSITION/2))) + (c(2*(hour-HOUR_NIGHT-HOURS_TRANSITION/2)) - c(2*(hour-HOUR_NIGHT+HOURS_TRANSITION/2))))
+			// transitionAngle := 1 + ((c((hour - HOUR_MORNING - HOURS_TRANSITION/2)) - c((hour - HOUR_MORNING + HOURS_TRANSITION/2))) + (c((hour - HOUR_NIGHT - HOURS_TRANSITION/2)) - c((hour - HOUR_NIGHT + HOURS_TRANSITION/2))))
 
-			sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
+			// sunColor := DAWN.Lerp(NIGHT.Lerp(DAY, (day)), (transitionColor))
 
-			globals.Shaders.Main.LightDirectional(v3.XYZ((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 1)
-			// globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.7)
+			// globals.Shaders.Main.LightDirectional(v3.XYZ((1-transitionAngle), (1-day*2), 0).Normalize(), rl.ColorFromHSV(float32(sunColor.X), float32(sunColor.Y), float32(sunColor.Z)), 1)
+			globals.Shaders.Main.LightDirectional(v3.XYZ(0.3, -1, 0), color.RGBA{180, 190, 255, 255}, 0.8)
 
 			targetChunkPos, targetLocalPos := WorldToChunk(w.Camera.Target)
 			chunks := make([]*Chunk, 0, 9)
@@ -204,13 +205,13 @@ func (w *World) Draw() {
 
 		})
 
-		t := game.Hour * float64(time.Hour)
-		t /= (10 * float64(time.Minute))
-		t = math.Floor(t)
-		t *= (10 * float64(time.Minute))
+		// t := game.Hour * float64(time.Hour)
+		// t /= (10 * float64(time.Minute))
+		// t = math.Floor(t)
+		// t *= (10 * float64(time.Minute))
 
-		clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(t))).Format("15:04")
-		rl.DrawText(clock, 12, 12, 10, rl.Green)
+		// clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(t))).Format("15:04")
+		// rl.DrawText(clock, 12, 12, 10, rl.Green)
 	})
 
 	rl.DrawTexturePro(

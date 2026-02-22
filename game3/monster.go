@@ -93,7 +93,7 @@ func (m *Monster) Update() {
 			delta := target.Subtract(pos)
 			tipDir := delta.Normalize()
 			if !isDisabled {
-				tip.body.ApplyForceAtWorldPoint(tipDir.Scale(1.25).Chipmunk(), pos.Chipmunk())
+				tip.body.ApplyForceAtWorldPoint(tipDir.Scale(5).Chipmunk(), pos.Chipmunk())
 			}
 
 			for otherArmI, arm := range m.arms {
@@ -119,7 +119,7 @@ func (m *Monster) Update() {
 				} else {
 					alpha := (float64(ii+1) / float64(len(arm.segments)))
 					dir := bodyDir.SLerp(tipDir, alpha)
-					vel = vel.Lerp(dir.Scale(vel.Length()), 0.025)
+					vel = vel.Lerp(dir.Scale(vel.Length()), 0.04)
 				}
 				segment.body.SetVelocity(vel.X, vel.Y)
 			}
@@ -235,7 +235,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 
 	m.Radius = 0.25
 
-	mass := m.Radius * m.Radius / 2
+	mass := m.Radius * m.Radius
 	body := m.world.space.AddBody(cp.NewBody(mass, cp.MomentForCircle(mass, 0, m.Radius, cp.Vector{X: 2, Y: 2})))
 
 	body.SetPosition(m.Position.Chipmunk())
@@ -273,7 +273,7 @@ func (m *Monster) Spawn(world *World) *Monster {
 			}
 			arm.segments = append(arm.segments, segment)
 
-			mass := segment.Length * segment.Width * 0.4
+			mass := segment.Length * segment.Width * 1.
 
 			segment.body = m.world.space.AddBody(cp.NewBody(mass, cp.MomentForBox(mass, segment.Length, segment.Width)))
 			position := prevPosition.Add(v3.X(segment.Length))
